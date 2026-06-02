@@ -84,7 +84,7 @@
         </div>
 
         {{-- lab request --}}
-        <a href="{{ route('requestlab.index') }}"
+        {{-- <a href="{{ route('requestlab.index') }}"
            class="sidebar-item {{ request()->routeIs('requestlab.*') ? 'sidebar-item-active' : '' }}">
             <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -94,10 +94,10 @@
                 <line x1="9" y1="15" x2="15" y2="15"/>
             </svg>
             Lab Request
-        </a>
+        </a> --}}
 
         {{-- inventory & stock --}}
-        <a href="{{ route('asset.index') }}"
+        {{-- <a href="{{ route('asset.index') }}"
            class="sidebar-item {{ request()->routeIs('asset.*') ? 'sidebar-item-active' : '' }}">
             <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -106,7 +106,7 @@
                 <line x1="12" y1="22.08" x2="12" y2="12"/>
             </svg>
             Inventory & Stock
-        </a>
+        </a> --}}
 
         {{-- activity log --}}
         {{-- <a href="{{ route('activity-log.index') }}"

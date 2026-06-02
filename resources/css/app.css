@@ -2,9 +2,16 @@
 @import 'tailwindcss';
 
 @import './auth/splash-screen.css';
-@import './components/navbar.css';
-@import './components/sidebar.css';
+@import './components/panel/navbar.css';
+@import './components/panel/sidebar.css';
 @import './pages/dashboard/spv-dashboard.css';
+@import './components/modal/index.css';
+@import './components/user/modal-user.css';
+@import './components/table/table.css';
+@import './components/button/button.css';
+@import './components/button/search.css';
+
+
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
