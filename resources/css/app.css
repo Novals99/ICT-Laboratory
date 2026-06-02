@@ -2,8 +2,8 @@
 @import 'tailwindcss';
 
 @import './auth/splash-screen.css';
-@import './components/navbar.css';
-@import './components/sidebar.css';
+@import './components/panel/navbar.css';
+@import './components/panel/sidebar.css';
 @import './pages/dashboard/spv-dashboard.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';

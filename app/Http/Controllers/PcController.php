@@ -2,64 +2,60 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Laboratory;
 use App\Models\Pc;
 use Illuminate\Http\Request;
 
 class PcController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function store(Request $request, Laboratory $laboratory)
     {
-        //
+        $validated = $request->validate([
+            'type_pc'     => 'required|in:dosen,mahasiswa',
+            'processor'   => 'nullable|string|max:255',
+            'ram'         => 'nullable|string|max:255',
+            'ssd'         => 'nullable|string|max:255',
+            'motherboard' => 'nullable|string|max:255',
+            'vga'         => 'nullable|string|max:255',
+            'cpu_fan'     => 'nullable|string|max:255',
+            'powersupply' => 'nullable|string|max:255',
+        ]);
+
+        $laboratory->pcs()->create(array_merge($validated, [
+            'status_pc' => 'active',
+            'pc_entry'  => now()->toDateString(),
+        ]));
+
+        return redirect()->route('laboratory.show', $laboratory)
+            ->with('success', 'PC berhasil ditambahkan.');
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function update(Request $request, Laboratory $laboratory, Pc $pc)
     {
-        //
+        $validated = $request->validate([
+            'type_pc'     => 'required|in:dosen,mahasiswa',
+            'status_pc'   => 'required|in:active,inactive',
+            'processor'   => 'nullable|string|max:255',
+            'ram'         => 'nullable|string|max:255',
+            'ssd'         => 'nullable|string|max:255',
+            'motherboard' => 'nullable|string|max:255',
+            'vga'         => 'nullable|string|max:255',
+            'cpu_fan'     => 'nullable|string|max:255',
+            'powersupply' => 'nullable|string|max:255',
+            'keterangan'  => 'nullable|string',
+        ]);
+
+        $pc->update($validated);
+
+        return redirect()->route('laboratory.show', $laboratory)
+            ->with('success', 'Data PC berhasil diperbarui.');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function destroy(Laboratory $laboratory, Pc $pc)
     {
-        //
-    }
+        $pc->delete();
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Pc $pc)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Pc $pc)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Pc $pc)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Pc $pc)
-    {
-        //
+        return redirect()->route('laboratory.show', $laboratory)
+            ->with('success', 'PC berhasil dihapus.');
     }
 }
