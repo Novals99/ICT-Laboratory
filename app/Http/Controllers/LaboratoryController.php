@@ -25,8 +25,8 @@ class LaboratoryController extends Controller
     {
         $laboratory->load([
             'pcs' => fn($q) => $q->orderBy('id'),
-            'users',
-            'assets',
+            'users'
+            // 'assets',
         ]);
 
         $totalActive   = $laboratory->pcs->where('status_pc', 'active')->count();
