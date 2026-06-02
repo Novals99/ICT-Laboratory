@@ -1,0 +1,50 @@
+.user-role-options,
+.user-lab-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.user-role-option,
+.user-lab-option {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #aeb4bd;
+    border-radius: 6px;
+    padding: 0 13px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    background: #ffffff;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.user-role-option:hover,
+.user-lab-option:hover {
+    border-color: #111B4C;
+    color: #111B4C;
+}
+
+.user-role-option.is-selected,
+.user-lab-option.is-selected {
+    background: #111B4C;
+    border-color: #111B4C;
+    color: #ffffff;
+}
+
+.dark .user-role-option,
+.dark .user-lab-option {
+    background: #252840;
+    border-color: #3d4468;
+    color: #cbd5e1;
+}
+
+.dark .user-role-option.is-selected,
+.dark .user-lab-option.is-selected {
+    background: #263060;
+    border-color: #a5b4fc;
+    color: #ffffff;
+}

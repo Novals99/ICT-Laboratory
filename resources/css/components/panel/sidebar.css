@@ -181,8 +181,6 @@
 }
 
 /* MOBILE: profil sidebar */
-.sidebar-profile-mobile { display: flex; }
-
 .sidebar-profile-mobile {
     display: none;
     flex-direction: column;
@@ -331,4 +329,7 @@
         from { transform: translateX(-100%); opacity: 0; }
         to   { transform: translateX(0);    opacity: 1; }
     }
+
+    .sidebar-profile-mobile { display: flex; }
+
 }
