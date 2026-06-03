@@ -63,13 +63,23 @@
                         <td>{{ $pc->ssd ?? '-' }}</td>
                         <td>{{ $pc->motherboard ?? '-' }}</td>
                         <td>{{ $pc->vga ?? '-' }}</td>
+                        {{-- Button Status PC --}}
                         <td>
-                            @php
-                                $badgeColor = $pc->status_pc === 'active' ? '#16a34a' : '#dc2626';
-                            @endphp
-                            <span style="background:{{ $badgeColor }}; color:#fff; border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600;">
-                                {{ ucfirst($pc->status_pc) }}
-                            </span>
+                            <form action="{{ route('pc.updateStatus', $pc->id) }}" method="POST" style="display: inline;">
+                                @csrf
+                                @method('PATCH')
+                                @php
+                                    $badgeColor = $pc->status_pc === 'active' ? '#16a34a' : '#dc2626';
+                                    // Jika sekarang active maka yang dikirim inactive, begitu sebaliknya
+                                    $newStatus = $pc->status_pc === 'active' ? 'inactive' : 'active';
+                                @endphp
+
+                                <input type="hidden" name="status_pc" value="{{ $newStatus }}">
+
+                                <button type="submit" style="background:{{ $badgeColor }}; color:#fff; border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600; border: none; cursor: pointer;" onclick="return confirm('Ubah status PC menjadi {{ $newStatus }}?')">
+                                    {{ ucfirst($pc->status_pc) }}
+                                </button>
+                            </form>
                         </td>
                         <td>
                             <div class="action-btns">

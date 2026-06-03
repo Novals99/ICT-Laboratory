@@ -72,7 +72,7 @@
                 @forelse ($laboratories ?? [] as $lab)
                     <a href="{{ route('laboratory.show', $lab->id) }}"
                        class="sidebar-subitem
-                              {{ request()->routeIs('laboratory.show') && request()->route('laboratory') == $lab->id
+                              {{ request()->routeIs('laboratory.show') && request()->route('laboratory')?->id == $lab->id
                                  ? 'sidebar-subitem-active' : '' }}">
                         <span class="subitem-dot" aria-hidden="true"></span>
                         {{ $lab->lab_name }}

@@ -29,8 +29,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('stafflab', StaffLabController::class);
     Route::resource('assetlab', AssetLabController::class);
     Route::resource('requestitem', RequestItemController::class);
+    Route::patch('/pc/{pc}/status', [PcController::class, 'updateStatus'])->name('pc.updateStatus');
 });
-
 
     // // Laboratory
     // Route::resource('laboratory', LaboratoryController::class);

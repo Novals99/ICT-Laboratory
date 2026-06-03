@@ -12,7 +12,7 @@
             <h2 class="db-card-title" style="margin:0">Laboratory List</h2>
             <div style="display:flex; gap:10px; align-items:center;">
                 <input type="text" id="searchInput" placeholder="Search..."
-                       onkeyup="filterTable()"
+                       oninput="filterTable()"
                        style="border:1px solid #e5e7eb; border-radius:8px; padding:8px 14px; font-size:13px; outline:none; width:200px;">
                 <button onclick="exportTable()"
                         style="border:1px solid #e5e7eb; background:#fff; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:500;">

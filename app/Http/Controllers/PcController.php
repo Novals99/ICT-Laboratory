@@ -58,4 +58,20 @@ class PcController extends Controller
         return redirect()->route('laboratory.show', $laboratory)
             ->with('success', 'PC berhasil dihapus.');
     }
+
+    public function updateStatus(Request $request, Pc $pc)
+    {
+        // 1. Validasi data yang masuk untuk memastikan hanya status yang valid yang diterima
+        $request->validate([
+            'status_pc' => 'required|in:active,inactive',
+        ]);
+
+        // 2. Update field status_pc di database
+        $pc->update([
+            'status_pc' => $request->status_pc,
+        ]);
+
+        // 3. Kembalikan ke halaman sebelumnya dengan alert sukses
+        return redirect()->back()->with('success', 'Status PC berhasil diubah menjadi ' . $request->status_pc);
+    }
 }
