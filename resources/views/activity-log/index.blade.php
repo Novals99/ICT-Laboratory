@@ -175,10 +175,10 @@
                             {{-- Tanggal dengan format yang readable --}}
                             <td class="px-6 py-4 text-sm">
                                 <div class="text-slate-700 font-medium">
-                                    {{ $log->timestamp->format('d M Y') }}
+                                    {{ $log->created_at->format('d M Y') }}
                                 </div>
                                 <div class="text-xs text-slate-400">
-                                    {{ $log->timestamp->format('H:i') }} WIB
+                                    {{ $log->created_at->format('H:i') }} WIB
                                 </div>
                             </td>
                             
@@ -190,14 +190,14 @@
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600">
                                         {{-- Initial dari nama: "Ali rajin" -> "AR" --}}
-                                        {{ strtoupper(substr($log->user?->nama ?? 'U', 0, 1)) }}
+                                        {{ strtoupper(substr($log->user?->name ?? 'U', 0, 1)) }}
                                     </div>
                                     <div>
                                         <div class="text-slate-700 font-medium">
-                                            {{ $log->user?->nama ?? 'User dihapus' }}
+                                            {{ $log->user?->name ?? 'User dihapus' }}
                                         </div>
                                         <div class="text-xs text-slate-400">
-                                            {{ $log->user?->username ?? '-' }}
+                                            {{ $log->user?->email ?? '-' }}
                                         </div>
                                     </div>
                                 </div>
@@ -221,7 +221,7 @@
                             
                             {{-- Keterangan --}}
                             <td class="px-6 py-4 text-sm text-slate-700">
-                                {{ $log->keterangan }}
+                                {{ $log->activity }}
                             </td>
                         </tr>
                     
