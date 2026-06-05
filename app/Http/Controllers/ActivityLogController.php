@@ -2,12 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\ActivityLog;
 
 class ActivityLogController extends Controller
 {
-    public function index() 
+    public function index()
     {
-        return view('activity-log.index');
+        $logs = ActivityLog::latest()->paginate(10);
+
+        return view('activity-log.index', [
+            'logs' => $logs,
+            'search' => '',
+            'startDate' => '',
+            'endDate' => '',
+            'role' => ''
+        ]);
     }
 }
