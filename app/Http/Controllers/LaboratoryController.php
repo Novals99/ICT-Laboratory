@@ -10,15 +10,20 @@ class LaboratoryController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+
         $laboratories = Laboratory::withCount([
-            'pcs as total_pc_active' => fn($q) => $q->where('status_pc', 'active'),
+            'pcs as total_pc_active'   => fn($q) => $q->where('status_pc', 'active'),
             'pcs as total_pc_inactive' => fn($q) => $q->where('status_pc', 'inactive'),
         ])
         ->with('users')
         ->orderBy('lab_name')
         ->paginate(15);
 
-        return view('pages.laboratory.index', compact('laboratories'));
+        // lab_id milik user yang login
+        $myLabIds = $user->labs()->pluck('laboratories.id')->toArray();
+
+        return view('pages.laboratory.index', compact('laboratories', 'myLabIds', 'user'));
     }
 
     public function show(Laboratory $laboratory)

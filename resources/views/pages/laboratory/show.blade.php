@@ -70,7 +70,7 @@
                                 @method('PATCH')
                                 @php
                                     $badgeColor = $pc->status_pc === 'active' ? '#16a34a' : '#dc2626';
-                                    // Jika sekarang active maka yang dikirim inactive, begitu sebaliknya
+
                                     $newStatus = $pc->status_pc === 'active' ? 'inactive' : 'active';
                                 @endphp
 

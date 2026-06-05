@@ -74,27 +74,23 @@ class DashboardController extends Controller
 
         $labIds = $laboratories->pluck('id');
 
-        $totalLaboratory = $laboratories->count();
+        $totalLaboratory  = $laboratories->count();
+        $totalPcActive    = $laboratories->flatMap(fn($lab) => $lab->pcs)->where('status_pc', 'active')->count();
+        $totalPcInactive  = $laboratories->flatMap(fn($lab) => $lab->pcs)->where('status_pc', 'inactive')->count();
+        $totalPc          = $totalPcActive + $totalPcInactive;
+        $totalRequestLab  = RequestLab::whereIn('lab_id', $labIds)->count();
 
-        $totalPcActive = $laboratories
-            ->flatMap(fn ($lab) => $lab->pcs)
-            ->where('status_pc', 'active')
-            ->count();
+        // staff di lab yang sama
+        $labStaff = User::whereHas('labs', fn($q) => $q->whereIn('laboratories.id', $labIds))
+            ->get(['id', 'name', 'nim', 'role']);
 
-        $totalPcInactive = $laboratories
-            ->flatMap(fn ($lab) => $lab->pcs)
-            ->where('status_pc', 'inactive')
-            ->count();
+        $totalUsers = $labStaff->count();
 
-        $totalRequestLab = RequestLab::whereIn('lab_id', $labIds)->count();
-
-        $chartData = $laboratories->map(function ($lab) {
-            return [
-                'label' => $lab->lab_name,
-                'active' => $lab->pcs->where('status_pc', 'active')->count(),
-                'inactive' => $lab->pcs->where('status_pc', 'inactive')->count(),
-            ];
-        })->values();
+        $chartData = $laboratories->map(fn($lab) => [
+            'label'    => $lab->lab_name,
+            'active'   => $lab->pcs->where('status_pc', 'active')->count(),
+            'inactive' => $lab->pcs->where('status_pc', 'inactive')->count(),
+        ])->values();
 
         $recentRequests = RequestLab::with('user')
             ->withSum('request_items as total_requested_items', 'total_request')
@@ -103,13 +99,16 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        return view('pages.dashboard.staff', compact(
+        return view('pages.dashboard.staff-dashboard', compact(
             'user',
             'laboratories',
             'totalLaboratory',
             'totalPcActive',
             'totalPcInactive',
+            'totalPc',
             'totalRequestLab',
+            'totalUsers',
+            'labStaff',
             'chartData',
             'recentRequests',
         ));
