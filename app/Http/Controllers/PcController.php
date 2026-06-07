@@ -26,6 +26,9 @@ class PcController extends Controller
             'pc_entry'  => now()->toDateString(),
         ]));
 
+        // update capacity
+        $laboratory->update(['capacity' => $laboratory->pcs()->count()]);
+
         return redirect()->route('laboratory.show', $laboratory)
             ->with('success', 'PC berhasil ditambahkan.');
     }
@@ -54,6 +57,9 @@ class PcController extends Controller
     public function destroy(Laboratory $laboratory, Pc $pc)
     {
         $pc->delete();
+
+        // update capacity
+        $laboratory->update(['capacity' => $laboratory->pcs()->count()]);
 
         return redirect()->route('laboratory.show', $laboratory)
             ->with('success', 'PC berhasil dihapus.');

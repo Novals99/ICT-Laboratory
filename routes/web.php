@@ -11,8 +11,6 @@ use App\Http\Controllers\StaffLabController;
 use App\Http\Controllers\AssetLabController;
 use App\Http\Controllers\RequestItemController;
 
-
-
 Route::get('/', function () {
     return redirect()->route('login');
 });
@@ -20,31 +18,37 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
-    Route::middleware('auth')->group(function () {
+
+    // Users
     Route::resource('users', UserController::class);
+
+    // Laboratory
     Route::resource('laboratory', LaboratoryController::class);
+
+    // PC — nested di bawah laboratory
+    Route::post('/laboratory/{laboratory}/pc', [PcController::class, 'store'])->name('pc.store');
+    Route::put('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'update'])->name('pc.update');
+    Route::delete('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'destroy'])->name('pc.destroy');
+
+    // Asset / Inventory
     Route::resource('asset', AssetController::class);
-    Route::resource('pc', PcController::class);
+
+    // Lab Request
     Route::resource('requestlab', RequestLabController::class);
+    Route::resource('requestitem', RequestItemController::class);
+
+    // Pivot tables
     Route::resource('stafflab', StaffLabController::class);
     Route::resource('assetlab', AssetLabController::class);
-    Route::resource('requestitem', RequestItemController::class);
-    Route::patch('/pc/{pc}/status', [PcController::class, 'updateStatus'])->name('pc.updateStatus');
-});
+    
+    // PC nested
+    Route::post('/laboratory/{laboratory}/pc', [PcController::class, 'store'])->name('pc.store');
+    Route::put('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'update'])->name('pc.update');
+    Route::delete('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'destroy'])->name('pc.destroy');
 
-    // // Laboratory
-    // Route::resource('laboratory', LaboratoryController::class);
-
-    // // PC
-    // Route::post('/laboratory/{laboratory}/pc', [PcController::class, 'store'])->name('pc.store');
-    // Route::put('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'update'])->name('pc.update');
-    // Route::delete('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'destroy'])->name('pc.destroy');
-
-    // // Placeholder
-    // Route::get('/users', fn() => 'coming soon')->name('users.index');
-    // Route::get('/request-lab', fn() => 'coming soon')->name('requestlab.index');
-    // Route::get('/asset', fn() => 'coming soon')->name('asset.index');
-
-});
+    // Asset Lab adjustment
+    Route::post('/laboratory/{laboratory}/assetlab/{assetId}/adjust', [AssetLabController::class, 'adjust'])->name('lab.assetlab.adjust');
+    Route::delete('/laboratory/{laboratory}/assetlab/{assetId}', [AssetLabController::class, 'removeFromLab'])->name('lab.assetlab.remove');
+    });
 
 require __DIR__.'/auth.php';

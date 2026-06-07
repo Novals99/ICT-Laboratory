@@ -50,38 +50,44 @@
             User
         </a>
 
-        {{-- Laboratory — sub-menu dinamis dari db --}}
-        <div x-data="{ open: {{ request()->routeIs('laboratory.*') ? 'true' : 'false' }} }">
-            <button @click="open = !open"
-                    class="sidebar-item sidebar-item-toggle
-                           {{ request()->routeIs('laboratory.*') ? 'sidebar-item-active' : '' }}">
+    {{-- Laboratory --}}
+    <div x-data="{ open: false }">
+        <div style="display:flex; align-items:center;">
+            <a href="{{ route('laboratory.index') }}"
+            class="sidebar-item {{ request()->routeIs('laboratory.*') ? 'sidebar-item-active' : '' }}"
+            style="flex:1;">
                 <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                     <polyline points="9 22 9 12 15 12 15 22"/>
                 </svg>
                 Laboratory
-                <svg class="sidebar-chevron" :class="{ 'rotate-90': open }"
-                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            </a>
+            <button @click="open = !open"
+                    style="background:none; border:none; cursor:pointer; padding:6px 10px; color:inherit; display:flex; align-items:center;">
+                <svg :style="open ? 'transform:rotate(90deg)' : ''"
+                    style="transition:transform 0.2s;"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
                     <polyline points="9 18 15 12 9 6"/>
                 </svg>
             </button>
-
-            <div x-show="open" x-collapse class="sidebar-submenu">
-                @forelse ($laboratories ?? [] as $lab)
-                    <a href="{{ route('laboratory.show', $lab->id) }}"
-                       class="sidebar-subitem
-                              {{ request()->routeIs('laboratory.show') && request()->route('laboratory')?->id == $lab->id
-                                 ? 'sidebar-subitem-active' : '' }}">
-                        <span class="subitem-dot" aria-hidden="true"></span>
-                        {{ $lab->lab_name }}
-                    </a>
-                @empty
-                    <p class="sidebar-subitem-empty">Belum ada laboratorium</p>
-                @endforelse
-            </div>
         </div>
+
+        <div x-show="open" x-collapse class="sidebar-submenu">
+            @forelse ($laboratories ?? [] as $lab)
+                <a href="{{ route('laboratory.show', $lab->id) }}"
+                class="sidebar-subitem
+                        {{ request()->routeIs('laboratory.show') && request()->route('laboratory')?->id == $lab->id
+                            ? 'sidebar-subitem-active' : '' }}">
+                    <span class="subitem-dot" aria-hidden="true"></span>
+                    {{ $lab->lab_name }}
+                </a>
+            @empty
+                <p class="sidebar-subitem-empty">Belum ada laboratorium</p>
+            @endforelse
+        </div>
+    </div>
 
         {{-- lab request --}}
         {{-- <a href="{{ route('requestlab.index') }}"
