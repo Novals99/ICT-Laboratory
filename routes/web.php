@@ -21,6 +21,8 @@ Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
+
+
 Route::middleware('auth')->group(function () {
     Route::resource('users', UserController::class);
     Route::resource('laboratory', LaboratoryController::class);
@@ -34,4 +36,4 @@ Route::middleware('auth')->group(function () {
 
 
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

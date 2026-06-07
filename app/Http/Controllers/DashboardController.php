@@ -16,6 +16,7 @@ class DashboardController extends Controller
         if ($user->role === 'spv inventory') {
             return $this->spvDashboard();
         }
+        
 
         return $this->staffDashboard($user);
     }
@@ -103,7 +104,7 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        return view('pages.dashboard.staff', compact(
+        return view('pages.dashboard.staff-dashboard', compact(
             'user',
             'laboratories',
             'totalLaboratory',

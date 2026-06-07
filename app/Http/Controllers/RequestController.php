@@ -2,26 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\RequestLab;
 use Illuminate\Http\Request;
 
-class RequestLabController extends Controller
+class RequestController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $labRequests = RequestLab::with([
-            'user',
-            'lab',
-            'request_items'
-        ])->get();
-
-        return view(
-            'pages.dashboard.requestlab.index',
-            compact('labRequests')
-        );
+        //
     }
 
     /**
@@ -43,7 +33,7 @@ class RequestLabController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(RequestLab $requestLab)
+    public function show(string $id)
     {
         //
     }
@@ -51,7 +41,7 @@ class RequestLabController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(RequestLab $requestLab)
+    public function edit(string $id)
     {
         //
     }
@@ -59,7 +49,7 @@ class RequestLabController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, RequestLab $requestLab)
+    public function update(Request $request, string $id)
     {
         //
     }
@@ -67,7 +57,7 @@ class RequestLabController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(RequestLab $requestLab)
+    public function destroy(string $id)
     {
         //
     }

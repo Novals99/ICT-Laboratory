@@ -1,4 +1,4 @@
-@extends('layouts.panel.content')
+@extends('panel.content')
 
 @section('title', 'Dashboard')
 
@@ -15,7 +15,7 @@
 
         <div class="db-stat-card">
             <div class="stat-info">
-                <span class="stat-label">PC Active</span>
+                <span class="stat-label">PC Active ontol</span>
                 <span class="stat-value">{{ number_format($totalPcActive) }}</span>
             </div>
         </div>
