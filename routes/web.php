@@ -2,38 +2,80 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\UserController;
 use App\Http\Controllers\LaboratoryController;
-use App\Http\Controllers\AssetController;
 use App\Http\Controllers\PcController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\AssetController;
 use App\Http\Controllers\RequestLabController;
 use App\Http\Controllers\StaffLabController;
 use App\Http\Controllers\AssetLabController;
 use App\Http\Controllers\RequestItemController;
 
-
-
 Route::get('/', function () {
     return redirect()->route('login');
 });
 
-Route::get('/dashboard', DashboardController::class)
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+Route::middleware(['auth', 'verified'])->group(function () {
 
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');    });
 
 
 Route::middleware('auth')->group(function () {
     Route::resource('users', UserController::class);
+
+    // Laboratory
     Route::resource('laboratory', LaboratoryController::class);
+
+    // PC — nested di bawah laboratory
+    Route::post('/laboratory/{laboratory}/pc', [PcController::class, 'store'])->name('pc.store');
+    Route::put('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'update'])->name('pc.update');
+    Route::delete('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'destroy'])->name('pc.destroy');
+
+    // Asset / Inventory
     Route::resource('asset', AssetController::class);
-    Route::resource('pc', PcController::class);
-    Route::resource('requestlab', RequestLabController::class);
+//////////
+    // Lab Request
+      Route::get('/requestlab', [RequestLabController::class, 'index'])
+        ->name('requestlab.index');
+ 
+    // Store — simpan request baru
+    Route::post('/requestlab', [RequestLabController::class, 'store'])
+        ->name('requestlab.store');
+ 
+    // Detail — return JSON untuk modal (AJAX)
+    Route::get('/requestlab/{id}/detail', [RequestLabController::class, 'detail'])
+        ->name('requestlab.detail');
+ 
+    // Update Status — Approved / Rejected dari modal
+    Route::patch('/requestlab/{id}/status', [RequestLabController::class, 'updateStatus'])
+        ->name('requestlab.status');
+ 
+    // Edit — form edit halaman terpisah
+    Route::get('/requestlab/{id}/edit', [RequestLabController::class, 'edit'])
+        ->name('requestlab.edit');
+ 
+    // Update — simpan perubahan
+    Route::put('/requestlab/{id}', [RequestLabController::class, 'update'])
+        ->name('requestlab.update');
+ 
+    // Destroy — hapus data
+    Route::delete('/requestlab/{id}', [RequestLabController::class, 'destroy'])
+        ->name('requestlab.destroy');
+ 
+ ////////////
+
+    // Pivot tables
     Route::resource('stafflab', StaffLabController::class);
     Route::resource('assetlab', AssetLabController::class);
-    Route::resource('requestitem', RequestItemController::class);
-});
+    
+    // PC nested
+    Route::post('/laboratory/{laboratory}/pc', [PcController::class, 'store'])->name('pc.store');
+    Route::put('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'update'])->name('pc.update');
+    Route::delete('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'destroy'])->name('pc.destroy');
 
-
+    // Asset Lab adjustment
+    Route::post('/laboratory/{laboratory}/assetlab/{assetId}/adjust', [AssetLabController::class, 'adjust'])->name('lab.assetlab.adjust');
+    Route::delete('/laboratory/{laboratory}/assetlab/{assetId}', [AssetLabController::class, 'removeFromLab'])->name('lab.assetlab.remove');
+    });
 
 require __DIR__ . '/auth.php';

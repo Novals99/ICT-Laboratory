@@ -18,12 +18,18 @@ class Laboratory extends Model
         return $this->belongsToMany(User::class, 'staff_labs', 'lab_id', 'user_id');
     }
     public function assets() {
-        return $this->belongsToMany(Asset::class, 'asset_labs');
+        return $this->belongsToMany(Asset::class, 'asset_labs', 'lab_id', 'asset_id')
+                    ->withPivot([
+                        'total_good_lab',
+                        'total_damaged_lab',
+                        'total_loss_lab',
+                        'total_asset_lab',
+                    ]);
     }
     public function pcs() {
         return $this->hasMany(Pc::class, 'lab_id');
     }
     public function request_labs() {
         return $this->hasMany(RequestLab::class, 'lab_id');
-    }    
+    }
 }
