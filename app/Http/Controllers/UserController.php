@@ -17,7 +17,7 @@ class UserController extends Controller
     public function index()
     {
        $users = User::with('labs')
-              ->when(request('search'), function ($query, $search) {
+               ->when(request('search'), function ($query, $search) {
                      $query->where(function ($q) use ($search) {
                             $q->where('name', 'like', "%{$search}%")
                             ->orWhere('nim', 'like', "%{$search}%")
@@ -25,7 +25,13 @@ class UserController extends Controller
                             ->orWhere('email', 'like', "%{$search}%")
                             ->orWhere('role', 'like', "%{$search}%");
                      });
-              })
+               })
+               ->when(request('role'), function ($query, $roles) {
+                     $query->whereIn('role', $roles);
+               })
+               ->when(request('status') !== null, function ($query) {
+                     $query->whereIn('status_user', request('status'));
+               })
        ->latest()
        ->paginate(10)
        ->withQueryString();
