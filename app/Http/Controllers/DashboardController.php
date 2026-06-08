@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Laboratory;
 use App\Models\RequestLab;
+use App\Models\RequestItem;
 use App\Models\Asset;
 
 class DashboardController extends Controller

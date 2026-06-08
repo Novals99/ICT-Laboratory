@@ -5,24 +5,30 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\Laboratory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class LaboratoryController extends Controller
 {
     public function index()
-    {
-        $laboratories = Laboratory::withCount([
-            'pcs as total_pc_active' => fn($q) => $q->where('status_pc', 'active'),
-            'pcs as total_pc_inactive' => fn($q) => $q->where('status_pc', 'inactive'),
-        ])
-        ->with(['users', 'assets'])
-        ->orderBy('lab_name')
-        ->paginate(15);
+{
+    $user = Auth::user();
 
-        $myLabIds  = $user->labs()->pluck('laboratories.id')->toArray();
-        $allAssets = Asset::orderBy('asset_name')->get();
+    $laboratories = Laboratory::withCount([
+        'pcs as total_pc_active' => fn($q) => $q->where('status_pc', 'active'),
+        'pcs as total_pc_inactive' => fn($q) => $q->where('status_pc', 'inactive'),
+    ])
+    ->with(['users', 'assets'])
+    ->orderBy('lab_name')
+    ->paginate(15);
 
-        return view('pages.laboratory.index', compact('laboratories', 'myLabIds', 'user', 'allAssets'));
-    }
+    $myLabIds = [];
+    $allAssets = Asset::orderBy('asset_name')->get();
+
+    return view(
+        'pages.laboratory.index',
+        compact('laboratories', 'myLabIds', 'user', 'allAssets')
+    );
+}
 
     public function show(Laboratory $laboratory)
     {
@@ -42,8 +48,13 @@ class LaboratoryController extends Controller
         $assistants = $laboratory->users->where('role', 'assistant')->values();
 
         return view('pages.laboratory.show', compact(
-            'laboratory', 'totalActive', 'totalInactive',
-            'allAssets', 'pic', 'admins', 'assistants'
+            'laboratory',
+            'totalActive',
+            'totalInactive',
+            'allAssets',
+            'pic',
+            'admins',
+            'assistants'
         ));
     }
 
