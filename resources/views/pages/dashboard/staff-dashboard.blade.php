@@ -1,4 +1,4 @@
-@extends('layouts.panel.content')
+@extends('panel.content')
 
 @section('title', 'Dashboard')
 
@@ -67,7 +67,7 @@
                             <td class="td-mono">{{ $req->id }}</td>
                             <td>{{ $req->user->name ?? '-' }}</td>
                             <td>{{ $req->total_requested_items ?? 0 }}</td>
-                            <td>{{ $req->created_at->format('d-m-y') }}</td>
+                            <td>{{ \Carbon\Carbon::parse($req->created_at)->format('d-m-y') }}</td>
                             <td>
                                 @php
                                     $status = strtolower($req->request_status ?? 'pending');

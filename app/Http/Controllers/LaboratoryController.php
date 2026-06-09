@@ -10,6 +10,8 @@ class LaboratoryController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+
         $laboratories = Laboratory::withCount([
             'pcs as total_pc_active' => fn($q) => $q->where('status_pc', 'active'),
             'pcs as total_pc_inactive' => fn($q) => $q->where('status_pc', 'inactive'),
