@@ -21,4 +21,9 @@ class Asset extends Model
     public function labs() {
         return $this->belongsToMany(Laboratory::class, 'asset_labs');
     }
+
+    public function assetlogs()
+    {
+        return $this->hasMany(AssetLog::class);
+    }
 }

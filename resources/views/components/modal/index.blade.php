@@ -6,6 +6,8 @@
     'method' => 'POST',
     'submitText' => 'Save',
     'cancelText' => 'Cancel',
+    'boxClass' => '',
+    'innerClass' => '',
 ])
 
 <div
@@ -13,7 +15,7 @@
     class="panel-modal-overlay hidden"
     onclick="closePanelModalOnBackdrop(event, '{{ $id }}')"
 >
-    <div class="panel-modal-box">
+    <div class="panel-modal-box {{ $boxClass }}">
 
         {{-- header --}}
         <div class="panel-modal-header">
@@ -39,7 +41,7 @@
                 @method($method)
             @endif
 
-            <div class="panel-form-inner">
+            <div class="panel-form-inner {{ $innerClass }}">
                 @if ($formTitle)
                     <h3 class="panel-form-title">
                         {{ $formTitle }}
