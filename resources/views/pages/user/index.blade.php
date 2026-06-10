@@ -21,8 +21,48 @@
                 />
 
                 {{-- filter --}}
-                <x-button.filter type="button">
-                    Filter
+                <x-button.filter :action="route('users.index')">
+
+                    <div class="filter-section">
+                        <div class="filter-section-title">Role</div>
+                        @foreach(['spv inventory', 'pic', 'admin', 'assistant'] as $role)
+                            <label class="filter-checkbox-row">
+                                <input
+                                    type="checkbox"
+                                    name="role[]"
+                                    value="{{ $role }}"
+                                    {{ in_array($role, (array) request('role', [])) ? 'checked' : '' }}
+                                    style="accent-color: #111B4C;"
+                                >
+                                <span>{{ ucwords($role) }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+
+                    <div class="filter-section">
+                        <div class="filter-section-title">Status</div>
+                        <label class="filter-checkbox-row">
+                            <input
+                                type="checkbox"
+                                name="status[]"
+                                value="1"
+                                {{ in_array('1', (array) request('status', [])) ? 'checked' : '' }}
+                                style="accent-color: #111B4C;"
+                            >
+                            <span>Active</span>
+                        </label>
+                        <label class="filter-checkbox-row">
+                            <input
+                                type="checkbox"
+                                name="status[]"
+                                value="0"
+                                {{ in_array('0', (array) request('status', [])) ? 'checked' : '' }}
+                                style="accent-color: #111B4C;"
+                            >
+                            <span>Non-active</span>
+                        </label>
+                    </div>
+
                 </x-button.filter>
 
                 {{-- Export --}}
@@ -51,6 +91,7 @@
                     <x-table.th>Lab</x-table.th>
                     <x-table.th>Username</x-table.th>
                     <x-table.th>Password</x-table.th>
+                    <x-table.th>Status</x-table.th>
                     <x-table.th align="center">Action</x-table.th>
                 </tr>
             </thead>
@@ -90,11 +131,19 @@
                             ********
                         </x-table.td>
 
+                        <x-table.td>
+                            @if ($user->status_user)
+                                <span class="panel-badge panel-badge-green">Active</span>
+                            @else
+                                <span class="panel-badge panel-badge-red">Non-active</span>
+                            @endif
+                        </x-table.td>
+
                         <x-table.td align="center">
                             <div class="flex items-center justify-center gap-1">
 
                                 {{-- detail --}}
-                                <x-table.action
+                                {{-- <x-table.action
                                     href="{{ route('users.show', $user->id) }}"
                                     variant="view"
                                     title="Detail"
@@ -104,7 +153,7 @@
                                         <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
                                         <circle cx="12" cy="12" r="3"/>
                                     </svg>
-                                </x-table.action>
+                                </x-table.action> --}}
 
                                 {{-- edit --}}
                                 <x-table.action

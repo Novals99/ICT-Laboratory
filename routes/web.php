@@ -10,6 +10,9 @@ use App\Http\Controllers\RequestLabController;
 use App\Http\Controllers\StaffLabController;
 use App\Http\Controllers\AssetLabController;
 use App\Http\Controllers\RequestItemController;
+use App\Http\Controllers\AssetLogController;
+
+
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -83,3 +86,9 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__ . '/auth.php';
+    Route::resource('requestitem', RequestItemController::class);
+});
+
+
+
+require __DIR__.'/auth.php';
