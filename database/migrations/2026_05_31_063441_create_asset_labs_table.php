@@ -15,7 +15,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('lab_id')->constrained('laboratories')->cascadeOnDelete();
             $table->foreignId('asset_id')->constrained()->cascadeOnDelete();
-            $table->integer('total_asset_lab');
+            $table->integer('total_good_lab')->default(0);
+            $table->integer('total_damaged_lab')->default(0);
+            $table->integer('total_loss_lab')->default(0);
+            $table->integer('total_asset_lab')->default(0);
             $table->timestamps();
         });
     }

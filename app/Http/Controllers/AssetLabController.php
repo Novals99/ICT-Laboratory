@@ -3,10 +3,47 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssetLab;
+use App\Models\Laboratory;
 use Illuminate\Http\Request;
 
 class AssetLabController extends Controller
 {
+    public function adjust(Request $request, Laboratory $laboratory, $assetId)
+    {
+        $field  = $request->input('field');
+        $action = $request->input('action');
+
+        $allowed = ['total_good_lab', 'total_damaged_lab', 'total_loss_lab'];
+        if (!in_array($field, $allowed)) abort(400);
+
+        $assetLab = AssetLab::where('lab_id', $laboratory->id)
+                            ->where('asset_id', $assetId)
+                            ->firstOrFail();
+
+        if ($action === 'increment') {
+            $assetLab->increment($field);
+        } elseif ($action === 'decrement' && $assetLab->$field > 0) {
+            $assetLab->decrement($field);
+        }
+
+        $assetLab->refresh();
+        $assetLab->update([
+            'total_asset_lab' => $assetLab->total_good_lab
+                               + $assetLab->total_damaged_lab
+                               + $assetLab->total_loss_lab,
+        ]);
+
+        return back()->with('success', 'Stok berhasil diperbarui.');
+    }
+
+    public function removeFromLab(Laboratory $laboratory, $assetId)
+    {
+        AssetLab::where('lab_id', $laboratory->id)
+                ->where('asset_id', $assetId)
+                ->delete();
+
+        return back()->with('success', 'Aset berhasil dihapus dari lab.');
+    }
     /**
      * Display a listing of the resource.
      */
