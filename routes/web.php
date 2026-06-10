@@ -101,7 +101,7 @@ require __DIR__ . '/auth.php';
         Route::post('/adjustment', [AssetLogController::class, 'storeAdjustment'])->name('adjustment');
     });
 
-});
+
 
 
 
