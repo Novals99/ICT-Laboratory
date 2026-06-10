@@ -5,9 +5,6 @@ namespace App\Providers;
 use App\Models\Laboratory;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\View;
-use App\Models\Laboratory;
-
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void {}

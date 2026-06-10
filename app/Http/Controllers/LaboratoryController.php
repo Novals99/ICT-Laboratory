@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Asset;
 use App\Models\Laboratory;
+use App\Models\AssetLab;
 use Illuminate\Http\Request;
 
 class LaboratoryController extends Controller
@@ -28,6 +29,8 @@ class LaboratoryController extends Controller
 
     public function show(Laboratory $laboratory)
     {
+        $user = auth()->user();
+
         $laboratory->load([
             'pcs'    => fn($q) => $q->orderBy('id'),
             'users',
@@ -38,14 +41,28 @@ class LaboratoryController extends Controller
         $totalInactive = $laboratory->pcs->where('status_pc', 'inactive')->count();
         $allAssets     = Asset::orderBy('asset_name')->get();
 
-        // Staff per role
         $pic        = $laboratory->users->firstWhere('role', 'pic');
         $admins     = $laboratory->users->where('role', 'admin')->values();
         $assistants = $laboratory->users->where('role', 'assistant')->values();
 
+        $myLabIds  = $user->labs()->pluck('laboratories.id')->toArray();
+        $canEdit   = $user->role === 'spv inventory' || in_array($laboratory->id, $myLabIds);
+
+        $pcComponents = AssetLab::where('lab_id', $laboratory->id)
+            ->whereHas('asset', fn($q) => $q->where('asset_category', 'component-pc'))
+            ->with('asset')
+            ->get()
+            ->map(fn($al) => [
+                'asset_lab_id' => $al->id,
+                'name'         => $al->asset->asset_name,
+                'stock'        => $al->total_good_lab,
+            ])
+            ->values();
+
         return view('pages.laboratory.show', compact(
             'laboratory', 'totalActive', 'totalInactive',
-            'allAssets', 'pic', 'admins', 'assistants'
+            'allAssets', 'pic', 'admins', 'assistants',
+            'pcComponents', 'canEdit'
         ));
     }
 
