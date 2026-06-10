@@ -19,7 +19,6 @@ return new class extends Migration
             $table->integer('total_good')->default(0);
             $table->integer('total_damaged')->default(0);
             $table->integer('total_loss')->default(0);
-            $table->date('asset_entry')->nullable(true);
             $table->timestamps();
         });
     }
