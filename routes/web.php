@@ -87,6 +87,20 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__ . '/auth.php';
     Route::resource('requestitem', RequestItemController::class);
+
+    Route::resource('assetlog', AssetLogController::class)
+        ->only(['index', 'show']);
+
+    Route::prefix('asset/{asset}/log')->name('assetlog.')->group(function () {
+        Route::post('/stock-in', [AssetLogController::class, 'storeStockIn'])->name('stock-in');
+        Route::post('/stock-out', [AssetLogController::class, 'storeStockOut'])->name('stock-out');
+        Route::post('/transfer', [AssetLogController::class, 'storeTransfer'])->name('transfer');
+        Route::post('/damaged', [AssetLogController::class, 'storeDamaged'])->name('damaged');
+        Route::post('/lost', [AssetLogController::class, 'storeLost'])->name('lost');
+        Route::post('/repaired', [AssetLogController::class, 'storeRepaired'])->name('repaired');
+        Route::post('/adjustment', [AssetLogController::class, 'storeAdjustment'])->name('adjustment');
+    });
+
 });
 
 
