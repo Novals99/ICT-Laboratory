@@ -8,24 +8,19 @@ use Illuminate\Database\Eloquent\Model;
 class Asset extends Model
 {
     use HasFactory;
-   public function assets()
-{
-    return $this->belongsToMany(
-        Asset::class,
-        'asset_labs',
-        'lab_id',
-        'asset_id'
-    )->withPivot([
-        'total_asset_lab'
-    ]);
-}
 
-    public function labs() {
-        return $this->belongsToMany(Laboratory::class, 'asset_labs');
-    }
+    protected $fillable = [
+        'asset_name',
+        'asset_category',
+        'total_asset',
+        'total_good',
+        'total_damaged',
+        'total_loss',
+        'asset_entry',
+    ];
 
-    public function assetlogs()
+    public function assets()
     {
-        return $this->hasMany(AssetLog::class);
+        //
     }
 }

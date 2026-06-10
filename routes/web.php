@@ -17,7 +17,8 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');    });
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+});
 
 
 Route::middleware('auth')->group(function () {
@@ -33,41 +34,44 @@ Route::middleware('auth')->group(function () {
 
     // Asset / Inventory
     Route::resource('asset', AssetController::class);
-//////////
+    //////////
     // Lab Request
-      Route::get('/requestlab', [RequestLabController::class, 'index'])
+    Route::get('/requestlab', [RequestLabController::class, 'index'])
         ->name('requestlab.index');
- 
+
     // Store — simpan request baru
     Route::post('/requestlab', [RequestLabController::class, 'store'])
         ->name('requestlab.store');
- 
+
     // Detail — return JSON untuk modal (AJAX)
     Route::get('/requestlab/{id}/detail', [RequestLabController::class, 'detail'])
         ->name('requestlab.detail');
- 
+
     // Update Status — Approved / Rejected dari modal
     Route::patch('/requestlab/{id}/status', [RequestLabController::class, 'updateStatus'])
         ->name('requestlab.status');
- 
+
     // Edit — form edit halaman terpisah
     Route::get('/requestlab/{id}/edit', [RequestLabController::class, 'edit'])
         ->name('requestlab.edit');
- 
+
     // Update — simpan perubahan
     Route::put('/requestlab/{id}', [RequestLabController::class, 'update'])
         ->name('requestlab.update');
- 
+
     // Destroy — hapus data
     Route::delete('/requestlab/{id}', [RequestLabController::class, 'destroy'])
         ->name('requestlab.destroy');
- 
- ////////////
+
+    Route::get('/requestlab/export/pdf', [RequestLabController::class, 'exportPdf'])
+        ->name('requestlab.export.pdf');
+
+    ////////////
 
     // Pivot tables
     Route::resource('stafflab', StaffLabController::class);
     Route::resource('assetlab', AssetLabController::class);
-    
+
     // PC nested
     Route::post('/laboratory/{laboratory}/pc', [PcController::class, 'store'])->name('pc.store');
     Route::put('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'update'])->name('pc.update');
@@ -76,6 +80,6 @@ Route::middleware('auth')->group(function () {
     // Asset Lab adjustment
     Route::post('/laboratory/{laboratory}/assetlab/{assetId}/adjust', [AssetLabController::class, 'adjust'])->name('lab.assetlab.adjust');
     Route::delete('/laboratory/{laboratory}/assetlab/{assetId}', [AssetLabController::class, 'removeFromLab'])->name('lab.assetlab.remove');
-    });
+});
 
 require __DIR__ . '/auth.php';
