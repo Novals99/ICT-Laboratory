@@ -13,7 +13,7 @@
     - Spacing yang generous (lebih ke arah refined minimalism)
     - Hover states yang halus
 --}}
-@extends('layouts.app')
+@extends('panel.content')
 
 @section('title', 'Activity Log')
 @section('header', 'Admin Dashboard')
