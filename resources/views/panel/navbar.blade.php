@@ -101,7 +101,7 @@
                 <div class="dropdown-divider"></div>
 
                 {{-- logout --}}
-                <form method="POST" action="#">
+                <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="dropdown-logout">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
