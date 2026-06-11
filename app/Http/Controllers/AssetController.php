@@ -58,7 +58,6 @@ class AssetController extends Controller
             'items.*.total_good' => ['required', 'integer', 'min:0'],
             'items.*.total_damaged' => ['required', 'integer', 'min:0'],
             'items.*.total_loss' => ['required', 'integer', 'min:0'],
-            'items.*.asset_entry' => ['nullable', 'date'],
             'items.*.source' => ['nullable', 'string', 'max:255'],
             'items.*.notes' => ['nullable', 'string'],
         ]);
@@ -66,7 +65,7 @@ class AssetController extends Controller
         foreach ($validated['items'] as $index => $item) {
             $totalPhysicalStock = $item['total_good'] + $item['total_damaged'];
 
-            if ($totalPhysicalStock > $item['total_asset']) {
+            if ($totalPhysicalStock !== (int) $item['total_asset']) {
                 return back()
                     ->withInput()
                     ->withErrors([
@@ -83,7 +82,6 @@ class AssetController extends Controller
                 'total_good' => $item['total_good'],
                 'total_damaged' => $item['total_damaged'],
                 'total_loss' => $item['total_loss'],
-                'asset_entry' => $item['asset_entry'] ?? null,
             ]);
 
             AssetLog::create([
@@ -91,8 +89,20 @@ class AssetController extends Controller
                 'user_id' => auth()->id(),
                 'type' => 'stock_in',
                 'quantity' => $item['total_asset'],
+
+                'before_total_asset' => 0,
+                'after_total_asset' => (int) $item['total_asset'],
+
+                'before_total_good' => 0,
+                'after_total_good' => (int) $item['total_good'],
+
+                'before_total_damaged' => 0,
+                'after_total_damaged' => (int) $item['total_damaged'],
+
+                'before_total_loss' => 0,
+                'after_total_loss' => (int) $item['total_loss'],
+
                 'source' => $item['source'] ?? null,
-                'log_date' => $item['asset_entry'] ?? now()->toDateString(),
                 'notes' => $item['notes'] ?? 'Initial asset stock.',
             ]);
         }
@@ -133,7 +143,7 @@ class AssetController extends Controller
             'total_good' => ['required', 'integer', 'min:0'],
             'total_damaged' => ['required', 'integer', 'min:0'],
             'total_loss' => ['required', 'integer', 'min:0'],
-            'asset_entry' => ['nullable', 'date'],
+            'source' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -159,7 +169,6 @@ class AssetController extends Controller
             'total_good' => $validated['total_good'],
             'total_damaged' => $validated['total_damaged'],
             'total_loss' => $validated['total_loss'],
-            'asset_entry' => $validated['asset_entry'] ?? null,
         ]);
 
         $stockChanged =
@@ -174,8 +183,20 @@ class AssetController extends Controller
                 'user_id' => auth()->id(),
                 'type' => 'adjustment',
                 'quantity' => $validated['total_asset'] - $oldTotalAsset,
-                'source' => null,
-                'log_date' => now()->toDateString(),
+
+                'before_total_asset' => $oldTotalAsset,
+                'after_total_asset' => (int) $validated['total_asset'],
+
+                'before_total_good' => $oldGood,
+                'after_total_good' => (int) $validated['total_good'],
+
+                'before_total_damaged' => $oldDamaged,
+                'after_total_damaged' => (int) $validated['total_damaged'],
+
+                'before_total_loss' => $oldLoss,
+                'after_total_loss' => (int) $validated['total_loss'],
+
+                'source' => $validated['source'] ?? null,
                 'notes' => $validated['notes'] ?? 'Asset stock updated.',
             ]);
         }

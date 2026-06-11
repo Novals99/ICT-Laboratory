@@ -181,3 +181,54 @@
     border-color: #3d4468;
     color: #94a3b8;
 }
+
+.filter-date-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.filter-date-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-date-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.filter-date-input {
+    width: 100%;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.filter-date-input:focus {
+    border-color: #111B4C;
+}
+
+.dark .filter-date-input {
+    background: #12151f;
+    border-color: #2d3148;
+    color: #cbd5e1;
+    color-scheme: dark;
+}
+
+.dark .filter-date-input:focus {
+    border-color: #3d4468;
+}

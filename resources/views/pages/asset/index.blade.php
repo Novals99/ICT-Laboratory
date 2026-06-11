@@ -83,7 +83,7 @@
                     <x-table.th>Good</x-table.th>
                     <x-table.th>Damaged</x-table.th>
                     <x-table.th>Loss</x-table.th>
-                    <x-table.th>Entry Date</x-table.th>
+                    {{-- <x-table.th>Entry Date</x-table.th> --}}
                     <x-table.th align="center">Action</x-table.th>
                 </tr>
             </thead>
@@ -128,9 +128,9 @@
                             {{ number_format($asset->total_loss) }}
                         </x-table.td>
 
-                        <x-table.td>
+                        {{-- <x-table.td>
                             {{ $asset->asset_entry ? \Carbon\Carbon::parse($asset->asset_entry)->format('d-m-Y') : '-' }}
-                        </x-table.td>
+                        </x-table.td> --}}
 
                         <x-table.td align="center">
                             <div class="flex items-center justify-center gap-1">

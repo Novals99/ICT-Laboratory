@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Laboratory;
 use App\Models\RequestLab;
+use App\Models\RequestItem;
 use App\Models\Asset;
 
 class DashboardController extends Controller
@@ -16,6 +17,7 @@ class DashboardController extends Controller
         if ($user->role === 'spv inventory') {
             return $this->spvDashboard();
         }
+        
 
         return $this->staffDashboard($user);
     }
