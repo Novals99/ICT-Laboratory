@@ -159,3 +159,82 @@
 .dark .panel-page-title {
     color: #f1f5f9;
 }
+
+/* pake ni buat badge aja woiii */
+.panel-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.panel-badge-green {
+    background: #dcfce7;
+    color: #16a34a;
+    border: 1px solid #16a34a;
+    
+}
+
+.dark .panel-badge-green {
+    background: #14532d40;
+    color: #4ade80;
+    border: 1px solid #4ade80;
+
+}
+
+.panel-badge-red {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #dc2626;
+}
+
+.dark .panel-badge-red {
+    background: #7f1d1d40;
+    color: #f87171;
+    border: 1px solid #f87171;
+
+}
+
+.panel-badge-blue {
+    background: #e0f2fe;
+    color: #0284c7;
+    border: 1px solid #0284c7;
+
+}
+
+.dark .panel-badge-blue {
+    background: #0369a135;
+    color: #38bdf8;
+    border: 1px solid #38bdf8;
+
+}
+
+.panel-badge-yellow {
+    background: #fef9c3;
+    color: #ca8a04;
+    border: 1px solid #ca8a04;
+
+}
+
+.dark .panel-badge-yellow {
+    background: #713f1235;
+    color: #fde047;
+    border: 1px solid #fde047;
+
+}
+
+.panel-badge-purple {
+    background: #f3e8ff;
+    color: #9333ea;
+    border: 1px solid #9333ea;
+
+}
+
+.dark .panel-badge-purple {
+    background: #581c8740;
+    color: #c084fc;
+    border: 1px solid #c084fc;
+
+}

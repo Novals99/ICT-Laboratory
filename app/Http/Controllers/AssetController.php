@@ -91,16 +91,16 @@ class AssetController extends Controller
                 'quantity' => $item['total_asset'],
 
                 'before_total_asset' => 0,
-                'after_total_asset' => $asset->total_asset,
+                'after_total_asset' => (int) $item['total_asset'],
 
                 'before_total_good' => 0,
-                'after_total_good' => $asset->total_good,
+                'after_total_good' => (int) $item['total_good'],
 
                 'before_total_damaged' => 0,
-                'after_total_damaged' => $asset->total_damaged,
+                'after_total_damaged' => (int) $item['total_damaged'],
 
                 'before_total_loss' => 0,
-                'after_total_loss' => $asset->total_loss,
+                'after_total_loss' => (int) $item['total_loss'],
 
                 'source' => $item['source'] ?? null,
                 'notes' => $item['notes'] ?? 'Initial asset stock.',
@@ -143,6 +143,7 @@ class AssetController extends Controller
             'total_good' => ['required', 'integer', 'min:0'],
             'total_damaged' => ['required', 'integer', 'min:0'],
             'total_loss' => ['required', 'integer', 'min:0'],
+            'source' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -184,18 +185,18 @@ class AssetController extends Controller
                 'quantity' => $validated['total_asset'] - $oldTotalAsset,
 
                 'before_total_asset' => $oldTotalAsset,
-                'after_total_asset' => $asset->total_asset,
+                'after_total_asset' => (int) $validated['total_asset'],
 
                 'before_total_good' => $oldGood,
-                'after_total_good' => $asset->total_good,
+                'after_total_good' => (int) $validated['total_good'],
 
                 'before_total_damaged' => $oldDamaged,
-                'after_total_damaged' => $asset->total_damaged,
+                'after_total_damaged' => (int) $validated['total_damaged'],
 
                 'before_total_loss' => $oldLoss,
-                'after_total_loss' => $asset->total_loss,
+                'after_total_loss' => (int) $validated['total_loss'],
 
-                'source' => null,
+                'source' => $validated['source'] ?? null,
                 'notes' => $validated['notes'] ?? 'Asset stock updated.',
             ]);
         }

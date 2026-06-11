@@ -17,7 +17,7 @@ class RequestLabController extends Controller
      */
     public function index()
     {
-        $requests = LabRequest::latest()->paginate(11);
+        $requests = RequestLab::latest()->paginate(11);
 
         return view('pages.dashboard.requestlab.index', compact('requests'));
     }
@@ -32,7 +32,7 @@ class RequestLabController extends Controller
     // ---------------------------------------------------------------
    public function detail($id)
 {
-    $labRequest = LabRequest::findOrFail($id);
+    $labRequest = RequestLab::findOrFail($id);
 
     $electronic = Asset::where('asset_category', 'electronic')
         ->get()
@@ -76,7 +76,7 @@ class RequestLabController extends Controller
             'status' => 'required|in:Approved,Rejected',
         ]);
 
-        $labRequest = LabRequest::findOrFail($id);
+        $labRequest = RequestLab::findOrFail($id);
         $labRequest->update([
             'status'      => $validated['status'],
             'approved_by' => auth()->id(),
@@ -94,7 +94,7 @@ class RequestLabController extends Controller
     {
         DB::beginTransaction();
         try {
-            $labRequest = LabRequest::findOrFail($id);
+            $labRequest = RequestLab::findOrFail($id);
             $labRequest->delete();
 
             DB::commit();
@@ -120,7 +120,7 @@ class RequestLabController extends Controller
             'status'        => 'nullable|in:Pending,Approved,Rejected',
         ]);
 
-        LabRequest::create([
+        RequestLab::create([
             'name'          => $validated['name'],
             'total_request' => $validated['total_request'],
             'request_date'  => $validated['request_date'],
@@ -137,7 +137,7 @@ class RequestLabController extends Controller
     // ---------------------------------------------------------------
     public function edit($id)
     {
-        $labRequest = LabRequest::findOrFail($id);
+        $labRequest = RequestLab::findOrFail($id);
         return view('pages.dashboard.requestlab.edit', compact('labRequest'));
     }
 
@@ -154,7 +154,7 @@ class RequestLabController extends Controller
             'status'        => 'nullable|in:Pending,Approved,Rejected',
         ]);
 
-        $labRequest = LabRequest::findOrFail($id);
+        $labRequest = RequestLab::findOrFail($id);
         $labRequest->update($validated);
 
         return redirect()->route('requestlab.index')

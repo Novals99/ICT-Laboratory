@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -13,15 +14,31 @@ class AssetLog extends Model
         'asset_id',
         'user_id',
         'type',
-        'qty_before',
-        'qty_after',
         'quantity',
+
         'from_lab_id',
         'to_lab_id',
-        'condition_before',
-        'condition_after',
+
+        'before_total_asset',
+        'after_total_asset',
+
+        'before_total_good',
+        'after_total_good',
+
+        'before_total_damaged',
+        'after_total_damaged',
+
+        'before_total_loss',
+        'after_total_loss',
+
+        'before_from_lab_stock',
+        'after_from_lab_stock',
+
+        'before_to_lab_stock',
+        'after_to_lab_stock',
+
         'source',
-        'notes'
+        'notes',
     ];
 
     public function asset() {
