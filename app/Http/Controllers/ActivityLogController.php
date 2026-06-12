@@ -3,19 +3,59 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ActivityLogController extends Controller
 {
-    public function index()
+     public function index()
     {
-        $logs = ActivityLog::latest()->paginate(10);
+    $search = request('search');
+    $role = request('role');
 
-        return view('pages.activity-log.index', [
-            'logs' => $logs,
-            'search' => '',
-            'startDate' => '',
-            'endDate' => '',
-            'role' => ''
-        ]);
+    $logs = ActivityLog::query()
+    ->with('user')
+
+    ->when($search, function ($query) use ($search) {
+        $query->where(function ($q) use ($search) {
+            $q->where('activity', 'like', "%{$search}%")
+              ->orWhereHas('user', function ($userQuery) use ($search) {
+                  $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('role', 'like', "%{$search}%");
+              });
+        });
+    })
+
+    ->when($role, function ($query) use ($role) {
+        $query->whereHas('user', function ($q) use ($role) {
+            $q->where('role', $role);
+        });
+    })
+
+    ->latest()
+    ->paginate(10)
+    ->withQueryString();
+
+    return view('pages.activity-log.index', [
+        'logs' => $logs,
+        'search' => $search,
+        'startDate' => '',
+        'endDate' => '',
+        'role' => ''
+    ]);
+    }
+
+    public function export()
+    {
+    $logs = ActivityLog::with('user')
+        ->latest()
+        ->get();
+
+    $pdf = Pdf::loadView(
+        'pages.activity-log.pdf',
+        compact('logs')
+    );
+
+    return $pdf->download('activity-log.pdf');
     }
 }
