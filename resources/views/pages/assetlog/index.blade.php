@@ -80,10 +80,12 @@
                             </x-button.filter>
 
                             {{-- export --}}
-                            <x-button.export
-                                   href="{{ route('assetlog.index', array_merge(request()->query(), ['export' => 'excel'])) }}">
-                                   Export
-                            </x-button.export>
+                            <x-button.export.export
+                                   menuId="assetlogExportMenu"
+                                   pdfUrl="{{ route('assetlog.export', 'pdf') }}"
+                                   excelUrl="{{ route('assetlog.export', 'excel') }}"
+                                   csvUrl="{{ route('assetlog.export', 'csv') }}"
+                            />
                      </div>
               </div>
 

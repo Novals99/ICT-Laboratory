@@ -96,6 +96,7 @@ require __DIR__ . '/auth.php';
 
     Route::resource('assetlog', AssetLogController::class)
         ->only(['index', 'show']);
+    Route::get('/assetlog/export/{format}', [AssetLogController::class, 'export'])->name('assetlog.export');
 
     Route::prefix('asset/{asset}/log')->name('assetlog.')->group(function () {
         Route::post('/stock-in', [AssetLogController::class, 'storeStockIn'])->name('stock-in');
