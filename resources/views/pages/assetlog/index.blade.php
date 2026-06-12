@@ -49,7 +49,9 @@
                                                  'stock_out' => 'Stock Out',
                                                  'transfer' => 'Transfer',
                                                  'adjustment' => 'Adjustment',
-                                                 'status_change' => 'Status Change',
+                                                 'damaged' => 'Damaged',
+                                                 'lost' => 'Lost',
+                                                 'repaired' => 'Repaired',
                                           ];
                                    @endphp
                                    @foreach ($types as $value => $label)
@@ -145,7 +147,9 @@
                                                         'stock_out' => 'Stock Out',
                                                         'transfer' => 'Transfer',
                                                         'adjustment' => 'Adjustment',
-                                                        'status_change' => 'Status Change',
+                                                        'damaged' => 'Damaged',
+                                                        'lost' => 'Lost',
+                                                        'repaired' => 'Repaired',
                                                         default => ucwords(str_replace('_', ' ', $log->type)),
                                                  };
 
@@ -154,7 +158,9 @@
                                                         'stock_out' => 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-900',
                                                         'transfer' => 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900',
                                                         'adjustment' => 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/30 dark:text-yellow-300 dark:border-yellow-900',
-                                                        'status_change' => 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-900',
+                                                        'damaged' => 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-900',
+                                                        'lost' => 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-900',
+                                                        'repaired' => 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/30 dark:text-teal-300 dark:border-teal-900',
                                                         default => 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
                                                  };
                                           @endphp
