@@ -70,7 +70,7 @@ class DashboardController extends Controller
     private function staffDashboard(User $user)
     {
         $laboratories = $user->labs()
-            ->with('pcs')
+            ->with(['pcs', 'users'])
             ->orderBy('lab_name')
             ->get();
 
@@ -88,6 +88,8 @@ class DashboardController extends Controller
             ->where('status_pc', 'inactive')
             ->count();
 
+        $totalPc = $totalPcActive + $totalPcInactive;
+
         $totalRequestLab = RequestLab::whereIn('lab_id', $labIds)->count();
 
         $chartData = $laboratories->map(function ($lab) {
@@ -97,6 +99,13 @@ class DashboardController extends Controller
                 'inactive' => $lab->pcs->where('status_pc', 'inactive')->count(),
             ];
         })->values();
+
+        // Ambil semua user unik dari lab-lab yang dimiliki staff
+        $labUsers = $laboratories->flatMap(function ($lab) {
+            return $lab->users;
+        })->unique('id')->sortBy('name')->values();
+
+        $totalUsers = $labUsers->count();
 
         $recentRequests = RequestLab::with('user')
             ->withSum('request_items as total_requested_items', 'total_request')
@@ -111,8 +120,11 @@ class DashboardController extends Controller
             'totalLaboratory',
             'totalPcActive',
             'totalPcInactive',
+            'totalPc',
             'totalRequestLab',
             'chartData',
+            'totalUsers',
+            'labUsers',
             'recentRequests',
         ));
     }

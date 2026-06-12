@@ -45,13 +45,30 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
         </div>
         @endif
 
+        @if(session('error'))
+        <div style="margin:0 24px 12px; background:#fee2e2; color:#991b1b; border-radius:8px; padding:10px 16px; font-size:13px;">
+            {{ session('error') }}
+        </div>
+        @endif
+
+        @if($isSPV)
+        <div style="display:flex; align-items:center; gap:12px; padding:0 24px 12px;">
+            <button type="button" onclick="submitBulkDelete()"
+                    style="background:#dc2626; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:600;">
+                🗑 Hapus Terpilih
+            </button>
+        </div>
+        @endif
+
         <div class="table-wrap">
             <table class="db-table" id="labTable">
                 <thead>
                     <tr>
-                        <th class="th-check">
-                            <input type="checkbox" class="db-checkbox" id="checkAll" onclick="toggleAll(this)">
+                        @if($isSPV)
+                        <th class="th-check" style="width:40px;">
+                            <input type="checkbox" class="db-checkbox" id="checkAll" onchange="toggleAll(this)">
                         </th>
+                        @endif
                         <th>Name</th>
                         <th>PC Capacity</th>
                         <th>Admin</th>
@@ -64,12 +81,14 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
                     @forelse($laboratories as $lab)
                     @php
                         $isMyLab   = in_array($lab->id, $myLabIds);
-                        $adminUser = $lab->users->first();
+                        $adminUser = $lab->users->firstWhere('role', 'admin');
                     @endphp
                     <tr>
+                        @if($isSPV)
                         <td class="th-check">
-                            <input type="checkbox" class="db-checkbox row-check">
+                            <input type="checkbox" name="ids[]" value="{{ $lab->id }}" class="db-checkbox row-check" form="bulkDeleteForm">
                         </td>
+                        @endif
                         <td style="font-weight:600;">{{ $lab->lab_name }}</td>
                         <td>{{ $lab->capacity }} PC</td>
                         <td>{{ $adminUser?->name ?? '-' }}</td>
@@ -78,7 +97,6 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
                         <td>
                             <div class="action-btns">
                                 @if($isSPV || $isMyLab)
-                                    {{-- Edit (pencil → ke show page) --}}
                                     <a href="{{ route('laboratory.show', $lab->id) }}"
                                        class="action-btn action-edit" title="Edit">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -87,7 +105,6 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                         </svg>
                                     </a>
-                                    {{-- Delete --}}
                                     <form method="POST" action="{{ route('laboratory.destroy', $lab->id) }}"
                                           onsubmit="return confirm('Hapus lab {{ addslashes($lab->lab_name) }}?')"
                                           style="display:inline">
@@ -103,7 +120,6 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
                                         </button>
                                     </form>
                                 @else
-                                    {{-- View saja untuk lab lain (eye → ke show page) --}}
                                     <a href="{{ route('laboratory.show', $lab->id) }}"
                                        class="action-btn" title="View" style="color:#6b7280;">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -118,7 +134,7 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" style="text-align:center; padding:40px; color:#9ca3af; font-size:13px;">
+                        <td colspan="{{ $isSPV ? 7 : 6 }}" style="text-align:center; padding:40px; color:#9ca3af; font-size:13px;">
                             Belum ada laboratorium
                         </td>
                     </tr>
@@ -134,6 +150,13 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
         @endif
     </div>
 </div>
+
+{{-- Form bulk delete tersembunyi --}}
+@if($isSPV)
+<form id="bulkDeleteForm" method="POST" action="{{ route('laboratory.bulkDestroy') }}" style="display:none;">
+    @csrf @method('DELETE')
+</form>
+@endif
 
 {{-- ══ MODAL CREATE (SPV only) ══ --}}
 @if($isSPV)
@@ -239,6 +262,31 @@ function toggleAll(m) {
     document.querySelectorAll('.row-check').forEach(cb => cb.checked = m.checked);
 }
 
+function submitBulkDelete() {
+    const checked = document.querySelectorAll('.row-check:checked');
+    if (checked.length === 0) {
+        alert('Pilih minimal satu lab.');
+        return;
+    }
+    if (!confirm('Hapus ' + checked.length + ' lab yang dipilih? Semua asset dan PC akan dikembalikan ke stok.')) {
+        return;
+    }
+    
+    const form = document.getElementById('bulkDeleteForm');
+    // Hapus input lama
+    form.querySelectorAll('input[name="ids[]"]').forEach(i => i.remove());
+    // Tambah input baru
+    checked.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    form.submit();
+}
+
 @if($isSPV)
 // Create Modal
 function openCreateModal() {
@@ -293,7 +341,7 @@ function buildCreatePcList(cap) {
                 </div>
                 ${['ram','ssd','motherboard','vga','cpu_fan','powersupply'].map(f => `
                 <div>
-                    <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">${f.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase())}</label>
+                    <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">${f.replace('_',' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</label>
                     <input type="text" name="pcs[${i}][${f}]"
                            style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
                 </div>`).join('')}

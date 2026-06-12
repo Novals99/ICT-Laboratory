@@ -14,6 +14,8 @@ class LaboratoryController extends Controller
 {
     $user = Auth::user();
 
+        $user = auth()->user();
+
     $laboratories = Laboratory::withCount([
         'pcs as total_pc_active' => fn($q) => $q->where('status_pc', 'active'),
         'pcs as total_pc_inactive' => fn($q) => $q->where('status_pc', 'inactive'),
@@ -100,14 +102,37 @@ class LaboratoryController extends Controller
             ]));
         }
 
+        // ── SYNC ASSET KE LAB + KURANGI STOK SPV ──
         if (!empty($validated['lab_assets'])) {
             $sync = [];
             foreach ($validated['lab_assets'] as $a) {
                 if (!empty($a['asset_id'])) {
-                    $sync[$a['asset_id']] = ['total_asset_lab' => $a['quantity'] ?? 0];
+                    $asset = Asset::find($a['asset_id']);
+                    $qty   = $a['quantity'] ?? 0;
+
+                    if ($asset && $qty > 0) {
+                        if ($asset->total_good < $qty) {
+                            return back()
+                                ->withInput()
+                                ->withErrors(['lab_assets' => "Stok good untuk {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good})."]);
+                        }
+
+                        $asset->decrement('total_good', $qty);
+                        $asset->refresh();
+                        $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
+
+                        $sync[$a['asset_id']] = [
+                            'total_asset_lab'     => $qty,
+                            'total_good_lab'      => $qty,
+                            'total_damaged_lab'   => 0,
+                            'total_loss_lab'      => 0,
+                        ];
+                    }
                 }
             }
-            if ($sync) $lab->assets()->sync($sync);
+            if ($sync) {
+                $lab->assets()->sync($sync);
+            }
         }
 
         return redirect()->route('laboratory.index')
@@ -158,13 +183,76 @@ class LaboratoryController extends Controller
             $laboratory->pcs()->whereNotIn('id', $keepIds)->delete();
         }
 
+        // ── SYNC ASSET + SESUAIKAN STOK SPV ──
         if (isset($validated['lab_assets'])) {
+            $existingInLab = $laboratory->assets()->get()->keyBy('id');
             $sync = [];
+
             foreach ($validated['lab_assets'] as $a) {
                 if (!empty($a['asset_id'])) {
-                    $sync[$a['asset_id']] = ['total_asset_lab' => $a['quantity'] ?? 0];
+                    $asset   = Asset::find($a['asset_id']);
+                    $qty     = $a['quantity'] ?? 0;
+                    $oldQty  = $existingInLab->has($a['asset_id'])
+                        ? $existingInLab[$a['asset_id']]->pivot->total_good_lab
+                        : 0;
+
+                    if ($asset) {
+                        if ($qty > $oldQty) {
+                            $diff = $qty - $oldQty;
+                            if ($asset->total_good < $diff) {
+                                return back()
+                                    ->withInput()
+                                    ->withErrors(['lab_assets' => "Stok good untuk {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good})."]);
+                            }
+                            $asset->decrement('total_good', $diff);
+                            $asset->refresh();
+                            $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
+                        } elseif ($qty < $oldQty) {
+                            $diff = $oldQty - $qty;
+                            $asset->increment('total_good', $diff);
+                            $asset->refresh();
+                            $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
+                        }
+
+                        if ($qty > 0) {
+                            $sync[$a['asset_id']] = [
+                                'total_asset_lab'     => $qty
+                                    + ($existingInLab->has($a['asset_id']) ? $existingInLab[$a['asset_id']]->pivot->total_damaged_lab : 0)
+                                    + ($existingInLab->has($a['asset_id']) ? $existingInLab[$a['asset_id']]->pivot->total_loss_lab : 0),
+                                'total_good_lab'      => $qty,
+                                'total_damaged_lab'   => $existingInLab->has($a['asset_id'])
+                                    ? $existingInLab[$a['asset_id']]->pivot->total_damaged_lab
+                                    : 0,
+                                'total_loss_lab'      => $existingInLab->has($a['asset_id'])
+                                    ? $existingInLab[$a['asset_id']]->pivot->total_loss_lab
+                                    : 0,
+                            ];
+                        }
+                    }
                 }
             }
+
+            // Asset yang dihapus dari form → balikin semua kondisi ke SPV
+            $newAssetIds = collect($validated['lab_assets'])->pluck('asset_id')->filter()->toArray();
+            foreach ($existingInLab as $assetId => $assetLab) {
+                if (!in_array($assetId, $newAssetIds)) {
+                    $asset = Asset::find($assetId);
+                    if ($asset) {
+                        if ($assetLab->pivot->total_good_lab > 0) {
+                            $asset->increment('total_good', $assetLab->pivot->total_good_lab);
+                        }
+                        if ($assetLab->pivot->total_damaged_lab > 0) {
+                            $asset->increment('total_damaged', $assetLab->pivot->total_damaged_lab);
+                        }
+                        if ($assetLab->pivot->total_loss_lab > 0) {
+                            $asset->increment('total_loss', $assetLab->pivot->total_loss_lab);
+                        }
+                        $asset->refresh();
+                        $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
+                    }
+                }
+            }
+
             $laboratory->assets()->sync($sync);
         }
 
@@ -174,8 +262,104 @@ class LaboratoryController extends Controller
 
     public function destroy(Laboratory $laboratory)
     {
+        // 1. Kembalikan component PC ke stok asset_lab
+        foreach ($laboratory->pcs as $pc) {
+            $components = array_filter([
+                $pc->processor, $pc->ram, $pc->ssd, $pc->motherboard,
+                $pc->vga, $pc->cpu_fan, $pc->powersupply
+            ]);
+            foreach ($components as $name) {
+                $al = AssetLab::where('lab_id', $laboratory->id)
+                    ->whereHas('asset', function ($q) use ($name) {
+                        $q->where('asset_category', 'component-pc')
+                          ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)]);
+                    })
+                    ->first();
+                if ($al) {
+                    $al->increment('total_good_lab');
+                    $al->update([
+                        'total_asset_lab' => $al->total_good_lab + $al->total_damaged_lab + $al->total_loss_lab
+                    ]);
+                }
+            }
+        }
+
+        // 2. Kembalikan asset lab ke SPV sesuai kondisi (good/damaged/loss)
+        foreach ($laboratory->assets as $asset) {
+            $pivot = $asset->pivot;
+            if ($pivot->total_good_lab > 0) {
+                $asset->increment('total_good', $pivot->total_good_lab);
+            }
+            if ($pivot->total_damaged_lab > 0) {
+                $asset->increment('total_damaged', $pivot->total_damaged_lab);
+            }
+            if ($pivot->total_loss_lab > 0) {
+                $asset->increment('total_loss', $pivot->total_loss_lab);
+            }
+            $asset->refresh();
+            $asset->update([
+                'total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss
+            ]);
+        }
+
         $laboratory->delete();
+
         return redirect()->route('laboratory.index')
             ->with('success', "Lab {$laboratory->lab_name} berhasil dihapus.");
+    }
+
+        public function bulkDestroy(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (empty($ids)) {
+            return back()->with('error', 'Pilih minimal satu lab.');
+        }
+
+        $labs = Laboratory::whereIn('id', $ids)->get();
+        foreach ($labs as $lab) {
+            // Balikin component PC ke stok asset_lab
+            foreach ($lab->pcs as $pc) {
+                $components = array_filter([
+                    $pc->processor, $pc->ram, $pc->ssd, $pc->motherboard,
+                    $pc->vga, $pc->cpu_fan, $pc->powersupply
+                ]);
+                foreach ($components as $name) {
+                    $al = AssetLab::where('lab_id', $lab->id)
+                        ->whereHas('asset', function ($q) use ($name) {
+                            $q->where('asset_category', 'component-pc')
+                              ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)]);
+                        })
+                        ->first();
+                    if ($al) {
+                        $al->increment('total_good_lab');
+                        $al->update([
+                            'total_asset_lab' => $al->total_good_lab + $al->total_damaged_lab + $al->total_loss_lab
+                        ]);
+                    }
+                }
+            }
+
+            // Balikin asset ke SPV
+            foreach ($lab->assets as $asset) {
+                $pivot = $asset->pivot;
+                if ($pivot->total_good_lab > 0) {
+                    $asset->increment('total_good', $pivot->total_good_lab);
+                }
+                if ($pivot->total_damaged_lab > 0) {
+                    $asset->increment('total_damaged', $pivot->total_damaged_lab);
+                }
+                if ($pivot->total_loss_lab > 0) {
+                    $asset->increment('total_loss', $pivot->total_loss_lab);
+                }
+                $asset->refresh();
+                $asset->update([
+                    'total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss
+                ]);
+            }
+
+            $lab->delete();
+        }
+
+        return back()->with('success', count($ids) . ' lab berhasil dihapus.');
     }
 }

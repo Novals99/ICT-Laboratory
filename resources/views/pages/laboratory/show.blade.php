@@ -4,6 +4,7 @@
 @section('content')
 
 @php
+$isSPV = auth()->user()->role === 'spv inventory';
 $electronicAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'electronic')->values();
 $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'electronic')->values();
 $existingElectric    = $laboratory->assets->filter(fn($a) => $a->asset_category === 'electronic')->values();
@@ -50,23 +51,17 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                 @endforelse
             </div>
         </div>
-        <div style="display:flex; gap:8px; flex-shrink:0;">
-            @if($canEdit)
-            <button onclick="openEditLabModal()"
-                    style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:500; color:#374151;">
-                Edit Lab
-            </button>
-            @endif
-            <a href="{{ route('laboratory.index') }}"
-               style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:8px 16px; font-size:13px; text-decoration:none; color:#374151; font-weight:500;">
-                ← Back
-            </a>
-        </div>
     </div>
 
     @if(session('success'))
     <div style="background:#dcfce7; color:#166534; border-radius:8px; padding:10px 16px; font-size:13px;">
         {{ session('success') }}
+    </div>
+    @endif
+
+    @if(session('error'))
+    <div style="background:#fee2e2; color:#991b1b; border-radius:8px; padding:10px 16px; font-size:13px;">
+        {{ session('error') }}
     </div>
     @endif
 
@@ -174,7 +169,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
     <div id="section-asset" class="db-card" style="display:none; padding:0; overflow:hidden;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px 14px; border-bottom:1px solid #f3f4f6;">
             <h3 style="font-size:15px; font-weight:700; color:#111827; margin:0;">Asset Information</h3>
-            @if($canEdit)
+            @if($isSPV)
             <button onclick="openAddAssetModal()"
                     style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:600;">
                 + Add Asset
@@ -452,131 +447,6 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
         </form>
     </div>
 </div>
-
-{{-- ══ MODAL EDIT LAB (3 steps) ══ --}}
-<div id="modal-edit-lab" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50; align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:16px; width:100%; max-width:560px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15);">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid #e5e7eb;">
-            <h3 style="font-size:16px; font-weight:700; color:#111827; margin:0;">Edit Laboratory</h3>
-            <button onclick="closeEditLabModal()" style="background:none; border:none; cursor:pointer; color:#9ca3af; font-size:22px;">&times;</button>
-        </div>
-        <div style="display:flex; padding:16px 24px 0; gap:6px;">
-            <div id="elab-bar-1" style="flex:1; height:4px; border-radius:2px; background:#111B4C;"></div>
-            <div id="elab-bar-2" style="flex:1; height:4px; border-radius:2px; background:#e5e7eb;"></div>
-            <div id="elab-bar-3" style="flex:1; height:4px; border-radius:2px; background:#e5e7eb;"></div>
-        </div>
-        <form method="POST" action="{{ route('laboratory.update', $laboratory->id) }}" id="editLabForm">
-            @csrf @method('PUT')
-
-            <div id="elab-step-1" style="padding:24px;">
-                <h4 style="font-size:15px; font-weight:600; color:#374151; margin:0 0 20px; text-align:center;">General Information</h4>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">Laboratory Name:</label>
-                    <input type="text" name="lab_name" id="elab_name" value="{{ $laboratory->lab_name }}"
-                           style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:14px; outline:none; box-sizing:border-box;" required>
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">PC Capacity:</label>
-                    <input type="number" name="capacity" id="elab_capacity" value="{{ $laboratory->capacity }}" min="1"
-                           style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:14px; outline:none; box-sizing:border-box;" required>
-                </div>
-                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
-                    <button type="button" onclick="closeEditLabModal()"
-                            style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
-                    <button type="button" onclick="elabGoStep(2)"
-                            style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Next</button>
-                </div>
-            </div>
-
-            <div id="elab-step-2" style="display:none; padding:24px; max-height:55vh; overflow-y:auto;">
-                <h4 style="font-size:15px; font-weight:600; color:#374151; margin:0 0 16px; text-align:center;">PC Information</h4>
-                <div id="elab-pc-list"></div>
-                <div style="display:flex; justify-content:space-between; gap:8px; margin-top:20px;">
-                    <button type="button" onclick="elabGoStep(1)"
-                            style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Back</button>
-                    <button type="button" onclick="elabGoStep(3)"
-                            style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Next</button>
-                </div>
-            </div>
-
-            <div id="elab-step-3" style="display:none; padding:24px; max-height:55vh; overflow-y:auto;">
-                <h4 style="font-size:15px; font-weight:600; color:#374151; margin:0 0 16px; text-align:center;">Asset Information</h4>
-                <div style="border:1px solid #e5e7eb; border-radius:10px; margin-bottom:12px; overflow:hidden;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#f9fafb; border-bottom:1px solid #e5e7eb;">
-                        <span style="font-size:13px; font-weight:600; color:#374151;">Electronic Category</span>
-                        <button type="button" onclick="addAssetRow('electronic')"
-                                style="background:#111B4C; color:#fff; border:none; border-radius:6px; padding:5px 12px; font-size:13px; cursor:pointer;">+</button>
-                    </div>
-                    <div id="elab-electronic-rows" style="padding:12px; display:flex; flex-direction:column; gap:10px;">
-                        @foreach($existingElectric as $idx => $asset)
-                        <div class="asset-row" style="border:1px solid #e5e7eb; border-radius:8px; padding:12px; position:relative;">
-                            <button type="button" onclick="removeAssetRow(this)"
-                                    style="position:absolute; top:6px; right:8px; background:none; border:none; cursor:pointer; color:#9ca3af; font-size:16px;">×</button>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                                <div>
-                                    <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">Asset Name:</label>
-                                    <select name="lab_assets[e{{ $idx }}][asset_id]"
-                                            style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
-                                        <option value="">Choose asset...</option>
-                                        @foreach($electronicAssets as $a)
-                                        <option value="{{ $a->id }}" {{ $a->id == $asset->id ? 'selected' : '' }}>{{ $a->asset_name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">Quantity:</label>
-                                    <input type="number" name="lab_assets[e{{ $idx }}][quantity]"
-                                           value="{{ $asset->pivot->total_asset_lab }}" min="0"
-                                           style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
-                                </div>
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-                <div style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#f9fafb; border-bottom:1px solid #e5e7eb;">
-                        <span style="font-size:13px; font-weight:600; color:#374151;">Non-Electronic Category</span>
-                        <button type="button" onclick="addAssetRow('non-electronic')"
-                                style="background:#111B4C; color:#fff; border:none; border-radius:6px; padding:5px 12px; font-size:13px; cursor:pointer;">+</button>
-                    </div>
-                    <div id="elab-non-electronic-rows" style="padding:12px; display:flex; flex-direction:column; gap:10px;">
-                        @foreach($existingNonElectric as $idx => $asset)
-                        <div class="asset-row" style="border:1px solid #e5e7eb; border-radius:8px; padding:12px; position:relative;">
-                            <button type="button" onclick="removeAssetRow(this)"
-                                    style="position:absolute; top:6px; right:8px; background:none; border:none; cursor:pointer; color:#9ca3af; font-size:16px;">×</button>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                                <div>
-                                    <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">Asset Name:</label>
-                                    <select name="lab_assets[ne{{ $idx }}][asset_id]"
-                                            style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
-                                        <option value="">Choose asset...</option>
-                                        @foreach($nonElectronicAssets as $a)
-                                        <option value="{{ $a->id }}" {{ $a->id == $asset->id ? 'selected' : '' }}>{{ $a->asset_name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">Quantity:</label>
-                                    <input type="number" name="lab_assets[ne{{ $idx }}][quantity]"
-                                           value="{{ $asset->pivot->total_asset_lab }}" min="0"
-                                           style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
-                                </div>
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-                <div style="display:flex; justify-content:space-between; gap:8px; margin-top:20px;">
-                    <button type="button" onclick="elabGoStep(2)"
-                            style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Back</button>
-                    <button type="submit"
-                            style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Update</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
 @endif
 
 @endsection
@@ -597,6 +467,13 @@ function showSection(s) {
     document.getElementById('section-pc').style.display    = s === 'pc'    ? 'block' : 'none';
     document.getElementById('section-asset').style.display = s === 'asset' ? 'block' : 'none';
 }
+
+// ── Auto-show section after redirect ──
+@if(session('section') === 'asset')
+    showSection('asset');
+@elseif(session('section') === 'pc')
+    showSection('pc');
+@endif
 
 @if($canEdit)
 // ── Add PC ──
@@ -639,7 +516,6 @@ function showDropdown(field) {
 
     dropdown.innerHTML = '';
 
-    // Empty option
     const emptyOpt = document.createElement('div');
     emptyOpt.textContent = '— Kosongkan / Ketik Manual —';
     emptyOpt.style.cssText = 'padding:8px 12px; font-size:13px; cursor:pointer; color:#9ca3af; border-bottom:1px solid #f3f4f6;';
@@ -680,7 +556,6 @@ document.addEventListener('click', e => {
         const search   = document.getElementById(`epc_${f}_search`);
         const dropdown = document.getElementById(`epc_${f}_dropdown`);
         if (search && dropdown && !search.contains(e.target) && !dropdown.contains(e.target)) {
-            // Sync hidden input with search text before closing
             if (dropdown.style.display !== 'none') {
                 document.getElementById(`epc_${f}_val`).value = search.value;
                 dropdown.style.display = 'none';
@@ -694,91 +569,6 @@ function openAddAssetModal()  { document.getElementById('modal-add-asset').style
 function closeAddAssetModal() { document.getElementById('modal-add-asset').style.display = 'none'; }
 document.getElementById('modal-add-asset').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAddAssetModal();
-});
-
-// ── Edit Lab ──
-function openEditLabModal() { document.getElementById('modal-edit-lab').style.display='flex'; elabGoStep(1); }
-function closeEditLabModal(){ document.getElementById('modal-edit-lab').style.display='none'; }
-function elabGoStep(step) {
-    [1,2,3].forEach(s => {
-        document.getElementById(`elab-step-${s}`).style.display = s===step ? 'block' : 'none';
-        document.getElementById(`elab-bar-${s}`).style.background = s<step ? '#98083D' : s===step ? '#111B4C' : '#e5e7eb';
-    });
-    if (step===2) {
-        const cap = parseInt(document.getElementById('elab_capacity').value);
-        if (!cap||cap<1) { alert('Isi kapasitas terlebih dahulu.'); elabGoStep(1); return; }
-        buildElabPcList(cap);
-    }
-}
-function buildElabPcList(cap) {
-    const c = document.getElementById('elab-pc-list');
-    c.innerHTML = '';
-    for (let i=0; i<cap; i++) {
-        const pc = existingPcs[i] || null;
-        c.innerHTML += `
-        <details style="border:1px solid #e5e7eb; border-radius:10px; margin-bottom:10px;" ${i===0?'open':''}>
-            <summary style="padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; background:#f9fafb; display:flex; justify-content:space-between;">
-                PC-${String(i).padStart(2,'0')}
-                ${!pc?'<span style="font-size:11px;background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:4px;">New</span>':''}
-            </summary>
-            <div style="padding:14px; display:grid; gap:10px;">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div>
-                        <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">Type</label>
-                        <select name="pcs[${i}][type_pc]" style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px;">
-                            <option value="mahasiswa" ${pc?.type_pc==='mahasiswa'?'selected':''}>Mahasiswa</option>
-                            <option value="dosen" ${pc?.type_pc==='dosen'?'selected':''}>Dosen</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">Status</label>
-                        <select name="pcs[${i}][status_pc]" style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px;">
-                            <option value="active" ${!pc||pc.status_pc==='active'?'selected':''}>Active</option>
-                            <option value="inactive" ${pc?.status_pc==='inactive'?'selected':''}>Inactive</option>
-                        </select>
-                    </div>
-                </div>
-                ${['processor','ram','ssd','motherboard','vga','cpu_fan','powersupply'].map(f=>`
-                <div>
-                    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">${f.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase())}</label>
-                    <input type="text" name="pcs[${i}][${f}]" value="${pc?.[f]??''}"
-                           style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
-                </div>`).join('')}
-                ${pc?`<input type="hidden" name="pcs[${i}][id]" value="${pc.id}">`:''}
-            </div>
-        </details>`;
-    }
-}
-function addAssetRow(type) {
-    const idx = assetCounter++;
-    const container = document.getElementById(type==='electronic' ? 'elab-electronic-rows' : 'elab-non-electronic-rows');
-    const options   = type==='electronic' ? electronicOptions : nonElectronicOptions;
-    const div = document.createElement('div');
-    div.className='asset-row';
-    div.style.cssText='border:1px solid #e5e7eb;border-radius:8px;padding:12px;position:relative;';
-    div.innerHTML=`
-        <button type="button" onclick="removeAssetRow(this)"
-                style="position:absolute;top:6px;right:8px;background:none;border:none;cursor:pointer;color:#9ca3af;font-size:16px;">×</button>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div>
-                <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Asset Name:</label>
-                <select name="lab_assets[${idx}][asset_id]"
-                        style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
-                    <option value="">Choose asset...</option>
-                    ${options.map(o=>`<option value="${o.id}">${o.name}</option>`).join('')}
-                </select>
-            </div>
-            <div>
-                <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Quantity:</label>
-                <input type="number" name="lab_assets[${idx}][quantity]" value="0" min="0"
-                       style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
-            </div>
-        </div>`;
-    container.appendChild(div);
-}
-function removeAssetRow(btn) { btn.closest('.asset-row').remove(); }
-document.getElementById('modal-edit-lab').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeEditLabModal();
 });
 @endif
 </script>
