@@ -13,28 +13,42 @@ class AssetLog extends Model
         'asset_id',
         'user_id',
         'type',
-        'qty_before',
-        'qty_after',
         'quantity',
         'from_lab_id',
         'to_lab_id',
-        'condition_before',
-        'condition_after',
+        'before_total_asset',
+        'after_total_asset',
+        'before_total_good',
+        'after_total_good',
+        'before_total_damaged',
+        'after_total_damaged',
+        'before_total_loss',
+        'after_total_loss',
+        'before_from_lab_stock',
+        'after_from_lab_stock',
+        'before_to_lab_stock',
+        'after_to_lab_stock',
         'source',
-        'notes'
+        'notes',
     ];
 
-    public function asset() {
+    public function asset()
+    {
         return $this->belongsTo(Asset::class, 'asset_id');
     }
-    public function user() {
+
+    public function user()
+    {
         return $this->belongsTo(User::class, 'user_id');
     }
-    public function fromLab() {
+
+    public function fromLab()
+    {
         return $this->belongsTo(Laboratory::class, 'from_lab_id');
     }
-    public function toLab() {
+
+    public function toLab()
+    {
         return $this->belongsTo(Laboratory::class, 'to_lab_id');
     }
-
 }
