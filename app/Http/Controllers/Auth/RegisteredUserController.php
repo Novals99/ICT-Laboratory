@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -32,14 +33,21 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'nim' => ['required', 'string', 'max:10', 'unique:users,nim'],
+            'username' => ['required', 'string', 'max:100', 'unique:users,username'],
+            'role' => ['required', Rule::in(['spv inventory', 'pic', 'admin', 'assistant'])],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
             'name' => $request->name,
+            'nim' => $request->nim,
+            'username' => $request->username,
+            'role' => $request->role,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'status_user' => true,
         ]);
 
         event(new Registered($user));
