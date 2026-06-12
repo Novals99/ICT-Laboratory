@@ -145,7 +145,7 @@
                         </td>
                         <td>
                             <div class="action-btns">
-                                <a href="{{ route('lab-request.edit', $req->id) }}"
+                                <a href="{{ route('requestlab.edit', $req->id) }}"
                                    class="action-btn action-edit" title="Edit">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -154,7 +154,7 @@
                                     </svg>
                                 </a>
                                 <form method="POST"
-                                      action="{{ route('lab-request.destroy', $req->id) }}"
+                                      action="{{ route('requestlab.destroy', $req->id) }}"
                                       onsubmit="return confirm('Hapus request ini?')"
                                       style="display:inline">
                                     @csrf @method('DELETE')

@@ -466,7 +466,7 @@
 
 .asset-field-entry,
 .asset-field-source {
-    grid-column: span 2;
+    grid-column: span 4;
 }
 
 .asset-field-label {

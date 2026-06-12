@@ -14,16 +14,15 @@ class Asset extends Model
         'total_asset',
         'total_good',
         'total_damaged',
-        'total_loss',
-        'asset_entry'
+        'total_loss'
     ];
 
     public function labs() {
         return $this->belongsToMany(Laboratory::class, 'asset_labs');
     }
 
-    public function assetlogs()
-    {
+    public function logs() {
         return $this->hasMany(AssetLog::class);
     }
+
 }

@@ -1,4 +1,5 @@
 @extends('panel.content')
+@extends('panel.content')
 
 @section('title', 'Dashboard')
 
@@ -16,8 +17,15 @@
 
         <div class="db-stat-card">
             <div class="stat-info">
-                <span class="stat-label">Total PC</span>
-                <span class="stat-value">{{ number_format($totalPc) }}</span>
+                <span class="stat-label">PC Active</span>
+                <span class="stat-value">{{ number_format($totalPcActive) }}</span>
+            </div>
+        </div>
+
+        <div class="db-stat-card">
+            <div class="stat-info">
+                <span class="stat-label">PC Inactive</span>
+                <span class="stat-value">{{ number_format($totalPcInactive) }}</span>
             </div>
         </div>
 
