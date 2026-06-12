@@ -41,6 +41,8 @@ Route::middleware('auth')->group(function () {
 
     // Asset / Inventory
     Route::resource('asset', AssetController::class);
+    Route::get('/asset/export/{format}', [AssetController::class, 'export'])->name('asset.export');
+
     //////////
     // Lab Request
     Route::get('/requestlab', [RequestLabController::class, 'index'])
