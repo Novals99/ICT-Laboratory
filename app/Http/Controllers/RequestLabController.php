@@ -7,6 +7,7 @@ use App\Models\LabRequest;
 use App\Models\RequestLab;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 use App\Models\Asset;
 
@@ -17,7 +18,11 @@ class RequestLabController extends Controller
      */
     public function index()
     {
-        $requests = RequestLab::latest()->paginate(11);
+        $requests = RequestLab::with([
+            'user',
+            'lab',
+            'request_items.asset'
+        ])->latest()->paginate(11);
 
         return view('pages.dashboard.requestlab.index', compact('requests'));
     }
@@ -32,39 +37,39 @@ class RequestLabController extends Controller
     // ---------------------------------------------------------------
    public function detail($id)
 {
-    $labRequest = RequestLab::findOrFail($id);
+    $labRequest = LabRequest::findOrFail($id);
 
-    $electronic = Asset::where('asset_category', 'electronic')
-        ->get()
-        ->map(function ($asset) {
-            return [
-                'asset_name' => $asset->asset_name,
-                'quantity'   => $asset->total_asset,
-            ];
-        })
-        ->toArray();
+        $electronic = Asset::where('asset_category', 'electronic')
+            ->get()
+            ->map(function ($asset) {
+                return [
+                    'asset_name' => $asset->asset_name,
+                    'quantity'   => $asset->total_asset,
+                ];
+            })
+            ->toArray();
 
-    $nonElectronic = Asset::where('asset_category', 'non-electronic')
-        ->get()
-        ->map(function ($asset) {
-            return [
-                'asset_name' => $asset->asset_name,
-                'quantity'   => $asset->total_asset,
-            ];
-        })
-        ->toArray();
+        $nonElectronic = Asset::where('asset_category', 'non-electronic')
+            ->get()
+            ->map(function ($asset) {
+                return [
+                    'asset_name' => $asset->asset_name,
+                    'quantity'   => $asset->total_asset,
+                ];
+            })
+            ->toArray();
 
-    return response()->json([
-        'request_id'     => $labRequest->request_id ?? $labRequest->id,
-        'user_name'      => $labRequest->name ?? '-',
-        'total_request'  => $labRequest->total_request ?? 0,
-        'notes'          => null,
-        'request_date'   => $labRequest->request_date,
-        'status'         => $labRequest->status,
-        'electronic'     => $electronic,
-        'non_electronic' => $nonElectronic,
-    ]);
-}
+        return response()->json([
+            'request_id'     => 'REQ-' . $labRequest->id,
+            'user_name'      => $labRequest->user->name ?? '-',
+            'total_request'  => $labRequest->request_items->sum('total_request'),
+            'notes'          => null,
+            'request_date'   => $labRequest->request_date,
+            'status'         => $labRequest->request_status,
+            'electronic'     => $electronic,
+            'non_electronic' => $nonElectronic,
+        ]);
+    }
 
     // ---------------------------------------------------------------
     // UPDATE STATUS — Approved / Rejected dari tombol modal
@@ -73,13 +78,13 @@ class RequestLabController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $validated = $request->validate([
-            'status' => 'required|in:Approved,Rejected',
+            'status' => 'required|in:Approved,Partially Approved,Rejected',
         ]);
 
         $labRequest = RequestLab::findOrFail($id);
         $labRequest->update([
-            'status'      => $validated['status'],
-            'approved_by' => auth()->id(),
+            'request_status' => strtolower($validated['status']),
+            'approved_by' => null,
         ]);
 
         return redirect()->route('requestlab.index')
@@ -117,7 +122,7 @@ class RequestLabController extends Controller
             'name'          => 'required|string|max:255',
             'total_request' => 'required|integer|min:1',
             'request_date'  => 'required|date',
-            'status'        => 'nullable|in:Pending,Approved,Rejected',
+            'status'        => 'nullable|in:Pending,Approved,Partially Approved,Rejected',
         ]);
 
         RequestLab::create([
@@ -159,5 +164,16 @@ class RequestLabController extends Controller
 
         return redirect()->route('requestlab.index')
             ->with('success', 'Request berhasil diperbarui.');
+    }
+
+    public function exportPdf()
+    {
+        $requests = LabRequest::all();
+
+        $pdf = Pdf::loadView('pdf.lab-requests', [
+            'requests' => $requests
+        ]);
+
+        return $pdf->download('Request-Lab.pdf');
     }
 }

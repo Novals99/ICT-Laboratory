@@ -41,7 +41,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($labRequests as $request)
+            @foreach($requests as $request)
                 <tr>
                     <td>{{ $request->request_id }}</td>
                     <td>{{ $request->name }}</td>
