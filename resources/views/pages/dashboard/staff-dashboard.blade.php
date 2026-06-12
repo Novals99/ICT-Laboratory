@@ -5,25 +5,19 @@
 @section('content')
 <div class="db-wrap">
 
+    {{-- ══ 3 CARDS ══ --}}
     <div class="db-cards-row">
         <div class="db-stat-card">
             <div class="stat-info">
-                <span class="stat-label">Laboratory</span>
-                <span class="stat-value">{{ number_format($totalLaboratory) }}</span>
+                <span class="stat-label">Users</span>
+                <span class="stat-value">{{ number_format($totalUsers) }}</span>
             </div>
         </div>
 
         <div class="db-stat-card">
             <div class="stat-info">
-                <span class="stat-label">PC Active</span>
-                <span class="stat-value">{{ number_format($totalPcActive) }}</span>
-            </div>
-        </div>
-
-        <div class="db-stat-card">
-            <div class="stat-info">
-                <span class="stat-label">PC Inactive</span>
-                <span class="stat-value">{{ number_format($totalPcInactive) }}</span>
+                <span class="stat-label">Total PC</span>
+                <span class="stat-value">{{ number_format($totalPc) }}</span>
             </div>
         </div>
 
@@ -35,6 +29,7 @@
         </div>
     </div>
 
+    {{-- ══ CHART ══ --}}
     <div class="db-card db-chart-card">
         <h2 class="db-card-title">Laboratory Conditions</h2>
 
@@ -48,7 +43,53 @@
         </div>
     </div>
 
+    {{-- ══ LABORATORY USERS ══ --}}
     <div class="db-card db-table-card">
+        <h2 class="db-card-title">Laboratory Users</h2>
+        <div class="table-wrap">
+            <table class="db-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>NIM</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($labUsers as $u)
+                        <tr>
+                            <td style="font-weight:500;">{{ $u->name }}</td>
+                            <td class="td-mono">{{ $u->nim ?? '-' }}</td>
+                            <td>
+                                @php
+                                    $roleClass = match(strtolower($u->role)) {
+                                        'spv inventory' => 'role-spv',
+                                        'pic' => 'role-pic',
+                                        'admin' => 'role-admin',
+                                        'assistant' => 'role-assistant',
+                                        default => 'role-default',
+                                    };
+                                @endphp
+                                <span class="role-badge {{ $roleClass }}">
+                                    {{ ucfirst($u->role) }}
+                                </span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="empty-state" style="text-align:center; padding:32px">
+                                Belum ada user di laboratory
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{-- ══ RECENT REQUESTS ══ --}}
+    <div class="db-card db-table-card">
+        <h2 class="db-card-title">Recent Lab Request</h2>
         <div class="table-wrap">
             <table class="db-table">
                 <thead>
@@ -60,7 +101,6 @@
                         <th>Status</th>
                     </tr>
                 </thead>
-
                 <tbody>
                     @forelse ($recentRequests as $req)
                         <tr>
@@ -71,14 +111,12 @@
                             <td>
                                 @php
                                     $status = strtolower($req->request_status ?? 'pending');
-
                                     $badgeClass = match($status) {
                                         'approved' => 'badge-approved',
                                         'rejected' => 'badge-rejected',
                                         default => 'badge-pending',
                                     };
                                 @endphp
-
                                 <span class="status-badge {{ $badgeClass }}">
                                     {{ ucfirst($req->request_status ?? 'Pending') }}
                                 </span>
@@ -109,7 +147,7 @@
 
     .db-cards-row {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 16px;
     }
 
@@ -226,13 +264,13 @@
         font-weight: 600;
         color: #374151;
         white-space: nowrap;
-        background: #ffffff;
+        background: #f9fafb;
         border-bottom: 1px solid #e5e7eb;
     }
 
     .dark .db-table th {
         color: #94a3b8;
-        background: #1e2130;
+        background: #252a3d;
         border-bottom-color: #2d3148;
     }
 
@@ -247,6 +285,52 @@
         border-bottom-color: #2d3148;
     }
 
+    .td-mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12.5px;
+        color: #6b7280;
+    }
+
+    .dark .td-mono {
+        color: #94a3b8;
+    }
+
+    /* Role Badges */
+    .role-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .role-spv {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .role-pic {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .role-admin {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .role-assistant {
+        background: #f3e8ff;
+        color: #6b21a8;
+    }
+
+    .role-default {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    /* Status Badges */
     .status-badge {
         display: inline-flex;
         align-items: center;

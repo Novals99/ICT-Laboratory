@@ -39,6 +39,7 @@
             Dashboard
         </a>
 
+        @if(auth()->user()->role === 'spv inventory')
         {{-- user --}}
         <a href="{{ route('users.index') }}"
            class="sidebar-item {{ request()->routeIs('users.*') ? 'sidebar-item-active' : '' }}">
@@ -49,6 +50,7 @@
             </svg>
             User
         </a>
+        @endif
 
     {{-- Laboratory --}}
     <div x-data="{ open: false }">
@@ -102,8 +104,9 @@
             Lab Request
         </a> --}}
 
+        @if(auth()->user()->role === 'spv inventory')
         {{-- inventory & stock --}}
-        <a href="{{ route('asset.index') }}"
+         <a href="{{ route('asset.index') }}"
            class="sidebar-item {{ request()->routeIs('asset.*') ? 'sidebar-item-active' : '' }}">
             <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -113,6 +116,7 @@
             </svg>
             Inventory & Stock
         </a>
+        @endif
 
         {{-- activity log --}}
         {{-- <a href="{{ route('activity-log.index') }}"

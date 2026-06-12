@@ -50,5 +50,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/laboratory/{laboratory}/assetlab/{assetId}/adjust', [AssetLabController::class, 'adjust'])->name('lab.assetlab.adjust');
     Route::delete('/laboratory/{laboratory}/assetlab/{assetId}', [AssetLabController::class, 'removeFromLab'])->name('lab.assetlab.remove');
     });
+    Route::delete('/laboratory/bulk-destroy', [App\Http\Controllers\LaboratoryController::class, 'bulkDestroy'])->name('laboratory.bulkDestroy');
 
 require __DIR__.'/auth.php';
