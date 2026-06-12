@@ -1,41 +1,25 @@
-{{-- 
-    VIEW: Activity Log Index
-    File: resources/views/activity-log/index.blade.php
-    
-    Konsep penting:
-    - @extends('layouts.app') = pakai layout master tadi
-    - @section('content') = isi area content di layout
-    - Variable $logs, $search, dll dikirim dari controller
-    
-    Style yang dipakai:
-    - Card putih dengan rounded-2xl untuk container utama
-    - Navy color (#1E2A5E) sebagai accent (sesuai Figma)
-    - Spacing yang generous (lebih ke arah refined minimalism)
-    - Hover states yang halus
---}}
 @extends('panel.content')
 
-@section('title', 'Activity Log')
-@section('header', 'Admin Dashboard')
+@section('title', 'Admin Dashboard')
 
 @section('content')
-<div class="max-w-7xl mx-auto">
+<div class="panel-page-card">
     
     {{-- ========================================== --}}
     {{-- CARD UTAMA: Activity Log --}}
     {{-- ========================================== --}}
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    {{-- <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"> --}}
         
         {{-- Header Card: Title + Search + Filter + Export --}}
-        <div class="px-6 py-5 border-b border-slate-100">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div class="px-6 py-5 ">
+           <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 
                 {{-- Title --}}
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-800">Activity Log</h2>
-                    <p class="text-sm text-slate-500 mt-0.5">
+                    <h2 class="panel-page-title">Activity Log</h2>
+                    {{-- <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                         Total {{ $logs->total() }} aktivitas tercatat
-                    </p>
+                    </p> --}}
                 </div>
                 
                 {{-- 
@@ -43,29 +27,16 @@
                     Pakai form GET supaya filter ke-passing di URL,
                     bisa di-share & di-bookmark
                 --}}
-                <form method="GET" action="{{ route('activity-log.index') }}" 
-                      id="filterForm"
-                      class="flex flex-col sm:flex-row gap-2">
+               
                     
-                    {{-- Search Box --}}
-                    <div class="relative">
-                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-                        <input 
-                            type="text" 
-                            name="search" 
-                            value="{{ $search }}"
-                            placeholder="Search..." 
-                            class="w-full sm:w-64 pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E2A5E]/20 focus:border-[#1E2A5E] transition"
-                        >
-                    </div>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                     {{-- search --}}
+                     <x-button.search.modul-search :action="route('activity-log.index')" name="search"
+                            :value="request('search')" placeholder="Search..." />
                     
                     {{-- Filter Button (toggle filter panel) --}}
-                    <button type="button" 
-                            onclick="document.getElementById('filterPanel').classList.toggle('hidden')"
-                            class="flex items-center justify-center gap-2 px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition text-slate-700">
-                        <i data-lucide="filter" class="w-4 h-4"></i>
-                        <span>Filter</span>
-                    </button>
+                    <x-button.filter :action="route('activity-log.index')">
+                    </x-button.filter>
                     
                     {{-- Export Button --}}
                     {{-- 
@@ -73,11 +44,10 @@
                         lalu redirect ke route export dengan query string yang sama.
                         Atau cara simple: bikin link langsung dengan query saat ini.
                     --}}
-                    <a href="{{ route('activity-log.export', request()->query()) }}" 
-                       class="flex items-center justify-center gap-2 px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition text-slate-700">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        <span>Export</span>
-                    </a>
+                   <x-button.export
+    href="{{ route('activity-log.export', request()->query()) }}">
+                  Export
+                    </x-button.export>
                 </form>
             </div>
             
@@ -140,7 +110,7 @@
                             No
                         </th>
                         <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            Tanggal & Waktu
+                            Date & Time
                         </th>
                         <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                             User
@@ -149,7 +119,7 @@
                             Role
                         </th>
                         <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            Keterangan
+                            Description
                         </th>
                     </tr>
                 </thead>
@@ -316,7 +286,7 @@
                 </div>
             </div>
         @endif
-    </div>
+    {{-- </div> --}}
 </div>
 
 {{-- 

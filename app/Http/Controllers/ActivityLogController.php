@@ -10,7 +10,7 @@ class ActivityLogController extends Controller
     {
         $logs = ActivityLog::latest()->paginate(10);
 
-        return view('activity-log.index', [
+        return view('pages.activity-log.index', [
             'logs' => $logs,
             'search' => '',
             'startDate' => '',
