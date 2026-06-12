@@ -128,7 +128,7 @@
         @endif
 
         {{-- activity log --}}
-        {{-- <a href="{{ route('activity-log.index') }}"
+        <a href="{{ route('activity-log.index') }}"
             class="sidebar-item {{ request()->routeIs('activity-log.*') ? 'sidebar-item-active' : '' }}">
             <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                 stroke-linecap="round" stroke-linejoin="round">
@@ -138,7 +138,7 @@
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
             Activity Log
-        </a> --}}
+        </a>
 
         {{-- asset log --}}
         <a href="{{ route('assetlog.index') }}"

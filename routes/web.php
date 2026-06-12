@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LaboratoryController;
@@ -102,6 +103,13 @@ require __DIR__ . '/auth.php';
     });
     Route::delete('/laboratory/bulk-destroy', [App\Http\Controllers\LaboratoryController::class, 'bulkDestroy'])->name('laboratory.bulkDestroy');
 
+
+    Route::get('/activity-log', [ActivityLogController::class, 'index'])
+    ->name('activity-log.index');
+
+    Route::get('/activity-log/export', function () {
+        return 'Export belum dibuat';
+    })->name('activity-log.export');
 
 
 
