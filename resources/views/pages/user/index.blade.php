@@ -66,10 +66,13 @@
                 </x-button.filter>
 
                 {{-- Export --}}
-                <x-button.export type="button">
-                    Export
-                </x-button.export>
-
+                <x-button.export.export
+                    menuId="usersExportMenu"
+                    pdfUrl="{{ route('users.export', 'pdf') }}"
+                    excelUrl="{{ route('users.export', 'excel') }}"
+                    csvUrl="{{ route('users.export', 'csv') }}"
+                />
+                
                 {{-- Add User --}}
                 <x-button.add type="button" onclick="openPanelModal('create-modal-user')">
                     Add User

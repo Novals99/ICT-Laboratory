@@ -25,6 +25,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::resource('users', UserController::class);
+    Route::get('/users/export/{format}', [UserController::class, 'export'])->name('users.export');
 
     // Laboratory
     Route::resource('laboratory', LaboratoryController::class);
