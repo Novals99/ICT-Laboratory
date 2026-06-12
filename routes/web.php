@@ -31,6 +31,8 @@ Route::middleware('auth')->group(function () {
 
     // Laboratory
     Route::resource('laboratory', LaboratoryController::class);
+    Route::get('/laboratory/export/{format}', [LaboratoryController::class, 'export'])->name('laboratory.export');
+
 
     // PC — nested di bawah laboratory
     Route::post('/laboratory/{laboratory}/pc', [PcController::class, 'store'])->name('pc.store');

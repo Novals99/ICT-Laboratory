@@ -1,5 +1,5 @@
 @extends('panel.content')
-@section('title', 'Laboratory')
+@section('title', 'Admin Dashboard')
 
 @section('content')
 
@@ -9,146 +9,175 @@ $electronicAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'elec
 $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'electronic')->values();
 @endphp
 
-<div class="db-wrap">
-    <div class="db-card db-table-card">
+<div class="panel-page-card">
 
-        {{-- header --}}
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px 16px;">
-            <h2 class="db-card-title" style="margin:0">Laboratory List</h2>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <div style="position:relative;">
-                    <svg style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#9ca3af;"
-                         width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    </svg>
-                    <input type="text" id="searchInput" placeholder="Search..." oninput="filterTable()"
-                           style="border:1px solid #e5e7eb; border-radius:8px; padding:8px 14px 8px 32px; font-size:13px; outline:none; width:200px;">
-                </div>
-                <button style="display:flex; align-items:center; gap:6px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; color:#374151;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-                    </svg>
-                    Filter
-                </button>
-                @if($isSPV)
-                <button onclick="openCreateModal()"
-                        style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:600;">
-                    + Add Lab
-                </button>
-                @endif
-            </div>
+    {{-- header --}}
+    <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <h2 class="panel-page-title">
+            Laboratory List
+        </h2>
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+             {{-- search --}}
+            <x-button.search.modul-search
+                :action="route('laboratory.index')"
+                name="search"
+                :value="request('search')"
+                placeholder="Search..."
+            />
+
+            {{-- Export --}}
+            <x-button.export.export
+                menuId="labExportMenu"
+                pdfUrl="{{ route('laboratory.export', 'pdf') }}"
+                excelUrl="{{ route('laboratory.export', 'excel') }}"
+                csvUrl="{{ route('laboratory.export', 'csv') }}"
+            />
+
+            {{-- Add Lab --}}
+            @if($isSPV)
+                <x-button.add type="button" onclick="openCreateModal()">
+                    Add Lab
+                </x-button.add>
+            @endif
         </div>
+    </div>
 
-        @if(session('success'))
-        <div style="margin:0 24px 12px; background:#dcfce7; color:#166534; border-radius:8px; padding:10px 16px; font-size:13px;">
+    {{-- alert --}}
+    @if(session('success'))
+        <div class="mb-4 rounded-lg bg-green-100 px-4 py-3 text-sm text-green-700">
             {{ session('success') }}
         </div>
-        @endif
+    @endif
 
-        @if(session('error'))
-        <div style="margin:0 24px 12px; background:#fee2e2; color:#991b1b; border-radius:8px; padding:10px 16px; font-size:13px;">
-            {{ session('error') }}
-        </div>
-        @endif
+    {{-- Table --}}
+    <div id="labTableWrapper">
+        <x-table.index>
+            <thead>
+                <tr>
+                    <x-table.th class="w-12">
+                        <x-table.checkbox id="checkAll" />
+                    </x-table.th>
 
-        @if($isSPV)
-        <div style="display:flex; align-items:center; gap:12px; padding:0 24px 12px;">
-            <button type="button" onclick="submitBulkDelete()"
-                    style="background:#dc2626; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:600;">
-                🗑 Hapus Terpilih
-            </button>
-        </div>
-        @endif
+                    <x-table.th>Name</x-table.th>
+                    <x-table.th>PC Capacity</x-table.th>
+                    <x-table.th>Admin</x-table.th>
+                    <x-table.th>Active</x-table.th>
+                    <x-table.th>Inactive</x-table.th>
+                    <x-table.th align="center">Action</x-table.th>
+                </tr>
+            </thead>
 
-        <div class="table-wrap">
-            <table class="db-table" id="labTable">
-                <thead>
-                    <tr>
-                        @if($isSPV)
-                        <th class="th-check" style="width:40px;">
-                            <input type="checkbox" class="db-checkbox" id="checkAll" onchange="toggleAll(this)">
-                        </th>
-                        @endif
-                        <th>Name</th>
-                        <th>PC Capacity</th>
-                        <th>Admin</th>
-                        <th>Active</th>
-                        <th>Inactive</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($laboratories as $lab)
+            <tbody>
+                @forelse($laboratories as $lab)
                     @php
                         $isMyLab   = in_array($lab->id, $myLabIds);
                         $adminUser = $lab->users->firstWhere('role', 'admin');
                     @endphp
-                    <tr>
-                        @if($isSPV)
-                        <td class="th-check">
-                            <input type="checkbox" name="ids[]" value="{{ $lab->id }}" class="db-checkbox row-check" form="bulkDeleteForm">
-                        </td>
-                        @endif
-                        <td style="font-weight:600;">{{ $lab->lab_name }}</td>
-                        <td>{{ $lab->capacity }} PC</td>
-                        <td>{{ $adminUser?->name ?? '-' }}</td>
-                        <td><span style="color:#16a34a; font-weight:600;">{{ $lab->total_pc_active ?? 0 }}</span></td>
-                        <td><span style="color:#dc2626; font-weight:600;">{{ $lab->total_pc_inactive ?? 0 }}</span></td>
-                        <td>
-                            <div class="action-btns">
+
+                    <tr class="panel-table-row">
+                        <x-table.td>
+                            <x-table.checkbox class="row-check" />
+                        </x-table.td>
+
+                        <x-table.td>
+                            <span class="font-semibold">
+                                {{ $lab->lab_name }}
+                            </span>
+                        </x-table.td>
+
+                        <x-table.td>
+                            {{ $lab->capacity }} PC
+                        </x-table.td>
+
+                        <x-table.td>
+                            {{ $adminUser?->name ?? '-' }}
+                        </x-table.td>
+
+                        <x-table.td>
+                            <span class="font-semibold text-green-600">
+                                {{ $lab->total_pc_active ?? 0 }}
+                            </span>
+                        </x-table.td>
+
+                        <x-table.td>
+                            <span class="font-semibold text-red-600">
+                                {{ $lab->total_pc_inactive ?? 0 }}
+                            </span>
+                        </x-table.td>
+
+                        <x-table.td align="center">
+                            <div class="flex items-center justify-center gap-1">
                                 @if($isSPV || $isMyLab)
-                                    <a href="{{ route('laboratory.show', $lab->id) }}"
-                                       class="action-btn action-edit" title="Edit">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                    {{-- Edit --}}
+                                    <x-table.action
+                                        href="{{ route('laboratory.show', $lab->id) }}"
+                                        variant="edit"
+                                        title="Edit"
+                                    >
+                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                         </svg>
-                                    </a>
-                                    <form method="POST" action="{{ route('laboratory.destroy', $lab->id) }}"
-                                          onsubmit="return confirm('Hapus lab {{ addslashes($lab->lab_name) }}?')"
-                                          style="display:inline">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="action-btn action-delete" title="Hapus">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                    </x-table.action>
+
+                                    {{-- Delete --}}
+                                    <form
+                                        method="POST"
+                                        action="{{ route('laboratory.destroy', $lab->id) }}"
+                                        onsubmit="return confirm('Hapus lab {{ addslashes($lab->lab_name) }}?')"
+                                    >
+                                        @csrf
+                                        @method('DELETE')
+
+                                        <x-table.action
+                                            type="submit"
+                                            variant="delete"
+                                            title="Delete"
+                                        >
+                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                                 <polyline points="3 6 5 6 21 6"/>
                                                 <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
                                                 <path d="M10 11v6M14 11v6"/>
                                                 <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
                                             </svg>
-                                        </button>
+                                        </x-table.action>
                                     </form>
                                 @else
-                                    <a href="{{ route('laboratory.show', $lab->id) }}"
-                                       class="action-btn" title="View" style="color:#6b7280;">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                    {{-- View --}}
+                                    <x-table.action
+                                        href="{{ route('laboratory.show', $lab->id) }}"
+                                        variant="view"
+                                        title="View"
+                                    >
+                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                             <circle cx="12" cy="12" r="3"/>
                                         </svg>
-                                    </a>
+                                    </x-table.action>
                                 @endif
                             </div>
-                        </td>
+                        </x-table.td>
                     </tr>
-                    @empty
-                    <tr>
-                        <td colspan="{{ $isSPV ? 7 : 6 }}" style="text-align:center; padding:40px; color:#9ca3af; font-size:13px;">
-                            Belum ada laboratorium
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                @empty
+                    <x-table.empty
+                        colspan="7"
+                        message="Belum ada laboratorium."
+                    />
+                @endforelse
+            </tbody>
+        </x-table.index>
+    </div>
 
-        @if($laboratories->hasPages())
-        <div style="padding:16px 24px;">
+    {{-- pagination --}}
+    {{-- @if($laboratories->hasPages())
+        <div class="mt-5">
             {{ $laboratories->links() }}
         </div>
-        @endif
-    </div>
+    @endif --}}
 </div>
 
 {{-- Form bulk delete tersembunyi --}}
@@ -253,13 +282,26 @@ const nonElecOptions      = @json($nonElectronicAssets->map(fn($a) => ['id'=>$a-
 let   createAssetCounter  = 0;
 
 function filterTable() {
-    const q = document.getElementById('searchInput').value.toLowerCase();
-    document.querySelectorAll('#labTable tbody tr').forEach(r => {
-        r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+    const searchInput = document.getElementById('searchInput');
+    const wrapper = document.getElementById('labTableWrapper');
+
+    if (!searchInput || !wrapper) return;
+
+    const q = searchInput.value.toLowerCase();
+
+    wrapper.querySelectorAll('tbody tr').forEach((row) => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
     });
 }
-function toggleAll(m) {
-    document.querySelectorAll('.row-check').forEach(cb => cb.checked = m.checked);
+
+const checkAll = document.getElementById('checkAll');
+
+if (checkAll) {
+    checkAll.addEventListener('change', function () {
+        document.querySelectorAll('.row-check').forEach((checkbox) => {
+            checkbox.checked = this.checked;
+        });
+    });
 }
 
 function submitBulkDelete() {
