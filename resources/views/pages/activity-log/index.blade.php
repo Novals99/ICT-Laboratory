@@ -36,6 +36,57 @@
                     
                     {{-- Filter Button (toggle filter panel) --}}
                     <x-button.filter :action="route('activity-log.index')">
+
+                        {{-- tetap bawa search --}}
+                        @if(request('search'))
+                            <input type="hidden" name="search" value="{{ request('search') }}">
+                        @endif
+
+                        {{-- Role --}}
+                        <div class="filter-section">
+                            <div class="filter-section-title">Role</div>
+
+                            @foreach (['Admin', 'Assistant', 'SPV'] as $roleOption)
+                                <label class="filter-checkbox-row">
+                                    <input
+                                        type="checkbox"
+                                        name="role"
+                                        value="{{ $roleOption }}"
+                                        {{ request('role') == $roleOption ? 'checked' : '' }}
+                                        style="accent-color: #111B4C;"
+                                    >
+                                    <span>{{ $roleOption }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+
+                        {{-- Date --}}
+                        <div class="filter-section">
+                            <div class="filter-section-title">Activity Date</div>
+
+                            <div class="filter-date-group">
+                                <div class="filter-date-item">
+                                    <label class="filter-date-label">From date</label>
+                                    <input
+                                        type="date"
+                                        name="start_date"
+                                        value="{{ request('start_date') }}"
+                                        class="filter-date-input"
+                                    >
+                                </div>
+
+                                <div class="filter-date-item">
+                                    <label class="filter-date-label">To date</label>
+                                    <input
+                                        type="date"
+                                        name="end_date"
+                                        value="{{ request('end_date') }}"
+                                        class="filter-date-input"
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
                     </x-button.filter>
                     
                     {{-- Export Button --}}
@@ -102,28 +153,17 @@
         {{-- ========================================== --}}
         {{-- TABEL LOG AKTIVITAS --}}
         {{-- ========================================== --}}
-        <div class="overflow-x-auto">
-            <table class="w-full">
+        <x-table.index>
                 <thead>
-                    <tr class="bg-slate-50/50 border-b border-slate-100">
-                        <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16">
-                            No
-                        </th>
-                        <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            Date & Time
-                        </th>
-                        <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            User
-                        </th>
-                        <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            Role
-                        </th>
-                        <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            Description
-                        </th>
+                    <tr class="panel-table-row">
+                        <x-table.th>No</x-table.th>
+                        <x-table.th>Date & Time</x-table.th>
+                        <x-table.th>User</x-table.th>
+                        <x-table.th>Role</x-table.th>
+                        <x-table.th>Description</x-table.th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-slate-700/30">
                     
                     {{-- 
                         @forelse: loop yang ada fallback kalau data kosong.
@@ -138,25 +178,25 @@
                                 Rumus: (halaman_skrg - 1) * per_page + index + 1
                                 Atau pakai: $logs->firstItem() + $index
                             --}}
-                            <td class="px-6 py-4 text-sm text-slate-500">
+                            <x-table.td>
                                 {{ $logs->firstItem() + $index }}
-                            </td>
+                            </x-table.td>
                             
                             {{-- Tanggal dengan format yang readable --}}
-                            <td class="px-6 py-4 text-sm">
+                            <x-table.td>
                                 <div class="text-slate-700 font-medium">
                                     {{ $log->created_at->format('d M Y') }}
                                 </div>
                                 <div class="text-xs text-slate-400">
                                     {{ $log->created_at->format('H:i') }} WIB
                                 </div>
-                            </td>
+                            </x-table.td>
                             
                             {{-- 
                                 Nama User dengan avatar
                                 Pakai null-safe (?->) kalau-kalau user sudah dihapus
                             --}}
-                            <td class="px-6 py-4 text-sm">
+                            <x-table.td>
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600">
                                         {{-- Initial dari nama: "Ali rajin" -> "AR" --}}
@@ -171,23 +211,33 @@
                                         </div>
                                     </div>
                                 </div>
-                            </td>
+                            </x-table.td>
                             
                             {{-- Badge Role dengan warna sesuai role --}}
-                            <td class="px-6 py-4 text-sm">
+                            <x-table.td>
                                 @php
-                                    // Tentukan warna badge sesuai role
-                                    $roleClasses = match($log->user?->role) {
-                                        'Admin' => 'bg-blue-50 text-blue-700 border-blue-100',
-                                        'Assistant' => 'bg-emerald-50 text-emerald-700 border-emerald-100',
-                                        'SPV' => 'bg-purple-50 text-purple-700 border-purple-100',
-                                        default => 'bg-slate-50 text-slate-600 border-slate-100',
-                                    };
+                                    $roleClasses = match(strtolower($log->user?->role ?? '')) {
+                                    'admin' =>
+                                    'bg-rose-100 text-rose-700 border-rose-300
+                                    dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-900',
+
+                                    'assistant' =>
+                                    'bg-emerald-100 text-emerald-700 border-emerald-300
+                                    dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900',
+
+                                    'spv' =>
+                                    'bg-blue-100 text-blue-700 border-blue-300
+                                    dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900',
+
+                                    'calas' =>
+                                    'bg-amber-100 text-amber-700 border-amber-300
+                                    dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900',
+                                };
                                 @endphp
-                                <span class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md border {{ $roleClasses }}">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full border text-xs font-semibold {{ $roleClasses }}">
                                     {{ $log->user?->role ?? '-' }}
                                 </span>
-                            </td>
+                            </x-table.td>
                             
                             {{-- Keterangan --}}
                             <td class="px-6 py-4 text-sm text-slate-700">
@@ -220,7 +270,7 @@
                     @endforelse
                 </tbody>
             </table>
-        </div>
+        </x-table.index>
         
         {{-- ========================================== --}}
         {{-- PAGINATION --}}

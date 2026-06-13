@@ -75,7 +75,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/stock-out', [AssetLogController::class, 'storeStockOut'])->name('stock-out');
         Route::post('/transfer', [AssetLogController::class, 'storeTransfer'])->name('transfer');
         Route::post('/damaged', [AssetLogController::class, 'storeDamaged'])->name('damaged');
-        Route::post('/lost', [AssetLogController::class, 'storeLost'])->name('lost');
+        
+    Route::post('/lost', [AssetLogController::class, 'storeLost'])->name('lost');
         Route::post('/repaired', [AssetLogController::class, 'storeRepaired'])->name('repaired');
         Route::post('/adjustment', [AssetLogController::class, 'storeAdjustment'])->name('adjustment');
     });
@@ -83,6 +84,10 @@ Route::middleware('auth')->group(function () {
 
 
 
+    Route::get(
+    '/activity-log/export',
+    [ActivityLogController::class, 'export']
+    )->name('activity-log.export');
 
-});
+}); 
 require __DIR__ . '/auth.php';
