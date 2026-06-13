@@ -1,6 +1,6 @@
 @extends('panel.content')
 
-@section('title', 'Lab Dashboard')
+@section('title', 'Staff Dashboard')
 
 @section('content')
     <div class="db-wrap">
