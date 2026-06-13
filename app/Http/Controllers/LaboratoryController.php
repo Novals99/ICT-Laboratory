@@ -20,9 +20,11 @@ class LaboratoryController extends Controller
 
         $search = $request->input('search');
 
+        $user = auth()->user();
+
         $laboratories = Laboratory::query()
             ->withCount([
-                'pcs as total_pc_active' => fn($q) => $q->where('status_pc', 'active'),
+                'pcs as total_pc_active'   => fn($q) => $q->where('status_pc', 'active'),
                 'pcs as total_pc_inactive' => fn($q) => $q->where('status_pc', 'inactive'),
             ])
             ->with(['users', 'assets'])
@@ -42,9 +44,12 @@ class LaboratoryController extends Controller
         $myLabIds = [];
         $allAssets = Asset::orderBy('asset_name')->get();
 
+        // lab_id milik user yang login
+        $myLabIds = $user->labs()->pluck('laboratories.id')->toArray();
+
         return view(
             'pages.laboratory.index',
-            compact('laboratories', 'myLabIds', 'user', 'allAssets')
+            compact('laboratories', 'myLabIds', 'user', 'myLabIds', 'user', 'allAssets')
         );
     }
 
