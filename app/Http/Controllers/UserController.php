@@ -8,8 +8,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-
-use App\Models\Laboratory;
 use App\Exports\UserExport;
 
 class UserController extends Controller

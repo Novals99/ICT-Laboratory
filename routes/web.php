@@ -10,6 +10,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetLabController;
 use App\Http\Controllers\AssetLogController;
+use App\Http\Controllers\ActivityLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -75,8 +76,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/stock-out', [AssetLogController::class, 'storeStockOut'])->name('stock-out');
         Route::post('/transfer', [AssetLogController::class, 'storeTransfer'])->name('transfer');
         Route::post('/damaged', [AssetLogController::class, 'storeDamaged'])->name('damaged');
-        
-    Route::post('/lost', [AssetLogController::class, 'storeLost'])->name('lost');
+
+        Route::post('/lost', [AssetLogController::class, 'storeLost'])->name('lost');
         Route::post('/repaired', [AssetLogController::class, 'storeRepaired'])->name('repaired');
         Route::post('/adjustment', [AssetLogController::class, 'storeAdjustment'])->name('adjustment');
     });
@@ -84,10 +85,11 @@ Route::middleware('auth')->group(function () {
 
 
 
-    Route::get(
-    '/activity-log/export',
-    [ActivityLogController::class, 'export']
-    )->name('activity-log.export');
+    Route::get('/activity-log', [ActivityLogController::class, 'index'])
+        ->name('activity-log.index');
 
-}); 
+    Route::get('/activity-log/export', function () {
+        return 'Export belum dibuat';
+    })->name('activity-log.export');
+});
 require __DIR__ . '/auth.php';
