@@ -1,4 +1,9 @@
 <aside class="sidebar">
+    @php
+        $role = auth()->user()->role;
+        $isAdmin = $role === 'admin';
+        $isSpv = $role === 'spv inventory';
+    @endphp
 
     {{-- logo ict --}}
     <div class="sidebar-brand">
@@ -40,7 +45,7 @@
             Dashboard
         </a>
 
-        @if(auth()->user()->role === 'spv inventory')
+        @if($isSpv)
         {{-- user --}}
         <a href="{{ route('users.index') }}"
             class="sidebar-item {{ request()->routeIs('users.*') ? 'sidebar-item-active' : '' }}">
@@ -113,7 +118,7 @@
             Request Lab
         </a>
 
-        @if(auth()->user()->role === 'spv inventory')
+        @if($isSpv)
         {{-- inventory & stock --}}
          <a href="{{ route('asset.index') }}"
            class="sidebar-item {{ request()->routeIs('asset.*') ? 'sidebar-item-active' : '' }}">
@@ -127,31 +132,33 @@
         </a>
         @endif
 
-        {{-- activity log --}}
-        <a href="{{ route('activity-log.index') }}"
-            class="sidebar-item {{ request()->routeIs('activity-log.*') ? 'sidebar-item-active' : '' }}">
-            <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            Activity Log
-        </a>
+        @unless($isAdmin)
+            {{-- activity log --}}
+            <a href="{{ route('activity-log.index') }}"
+                class="sidebar-item {{ request()->routeIs('activity-log.*') ? 'sidebar-item-active' : '' }}">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                Activity Log
+            </a>
 
-        {{-- asset log --}}
-        <a href="{{ route('assetlog.index') }}"
-            class="sidebar-item {{ request()->routeIs('assetlog.*') ? 'sidebar-item-active' : '' }}">
-            <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            Asset Log
-        </a>
+            {{-- asset log --}}
+            <a href="{{ route('assetlog.index') }}"
+                class="sidebar-item {{ request()->routeIs('assetlog.*') ? 'sidebar-item-active' : '' }}">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                Asset Log
+            </a>
+        @endunless
 
     </nav>
 

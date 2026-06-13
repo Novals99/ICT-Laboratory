@@ -22,7 +22,7 @@
                     <div class="filter-section">
                         <div class="filter-section-title">Role</div>
 
-                        @foreach (['spv inventory', 'pic', 'admin', 'assistant'] as $role)
+                        @foreach (['admin', 'assistant'] as $role)
                             <label class="filter-checkbox-row">
                                 <input type="checkbox" name="role[]" value="{{ $role }}"
                                     {{ in_array($role, (array) request('role', [])) ? 'checked' : '' }}
