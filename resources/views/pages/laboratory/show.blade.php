@@ -1,5 +1,5 @@
 @extends('panel.content')
-@section('title', $laboratory->lab_name)
+@section('title', 'Admin Dashbard')
 
 @section('content')
 
@@ -204,14 +204,14 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                                     @csrf
                                     <input type="hidden" name="field" value="total_good_lab">
                                     <input type="hidden" name="action" value="decrement">
-                                    <button type="submit" style="width:24px; height:24px; border:1px solid #d1d5db; border-radius:4px; background:#fff; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;">−</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">−</button>
                                 </form>
-                                <span style="min-width:28px; text-align:center; font-weight:600; font-size:13px;">{{ $asset->pivot->total_good_lab }}</span>
+                                <span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; background:#f3f4f6; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_good_lab ?? 0 }}</span>
                                 <form method="POST" action="{{ route('lab.assetlab.adjust', [$laboratory->id, $asset->id]) }}" style="display:inline">
                                     @csrf
                                     <input type="hidden" name="field" value="total_good_lab">
                                     <input type="hidden" name="action" value="increment">
-                                    <button type="submit" style="width:24px; height:24px; border:1px solid #d1d5db; border-radius:4px; background:#fff; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;">+</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">+</button>
                                 </form>
                             </div>
                         </td>
@@ -222,14 +222,14 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                                     @csrf
                                     <input type="hidden" name="field" value="total_damaged_lab">
                                     <input type="hidden" name="action" value="decrement">
-                                    <button type="submit" style="width:24px; height:24px; border:1px solid #d1d5db; border-radius:4px; background:#fff; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;">−</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">−</button>
                                 </form>
-                                <span style="min-width:28px; text-align:center; font-weight:600; font-size:13px; color:#dc2626;">{{ $asset->pivot->total_damaged_lab }}</span>
+                                <span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; color:#dc2626; background:#fef2f2; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_damaged_lab ?? 0 }}</span>
                                 <form method="POST" action="{{ route('lab.assetlab.adjust', [$laboratory->id, $asset->id]) }}" style="display:inline">
                                     @csrf
                                     <input type="hidden" name="field" value="total_damaged_lab">
                                     <input type="hidden" name="action" value="increment">
-                                    <button type="submit" style="width:24px; height:24px; border:1px solid #d1d5db; border-radius:4px; background:#fff; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;">+</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">+</button>
                                 </form>
                             </div>
                         </td>
@@ -240,21 +240,21 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                                     @csrf
                                     <input type="hidden" name="field" value="total_loss_lab">
                                     <input type="hidden" name="action" value="decrement">
-                                    <button type="submit" style="width:24px; height:24px; border:1px solid #d1d5db; border-radius:4px; background:#fff; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;">−</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">−</button>
                                 </form>
-                                <span style="min-width:28px; text-align:center; font-weight:600; font-size:13px; color:#f59e0b;">{{ $asset->pivot->total_loss_lab }}</span>
+                                <span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; color:#f59e0b; background:#fffbeb; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_loss_lab ?? 0 }}</span>
                                 <form method="POST" action="{{ route('lab.assetlab.adjust', [$laboratory->id, $asset->id]) }}" style="display:inline">
                                     @csrf
                                     <input type="hidden" name="field" value="total_loss_lab">
                                     <input type="hidden" name="action" value="increment">
-                                    <button type="submit" style="width:24px; height:24px; border:1px solid #d1d5db; border-radius:4px; background:#fff; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;">+</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">+</button>
                                 </form>
                             </div>
                         </td>
                         @else
-                        <td style="text-align:center; font-weight:600; font-size:13px;">{{ $asset->pivot->total_good_lab }}</td>
-                        <td style="text-align:center; font-weight:600; font-size:13px; color:#dc2626;">{{ $asset->pivot->total_damaged_lab }}</td>
-                        <td style="text-align:center; font-weight:600; font-size:13px; color:#f59e0b;">{{ $asset->pivot->total_loss_lab }}</td>
+                        <td style="text-align:center; font-weight:700; font-size:14px; background:#f3f4f6; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_good_lab ?? 0 }}</td>
+                        <td style="text-align:center; font-weight:700; font-size:14px; color:#dc2626; background:#fef2f2; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_damaged_lab ?? 0 }}</td>
+                        <td style="text-align:center; font-weight:700; font-size:14px; color:#f59e0b; background:#fffbeb; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_loss_lab ?? 0 }}</td>
                         @endif
 
                         <td style="text-align:center; font-weight:700; font-size:14px; color:#111827;">
@@ -320,15 +320,31 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                 </div>
                 <div>
                     <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">Processor</label>
-                    <input type="text" name="processor" placeholder="e.g. i3-8100"
+                    <input type="hidden" name="processor" id="apc_processor_val">
+                    <input type="text" id="apc_processor_search"
+                           placeholder="Search component or type manually..."
+                           autocomplete="off"
+                           oninput="filterAddDropdown('processor')"
+                           onfocus="showAddDropdown('processor')"
                            style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
+                    <div id="apc_processor_dropdown"
+                         style="display:none; position:relative; z-index:200; background:#fff; border:1px solid #d1d5db; border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); margin-top:2px;">
+                    </div>
                 </div>
             </div>
             @foreach(['ram'=>'RAM','ssd'=>'SSD','motherboard'=>'Motherboard','vga'=>'VGA','cpu_fan'=>'CPU Fan','powersupply'=>'Power Supply'] as $f => $l)
-            <div>
+            <div style="position:relative;">
                 <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">{{ $l }}</label>
-                <input type="text" name="{{ $f }}" placeholder="Enter here..."
+                <input type="hidden" name="{{ $f }}" id="apc_{{ $f }}_val">
+                <input type="text" id="apc_{{ $f }}_search"
+                       placeholder="Search component or type manually..."
+                       autocomplete="off"
+                       oninput="filterAddDropdown('{{ $f }}')"
+                       onfocus="showAddDropdown('{{ $f }}')"
                        style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
+                <div id="apc_{{ $f }}_dropdown"
+                     style="display:none; position:relative; z-index:200; background:#fff; border:1px solid #d1d5db; border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); margin-top:2px;">
+                </div>
             </div>
             @endforeach
             <div style="display:flex; justify-content:flex-end; gap:8px; padding-top:4px;">
@@ -476,6 +492,66 @@ function showSection(s) {
 @endif
 
 @if($canEdit)
+// ── Add PC Dropdowns ──
+function filterAddDropdown(field) {
+    showAddDropdown(field);
+}
+function showAddDropdown(field) {
+    const query    = document.getElementById(`apc_${field}_search`).value.toLowerCase();
+    const dropdown = document.getElementById(`apc_${field}_dropdown`);
+    const filtered = pcComponents.filter(c => c.name.toLowerCase().includes(query));
+
+    dropdown.innerHTML = '';
+
+    const emptyOpt = document.createElement('div');
+    emptyOpt.textContent = '— Kosongkan / Ketik Manual —';
+    emptyOpt.style.cssText = 'padding:8px 12px; font-size:13px; cursor:pointer; color:#9ca3af; border-bottom:1px solid #f3f4f6;';
+    emptyOpt.onmousedown = () => {
+        const txt = document.getElementById(`apc_${field}_search`).value;
+        selectAddComponent(field, txt, txt);
+    };
+    dropdown.appendChild(emptyOpt);
+
+    if (filtered.length > 0) {
+        filtered.forEach(comp => {
+            const disabled = comp.stock < 1;
+            const item = document.createElement('div');
+            item.style.cssText = `padding:8px 12px; font-size:13px; cursor:${disabled?'not-allowed':'pointer'}; display:flex; justify-content:space-between; align-items:center;`;
+            item.innerHTML = `
+                <span style="color:${disabled?'#9ca3af':'#374151'};">${comp.name}</span>
+                <span style="font-size:11px; background:${disabled?'#fee2e2':'#dcfce7'}; color:${disabled?'#dc2626':'#16a34a'}; padding:2px 6px; border-radius:4px; font-weight:600;">
+                    Stok: ${comp.stock}
+                </span>`;
+            if (!disabled) {
+                item.onmousedown = () => selectAddComponent(field, comp.name, comp.name);
+                item.onmouseover = () => item.style.background = '#f9fafb';
+                item.onmouseout  = () => item.style.background = '';
+            }
+            dropdown.appendChild(item);
+        });
+    }
+
+    dropdown.style.display = 'block';
+}
+function selectAddComponent(field, value, label) {
+    document.getElementById(`apc_${field}_val`).value    = value;
+    document.getElementById(`apc_${field}_search`).value = label;
+    document.getElementById(`apc_${field}_dropdown`).style.display = 'none';
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', e => {
+    pcFields.forEach(f => {
+        const search   = document.getElementById(`apc_${f}_search`);
+        const dropdown = document.getElementById(`apc_${f}_dropdown`);
+        if (search && dropdown && !search.contains(e.target) && !dropdown.contains(e.target)) {
+            if (dropdown.style.display !== 'none') {
+                document.getElementById(`apc_${f}_val`).value = search.value;
+                dropdown.style.display = 'none';
+            }
+        }
+    });
+});
 // ── Add PC ──
 function openAddPcModal()  { document.getElementById('modal-add-pc').style.display = 'flex'; }
 function closeAddPcModal() { document.getElementById('modal-add-pc').style.display = 'none'; }
