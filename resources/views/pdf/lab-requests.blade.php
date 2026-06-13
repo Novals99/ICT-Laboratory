@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab Requests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Lab Request List</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID Request</th>
+                <th>Name</th>
+                <th>Total Request</th>
+                <th>Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($requests as $request)
+                <tr>
+                    <td>{{ $request->request_id }}</td>
+                    <td>{{ $request->name }}</td>
+                    <td>{{ $request->total_request }}</td>
+                    <td>{{ $request->request_date }}</td>
+                    <td>{{ $request->status }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+
+</body>
+</html>
