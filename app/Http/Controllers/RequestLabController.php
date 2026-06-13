@@ -22,7 +22,6 @@ class RequestLabController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-
             $query->where(function ($q) use ($search) {
                 $q->whereRaw("CONCAT('REQ-', LPAD(id, 3, '0')) = ?", [$search])
                     ->orWhereHas('user', function ($user) use ($search) {
@@ -45,11 +44,13 @@ class RequestLabController extends Controller
             $query->whereDate('request_date', $request->date_to);
         }
 
-        $requests = $query
-            ->latest()
-            ->paginate(11)
-            ->withQueryString();
+        if ($request->filled('role')) {
+            $query->whereHas('user', function ($q) use ($request) {
+                $q->where('role', $request->role);
+            });
+        }
 
+        $requests = $query->latest()->paginate(11)->withQueryString();
         $laboratories = Laboratory::orderBy('lab_name')->get();
         $assets = Asset::orderBy('asset_name')->get();
 
@@ -64,6 +65,7 @@ class RequestLabController extends Controller
         ])->findOrFail($id);
 
         return response()->json([
+            'request_id' => 'REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
             'request_id' => 'REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
             'user_name' => $labRequest->user->name ?? '-',
             'total_request' => $labRequest->request_items->sum('total_request'),
@@ -170,23 +172,74 @@ class RequestLabController extends Controller
 
     public function destroy($id)
     {
-        abort_unless(auth()->user()->role === 'spv inventory', 403);
+        DB::beginTransaction();
+
+        try {
+            $labRequest = RequestLab::findOrFail($id);
+            $labRequest->delete();
 
         DB::transaction(function () use ($id) {
             RequestLab::findOrFail($id)->delete();
         });
 
+            return redirect()->route('requestlab.index')
+                ->with('success', 'Request berhasil dihapus.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return redirect()->route('requestlab.index')
+                ->with('error', 'Request gagal dihapus.');
+        }
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'lab_id'       => 'required|exists:laboratories,id',
+            'request_date' => 'required|date',
+        ]);
+
+        $labRequest = RequestLab::create([
+            'user_id'        => auth()->id(),
+            'lab_id'         => $request->lab_id,
+            'request_date'   => $request->request_date,
+            'request_status' => 'pending',
+        ]);
+
+        foreach ($request->items ?? [] as $category => $categoryItems) {
+            foreach ($categoryItems as $item) {
+                if (!empty($item['asset_id']) && !empty($item['total_request'])) {
+                    $labRequest->request_items()->create([
+                        'asset_id'      => $item['asset_id'],
+                        'total_request' => $item['total_request'],
+                        'status'        => 'pending',
+                    ]);
+                }
+            }
+        }
+
         return redirect()->route('requestlab.index')
-            ->with('success', 'Request berhasil dihapus.');
+            ->with('success', 'Request berhasil ditambahkan.');
     }
 
     public function edit($id)
     {
-        return redirect()->route('requestlab.index');
+        $labRequest = RequestLab::findOrFail($id);
+        return view('pages.dashboard.requestlab.edit', compact('labRequest'));
     }
 
     public function update(Request $request, $id)
     {
+        $validated = $request->validate([
+            'name'          => 'required|string|max:255',
+            'total_request' => 'required|integer|min:1',
+            'request_date'  => 'required|date',
+            'status'        => 'nullable|in:Pending,Approved,Rejected',
+        ]);
+
+        $labRequest = RequestLab::findOrFail($id);
+        $labRequest->update($validated);
+
         return redirect()->route('requestlab.index')
             ->with('error', 'Edit request lab dilakukan melalui status item di popup detail.');
     }

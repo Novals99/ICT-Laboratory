@@ -12,6 +12,7 @@ use App\Http\Controllers\AssetLabController;
 use App\Http\Controllers\AssetLogController;
 use App\Http\Controllers\ActivityLogController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -56,6 +57,8 @@ Route::middleware('auth')->group(function () {
         ->name('requestlab.destroy');
     Route::get('/requestlab/export/pdf', [RequestLabController::class, 'exportPdf'])
         ->name('requestlab.export.pdf');
+    Route::delete('/laboratory/bulk-destroy', [LaboratoryController::class, 'bulkDestroy'])
+        ->name('laboratory.bulkDestroy');
 
     Route::resource('stafflab', StaffLabController::class);
     Route::resource('assetlab', AssetLabController::class);
@@ -81,10 +84,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/repaired', [AssetLogController::class, 'storeRepaired'])->name('repaired');
         Route::post('/adjustment', [AssetLogController::class, 'storeAdjustment'])->name('adjustment');
     });
-
-
-
-
     Route::get('/activity-log', [ActivityLogController::class, 'index'])
         ->name('activity-log.index');
 

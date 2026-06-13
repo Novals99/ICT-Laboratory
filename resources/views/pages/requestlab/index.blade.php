@@ -39,51 +39,60 @@ $assetGroups = $assets
                 </div>
             </form>
 
+
             <x-button.filter :action="route('requestlab.index')">
                 @if (request('search'))
                 <input type="hidden" name="search" value="{{ request('search') }}">
                 @endif
 
-                @if ($role === 'admin')
-                <div class="filter-section">
-                    <div class="filter-section-title">User Role</div>
-                    @foreach (['admin' => 'Admin', 'assistant' => 'Assistant'] as $filterRole => $label)
-                    <label class="filter-checkbox-row">
-                        <input type="checkbox" name="request_role[]" value="{{ $filterRole }}"
-                            {{ in_array($filterRole, (array) request('request_role', [])) ? 'checked' : '' }}
-                            style="accent-color: #111B4C;">
-                        <span>{{ $label }}</span>
-                    </label>
-                    @endforeach
-                </div>
-                @endif
+                    {{-- Filter Role - hanya untuk admin --}}
+                    @if ($canCreateRequest)
+                        <div class="filter-section">
+                            <div class="filter-section-title">User Role</div>
+                            <label class="filter-checkbox-row">
+                                <input type="radio" name="role" value="" {{ !request('role') ? 'checked' : '' }}
+                                    style="accent-color: #111B4C;">
+                                <span>All</span>
+                            </label>
+                            <label class="filter-checkbox-row">
+                                <input type="radio" name="role" value="admin"
+                                    {{ request('role') === 'admin' ? 'checked' : '' }} style="accent-color: #111B4C;">
+                                <span>Admin</span>
+                            </label>
+                            <label class="filter-checkbox-row">
+                                <input type="radio" name="role" value="assistant"
+                                    {{ request('role') === 'assistant' ? 'checked' : '' }} style="accent-color: #111B4C;">
+                                <span>Assistant</span>
+                            </label>
+                        </div>
+                    @endif
 
-                @if ($role !== 'admin')
-                    <div class="filter-section">
-                        <div class="filter-section-title">Request Status</div>
-                        @foreach (['pending', 'approved', 'partial', 'rejected'] as $status)
-                        <label class="filter-checkbox-row">
-                            <input type="checkbox" name="status[]" value="{{ $status }}"
-                                {{ in_array($status, (array) request('status', [])) ? 'checked' : '' }}
-                                style="accent-color: #111B4C;">
-                            <span>{{ $status === 'partial' ? 'Partially Approved' : ucwords($status) }}</span>
-                        </label>
-                        @endforeach
-                    </div>
+                    {{-- Filter Status - hanya untuk SPV --}}
+                    @if ($isSpv)
+                        <div class="filter-section">
+                            <div class="filter-section-title">Request Status</div>
+                            @foreach (['pending', 'approved', 'partial', 'rejected'] as $status)
+                                <label class="filter-checkbox-row">
+                                    <input type="checkbox" name="status[]" value="{{ $status }}"
+                                        {{ in_array($status, (array) request('status', [])) ? 'checked' : '' }}
+                                        style="accent-color: #111B4C;">
+                                    <span>{{ $status === 'partial' ? 'Partially Approved' : ucwords($status) }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
 
                     <div class="filter-section">
                         <div class="filter-section-title">Request Date</div>
                         <input type="date" name="date_to" value="{{ request('date_to') }}"
                             class="w-full rounded-lg border px-3 py-2 text-sm">
                     </div>
+                </x-button.filter>
+                @if ($isSpv)
+                    <x-button.export href="{{ route('requestlab.export.pdf') }}">
+                        Export
+                    </x-button.export>
                 @endif
-            </x-button.filter>
-
-            @if ($isSpv)
-            <x-button.export href="{{ route('requestlab.export.pdf') }}">
-                Export
-            </x-button.export>
-            @endif
 
             @if ($canCreateRequest)
             <x-button.add type="button" onclick="openPanelModal('addRequestModal')">
@@ -133,49 +142,51 @@ $assetGroups = $assets
                                         'partial' => 'background:#2563eb;color:#fff;',
                                         default => 'background:#facc15;color:#713f12;',
                                     } }}">
-                            {{ $request->request_status === 'partial' ? 'Partially Approved' : ucwords($request->request_status) }}
-                        </span>
-                    </td>
-                    <td class="px-4 py-3">
-                        <div class="flex items-center justify-center gap-3">
-                            <button type="button" onclick="openRequestModal({{ $request->id }})"
-                                title="Lihat Detail"
-                                style="background:none; border:none; cursor:pointer; padding:4px; color:#9ca3af;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5m-1.414-9.414a2 2 0 1 1 2.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                            </button>
+                                    {{ $request->request_status === 'partial' ? 'Partially Approved' : ucwords($request->request_status) }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center justify-center gap-3">
+                                    {{-- View detail untuk semua role --}}
+                                    <button type="button" onclick="openRequestModal({{ $request->id }})"
+                                        title="Lihat Detail"
+                                        style="background:none; border:none; cursor:pointer; padding:4px; color:#9ca3af;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5m-1.414-9.414a2 2 0 1 1 2.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                    </button>
 
-                            @if ($canDeleteRequest)
-                            <form action="{{ route('requestlab.destroy', $request->id) }}" method="POST"
-                                onsubmit="return confirm('Yakin ingin menghapus data ini?')" style="display:inline;">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" title="Hapus"
-                                    style="background:none; border:none; cursor:pointer; padding:4px; color:#9ca3af;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
-                            </form>
-                            @endif
-                        </div>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="7" class="px-4 py-10 text-center text-gray-400">
-                        Tidak ada data request.
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                                    {{-- Delete hanya untuk SPV --}}
+                                    @if ($isSpv)
+                                        <form action="{{ route('requestlab.destroy', $request->id) }}" method="POST"
+                                            onsubmit="return confirm('Yakin ingin menghapus data ini?')"
+                                            style="display:inline;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" title="Hapus"
+                                                style="background:none; border:none; cursor:pointer; padding:4px; color:#9ca3af;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                                    stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </td>
+                        <tr>
+                            <td colspan="7" class="px-4 py-10 text-center text-gray-400">
+                                Tidak ada data request.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
 
     <div class="mt-6">
         {{ $requests->links() }}
@@ -378,7 +389,8 @@ $assetGroups = $assets
         const catAssets = assets[category] ?? [];
         const div = document.createElement('div');
         div.className = 'item-row';
-        div.style = 'border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative;';
+        div.style =
+                'border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative;';
         div.innerHTML = `
                 <button type="button" onclick="removeItemRow(this)"
                     style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted);">x</button>
@@ -411,7 +423,8 @@ $assetGroups = $assets
         modal.style.display = 'flex';
         document.getElementById('modalProgress').style.width = '30%';
 
-        const loading = '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
+        const loading =
+                '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
         document.getElementById('modal_electronic').innerHTML = loading;
         document.getElementById('modal_nonelectronic').innerHTML = loading;
 
@@ -478,15 +491,17 @@ $assetGroups = $assets
     function updateItemStatus(itemId, status) {
         if (!status) return;
         fetch(`/requestlab/items/${itemId}/status`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({
-                    status
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                   
+                        status
+               
+                    })
                 })
-            })
             .then(res => res.json())
             .then(data => {
                 if (!data.success) return;
@@ -521,15 +536,17 @@ $assetGroups = $assets
 
     function updateRequestStatus(status) {
         fetch(`/requestlab/${currentRequestId}/status`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                       
                     status
+                   
                 })
-            })
+                })
             .then(res => res.json())
             .then(data => {
                 if (data.success) updateRowBadge(currentRequestId, data.request_status);
@@ -537,16 +554,17 @@ $assetGroups = $assets
             });
     }
 
-    document.getElementById('requestModal').addEventListener('click', function(event) {
-        if (event.target === this) closeRequestModal();
-    });
+        document.getElementById('requestModal').addEventListener('click', function(event) {
+            if (event.target === this) closeRequestModal();
+        });
 
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeRequestModal();
-            document.querySelectorAll('.panel-modal-overlay:not(.hidden)').forEach(modal => modal.classList.add('hidden'));
-            document.body.style.overflow = '';
-        }
-    });
-</script>
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeRequestModal();
+                document.querySelectorAll('.panel-modal-overlay:not(.hidden)').forEach(modal => modal.classList.add(
+                    'hidden'));
+                document.body.style.overflow = '';
+            }
+        });
+    </script>
 @endpush
