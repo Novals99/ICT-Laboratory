@@ -1,24 +1,26 @@
 @extends('panel.content')
+@extends('panel.content')
 
 @section('title', 'Dashboard')
 
 @section('content')
     <div class="db-wrap">
 
+    {{-- ══ 3 CARDS ══ --}}
         <div class="db-cards-row">
             <div class="db-stat-card">
                 <div class="stat-info">
-                    <span class="stat-label">Laboratory</span>
-                    <span class="stat-value">{{ number_format($totalLaboratory) }}</span>
+                    <span class="stat-label">Users</span>
+                    <span class="stat-value">{{ number_format($totalUsers) }}</span>
                 </div>
             </div>
 
-            <div class="db-stat-card">
-                <div class="stat-info">
-                    <span class="stat-label">PC Active</span>
-                    <span class="stat-value">{{ number_format($totalPcActive) }}</span>
-                </div>
+        <div class="db-stat-card">
+            <div class="stat-info">
+                <span class="stat-label">PC Active ontol</span>
+                <span class="stat-value">{{ number_format($totalPcActive) }}</span>
             </div>
+        </div>
 
             <div class="db-stat-card">
                 <div class="stat-info">
@@ -35,8 +37,8 @@
             </div>
         </div>
 
-        <div class="db-card db-chart-card">
-            <h2 class="db-card-title">Laboratory Conditions</h2>
+    <div class="db-card db-chart-card">
+        <h2 class="db-card-title">Laboratory Conditions</h2>
 
             <div class="chart-container">
                 <canvas id="labConditionsChart"></canvas>
@@ -48,53 +50,53 @@
             </div>
         </div>
 
-        <div class="db-card db-table-card">
-            <div class="table-wrap">
-                <table class="db-table">
-                    <thead>
+    <div class="db-card db-table-card">
+        <div class="table-wrap">
+            <table class="db-table">
+                <thead>
+                    <tr>
+                        <th>ID Request</th>
+                        <th>Name</th>
+                        <th>Total Request</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @forelse ($recentRequests as $req)
                         <tr>
-                            <th>ID Request</th>
-                            <th>Name</th>
-                            <th>Total Request</th>
-                            <th>Date</th>
-                            <th>Status</th>
+                            <td class="td-mono">{{ $req->id }}</td>
+                            <td>{{ $req->user->name ?? '-' }}</td>
+                            <td>{{ $req->total_requested_items ?? 0 }}</td>
+                            <td>{{ $req->created_at->format('d-m-y') }}</td>
+                            <td>
+                                @php
+                                    $status = strtolower($req->request_status ?? 'pending');
+
+                                    $badgeClass = match($status) {
+                                        'approved' => 'badge-approved',
+                                        'rejected' => 'badge-rejected',
+                                        default => 'badge-pending',
+                                    };
+                                @endphp
+
+                                <span class="status-badge {{ $badgeClass }}">
+                                    {{ ucfirst($req->request_status ?? 'Pending') }}
+                                </span>
+                            </td>
                         </tr>
-                    </thead>
-
-                    <tbody>
-                        @forelse ($recentRequests as $req)
-                            <tr>
-                                <td class="td-mono">{{ $req->id }}</td>
-                                <td>{{ $req->user->name ?? '-' }}</td>
-                                <td>{{ $req->total_requested_items ?? 0 }}</td>
-                                <td>{{ optional($req->created_at)->format('d-m-y') ?? '-' }}</td>
-                                <td>
-                                    @php
-                                        $status = strtolower($req->request_status ?? 'pending');
-
-                                        $badgeClass = match ($status) {
-                                            'approved' => 'badge-approved',
-                                            'rejected' => 'badge-rejected',
-                                            default => 'badge-pending',
-                                        };
-                                    @endphp
-
-                                    <span class="status-badge {{ $badgeClass }}">
-                                        {{ ucfirst($req->request_status ?? 'Pending') }}
-                                    </span>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="empty-state" style="text-align:center; padding:32px">
-                                    Belum ada lab request
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="empty-state" style="text-align:center; padding:32px">
+                                Belum ada lab request
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
+    </div>
 
     </div>
 @endsection
@@ -107,11 +109,11 @@
             gap: 20px;
         }
 
-        .db-cards-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-        }
+    .db-cards-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+    }
 
         .db-stat-card {
             background: #ffffff;
@@ -219,22 +221,22 @@
             font-size: 13.5px;
         }
 
-        .db-table th {
-            padding: 14px 16px;
-            text-align: left;
-            font-size: 13px;
-            font-weight: 600;
-            color: #374151;
-            white-space: nowrap;
-            background: #ffffff;
-            border-bottom: 1px solid #e5e7eb;
-        }
+    .db-table th {
+        padding: 14px 16px;
+        text-align: left;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        white-space: nowrap;
+        background: #ffffff;
+        border-bottom: 1px solid #e5e7eb;
+    }
 
-        .dark .db-table th {
-            color: #94a3b8;
-            background: #1e2130;
-            border-bottom-color: #2d3148;
-        }
+    .dark .db-table th {
+        color: #94a3b8;
+        background: #1e2130;
+        border-bottom-color: #2d3148;
+    }
 
         .db-table td {
             padding: 13px 16px;
@@ -247,14 +249,14 @@
             border-bottom-color: #2d3148;
         }
 
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 5px 14px;
-            border-radius: 6px;
-            font-size: 12.5px;
-            font-weight: 700;
-        }
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 14px;
+        border-radius: 6px;
+        font-size: 12.5px;
+        font-weight: 700;
+    }
 
         .badge-pending {
             background: #f59e0b;

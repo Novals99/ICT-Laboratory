@@ -112,21 +112,6 @@
                         >
                     </div>
 
-                    <div class="asset-field asset-field-entry">
-                        <label class="asset-field-label">Entry Date:</label>
-                        <input
-                            type="date"
-                            name="items[0][asset_entry]"
-                            value="{{ old('items.0.asset_entry') }}"
-                            class="panel-form-input"
-                            data-progress-field
-                        >
-
-                        @error('items.0.asset_entry')
-                            <p class="panel-form-error">{{ $message }}</p>
-                        @enderror
-                    </div>
-
                     <div class="asset-field asset-field-source">
                         <label class="asset-field-label">Source:</label>
                         <input
@@ -293,16 +278,6 @@
                             class="panel-form-input asset-category-display"
                             data-category-display
                             readonly
-                        >
-                    </div>
-
-                    <div class="asset-field asset-field-entry">
-                        <label class="asset-field-label">Entry Date:</label>
-                        <input
-                            type="date"
-                            data-name="asset_entry"
-                            class="panel-form-input"
-                            data-progress-field
                         >
                     </div>
 
@@ -569,7 +544,7 @@
         </div>
 
         <div class="panel-form-row">
-            <label class="panel-form-label" for="{{ $modalId }}-asset-entry">
+            {{-- <label class="panel-form-label" for="{{ $modalId }}-asset-entry">
                 Entry Date:
             </label>
 
@@ -586,7 +561,21 @@
                 @error('asset_entry')
                     <p class="panel-form-error">{{ $message }}</p>
                 @enderror
-            </div>
+            </div> --}}
+
+            <label class="panel-form-label">Source</label>
+            <input
+                type="text"
+                name="source"
+                value="{{ old('source') }}"
+                class="panel-form-input"
+                placeholder="Pembelian / Hibah / Lab"
+            >
+
+            @error('source')
+                <p class="panel-form-error">{{ $message }}</p>
+            @enderror
+
         </div>
 
         <div class="panel-form-row">

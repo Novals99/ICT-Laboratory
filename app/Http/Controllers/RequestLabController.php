@@ -118,9 +118,12 @@ class RequestLabController extends Controller
 
     public function destroy($id)
     {
-        DB::transaction(function () use ($id) {
-            RequestLab::findOrFail($id)->delete();
-        });
+        DB::beginTransaction();
+        try {
+            $labRequest = LabRequest::findOrFail($id);
+            $labRequest->delete();
+
+            DB::commit();
 
         return redirect()->route('requestlab.index')
             ->with('success', 'Request berhasil dihapus.');
@@ -129,41 +132,18 @@ class RequestLabController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'lab_id' => ['required', 'exists:laboratories,id'],
-            'request_date' => ['required', 'date'],
-            'items' => ['required', 'array'],
-            'items.*' => ['nullable', 'array'],
-            'items.*.*.asset_id' => ['nullable', 'exists:assets,id'],
-            'items.*.*.total_request' => ['nullable', 'integer', 'min:1'],
+            'name'          => 'required|string|max:255',
+            'total_request' => 'required|integer|min:1',
+            'request_date'  => 'required|date',
+            'status'        => 'nullable|in:Pending,Approved,Partially Approved,Rejected',
         ]);
 
-        $items = collect($validated['items'])
-            ->flatMap(fn ($categoryItems) => $categoryItems ?? [])
-            ->filter(fn ($item) => ! empty($item['asset_id']) && ! empty($item['total_request']))
-            ->values();
-
-        if ($items->isEmpty()) {
-            return back()
-                ->withInput()
-                ->withErrors(['items' => 'Pilih minimal satu asset yang ingin direquest.']);
-        }
-
-        DB::transaction(function () use ($validated, $items) {
-            $labRequest = RequestLab::create([
-                'user_id' => auth()->id(),
-                'lab_id' => $validated['lab_id'],
-                'request_date' => $validated['request_date'],
-                'request_status' => 'pending',
-            ]);
-
-            foreach ($items as $item) {
-                $labRequest->request_items()->create([
-                    'asset_id' => $item['asset_id'],
-                    'total_request' => $item['total_request'],
-                    'status' => 'pending',
-                ]);
-            }
-        });
+        LabRequest::create([
+            'name'          => $validated['name'],
+            'total_request' => $validated['total_request'],
+            'request_date'  => $validated['request_date'],
+            'status'        => $validated['status'] ?? 'Pending',
+        ]);
 
         return redirect()->route('requestlab.index')
             ->with('success', 'Request berhasil ditambahkan.');
@@ -171,11 +151,22 @@ class RequestLabController extends Controller
 
     public function edit($id)
     {
-        return redirect()->route('requestlab.index');
+        $labRequest = LabRequest::findOrFail($id);
+        return view('pages.dashboard.requestlab.edit', compact('labRequest'));
     }
 
     public function update(Request $request, $id)
     {
+        $validated = $request->validate([
+            'name'          => 'required|string|max:255',
+            'total_request' => 'required|integer|min:1',
+            'request_date'  => 'required|date',
+            'status'        => 'nullable|in:Pending,Approved,Rejected',
+        ]);
+
+        $labRequest = LabRequest::findOrFail($id);
+        $labRequest->update($validated);
+
         return redirect()->route('requestlab.index')
             ->with('error', 'Edit request lab dilakukan melalui status item di popup detail.');
     }

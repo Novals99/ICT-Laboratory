@@ -1,8 +1,5 @@
 <?php
 
-use App\Http\Controllers\AssetController;
-use App\Http\Controllers\AssetLabController;
-use App\Http\Controllers\AssetLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LaboratoryController;
 use App\Http\Controllers\PcController;
@@ -10,6 +7,9 @@ use App\Http\Controllers\RequestItemController;
 use App\Http\Controllers\RequestLabController;
 use App\Http\Controllers\StaffLabController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AssetLabController;
+use App\Http\Controllers\AssetLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -72,6 +72,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/repaired', [AssetLogController::class, 'storeRepaired'])->name('repaired');
         Route::post('/adjustment', [AssetLogController::class, 'storeAdjustment'])->name('adjustment');
     });
-});
 
+
+
+
+
+});
 require __DIR__ . '/auth.php';
