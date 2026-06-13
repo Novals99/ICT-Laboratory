@@ -61,7 +61,7 @@ class RequestLabController extends Controller
         $nonElectronic = $this->itemsForCategory($labRequest, 'non-electronic');
 
         return response()->json([
-            'request_id' => 'REQ-'.str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
+            'request_id' => 'REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
             'user_name' => $labRequest->user->name ?? '-',
             'total_request' => $labRequest->request_items->sum('total_request'),
             'electronic' => $electronic,
@@ -119,14 +119,21 @@ class RequestLabController extends Controller
     public function destroy($id)
     {
         DB::beginTransaction();
+
         try {
-            $labRequest = LabRequest::findOrFail($id);
+            $labRequest = RequestLab::findOrFail($id);
             $labRequest->delete();
 
             DB::commit();
 
-        return redirect()->route('requestlab.index')
-            ->with('success', 'Request berhasil dihapus.');
+            return redirect()->route('requestlab.index')
+                ->with('success', 'Request berhasil dihapus.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return redirect()->route('requestlab.index')
+                ->with('error', 'Request gagal dihapus.');
+        }
     }
 
     public function store(Request $request)
@@ -187,9 +194,9 @@ class RequestLabController extends Controller
     private function itemsForCategory(RequestLab $labRequest, string $category): array
     {
         return $labRequest->request_items()
-            ->whereHas('asset', fn ($q) => $q->where('asset_category', $category))
+            ->whereHas('asset', fn($q) => $q->where('asset_category', $category))
             ->get()
-            ->map(fn ($item) => [
+            ->map(fn($item) => [
                 'item_id' => $item->id,
                 'asset_name' => $item->asset->asset_name ?? '-',
                 'quantity' => $item->total_request,
@@ -200,8 +207,8 @@ class RequestLabController extends Controller
 
     private function resolveRequestStatus($items): string
     {
-        $allApproved = $items->every(fn ($item) => $item->status === 'approved');
-        $allRejected = $items->every(fn ($item) => $item->status === 'rejected');
+        $allApproved = $items->every(fn($item) => $item->status === 'approved');
+        $allRejected = $items->every(fn($item) => $item->status === 'rejected');
 
         return match (true) {
             $allApproved => 'approved',
