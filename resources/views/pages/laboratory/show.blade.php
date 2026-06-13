@@ -258,7 +258,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                         @endif
 
                         <td style="text-align:center; font-weight:700; font-size:14px; color:#111827;">
-                            {{ $asset->pivot->total_asset_lab }}
+                            {{ $asset->pivot->total_asset_lab ?? 0 }}
                         </td>
 
                         @if($canEdit)

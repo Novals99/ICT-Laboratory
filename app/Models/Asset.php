@@ -17,6 +17,16 @@ class Asset extends Model
         'total_loss'
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Asset $asset) {
+            $asset->total_asset = 
+                (int) ($asset->total_good ?? 0) 
+                + (int) ($asset->total_damaged ?? 0) 
+                + (int) ($asset->total_loss ?? 0);
+        });
+    }
+
     public function labs() {
         return $this->belongsToMany(Laboratory::class, 'asset_labs');
     }

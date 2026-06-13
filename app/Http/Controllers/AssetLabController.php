@@ -28,58 +28,59 @@ class AssetLabController extends Controller
                 if (!$asset || $asset->total_good < 1) {
                     return back()->with('error', 'Stok good di inventory tidak mencukupi.');
                 }
-                $asset->decrement('total_good');
-                $this->recalculateAssetTotal($asset);
+                // Kurangi SPV
+                $asset->total_good -= 1;
+                $asset->save(); // trigger auto-calculate total_asset
 
-                $assetLab->increment('total_good_lab');
+                // Tambah lab
+                $assetLab->total_good_lab += 1;
 
             } elseif ($field === 'total_damaged_lab') {
-                if ($assetLab->total_good_lab > 0) {
-                    $assetLab->decrement('total_good_lab');
-                    $assetLab->increment('total_damaged_lab');
-                } else {
+                if ($assetLab->total_good_lab < 1) {
                     return back()->with('error', 'Stok good di lab tidak mencukupi untuk merusakkan.');
                 }
+                $assetLab->total_good_lab -= 1;
+                $assetLab->total_damaged_lab += 1;
 
             } elseif ($field === 'total_loss_lab') {
-                if ($assetLab->total_good_lab > 0) {
-                    $assetLab->decrement('total_good_lab');
-                    $assetLab->increment('total_loss_lab');
-                    $assetLab->decrement('total_asset_lab');
-                } else {
+                if ($assetLab->total_good_lab < 1) {
                     return back()->with('error', 'Stok good di lab tidak mencukupi untuk menghilangkan.');
                 }
+                $assetLab->total_good_lab -= 1;
+                $assetLab->total_loss_lab += 1;
             }
 
-        } elseif ($action === 'decrement' && $assetLab->$field > 0) {
+        } elseif ($action === 'decrement') {
             if ($field === 'total_good_lab') {
-                if ($asset) {
-                    $asset->increment('total_good');
-                    $this->recalculateAssetTotal($asset);
+                if ($assetLab->total_good_lab < 1) {
+                    return back()->with('error', 'Stok good di lab tidak mencukupi.');
                 }
-                $assetLab->decrement('total_good_lab');
+                if ($asset) {
+                    $asset->total_good += 1;
+                    $asset->save();
+                }
+                $assetLab->total_good_lab -= 1;
 
             } elseif ($field === 'total_damaged_lab') {
-                $assetLab->decrement('total_damaged_lab');
-                $assetLab->increment('total_good_lab');
+                if ($assetLab->total_damaged_lab < 1) {
+                    return back()->with('error', 'Stok damaged di lab tidak mencukupi.');
+                }
+                $assetLab->total_damaged_lab -= 1;
+                $assetLab->total_good_lab += 1;
 
             } elseif ($field === 'total_loss_lab') {
-                $assetLab->decrement('total_loss_lab');
-                $assetLab->increment('total_good_lab');
-                $assetLab->increment('total_asset_lab');
+                if ($assetLab->total_loss_lab < 1) {
+                    return back()->with('error', 'Stok loss di lab tidak mencukupi.');
+                }
+                $assetLab->total_loss_lab -= 1;
+                $assetLab->total_good_lab += 1;
             }
         }
 
-        $assetLab->refresh();
-        $assetLab->update([
-            'total_asset_lab' => $assetLab->total_good_lab
-                               + $assetLab->total_damaged_lab
-                               + $assetLab->total_loss_lab,
-        ]);
+        $assetLab->save(); // trigger auto-calculate total_asset_lab
 
         return back()->with('success', 'Stok berhasil diperbarui.')->with('section', 'asset');
     }
-
     public function removeFromLab(Laboratory $laboratory, $assetId)
     {
         $assetLab = AssetLab::where('lab_id', $laboratory->id)
@@ -89,17 +90,16 @@ class AssetLabController extends Controller
         if ($assetLab) {
             $asset = Asset::find($assetId);
             if ($asset) {
-                // Balikin semua kondisi ke SPV sesuai kondisi terakhir di lab
                 if ($assetLab->total_good_lab > 0) {
-                    $asset->increment('total_good', $assetLab->total_good_lab);
+                    $asset->total_good += $assetLab->total_good_lab;
                 }
                 if ($assetLab->total_damaged_lab > 0) {
-                    $asset->increment('total_damaged', $assetLab->total_damaged_lab);
+                    $asset->total_damaged += $assetLab->total_damaged_lab;
                 }
                 if ($assetLab->total_loss_lab > 0) {
-                    $asset->increment('total_loss', $assetLab->total_loss_lab);
+                    $asset->total_loss += $assetLab->total_loss_lab;
                 }
-                $this->recalculateAssetTotal($asset);
+                $asset->save(); // trigger auto-calculate
             }
             $assetLab->delete();
         }

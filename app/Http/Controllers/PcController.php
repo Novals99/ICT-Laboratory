@@ -12,19 +12,19 @@ class PcController extends Controller
     public function store(Request $request, Laboratory $laboratory)
     {
         $validated = $request->validate([
-            'type_pc' => 'required|in:dosen,mahasiswa',
-            'processor' => 'nullable|string|max:255',
-            'ram' => 'nullable|string|max:255',
-            'ssd' => 'nullable|string|max:255',
+            'type_pc'     => 'required|in:dosen,mahasiswa',
+            'processor'   => 'nullable|string|max:255',
+            'ram'         => 'nullable|string|max:255',
+            'ssd'         => 'nullable|string|max:255',
             'motherboard' => 'nullable|string|max:255',
-            'vga' => 'nullable|string|max:255',
-            'cpu_fan' => 'nullable|string|max:255',
+            'vga'         => 'nullable|string|max:255',
+            'cpu_fan'     => 'nullable|string|max:255',
             'powersupply' => 'nullable|string|max:255',
         ]);
 
         $laboratory->pcs()->create(array_merge($validated, [
             'status_pc' => 'active',
-            'pc_entry' => now()->toDateString(),
+            'pc_entry'  => now()->toDateString(),
         ]));
 
         // 🔴 Kurangi stok component di Lab
@@ -49,15 +49,16 @@ class PcController extends Controller
     public function update(Request $request, Laboratory $laboratory, Pc $pc)
     {
         $validated = $request->validate([
-            'type_pc' => 'required|in:dosen,mahasiswa',
-            'status_pc' => 'required|in:active,inactive',
-            'processor' => 'nullable|string|max:255',
-            'ram' => 'nullable|string|max:255',
-            'ssd' => 'nullable|string|max:255',
+            'type_pc'     => 'required|in:dosen,mahasiswa',
+            'status_pc'   => 'required|in:active,inactive',
+            'processor'   => 'nullable|string|max:255',
+            'ram'         => 'nullable|string|max:255',
+            'ssd'         => 'nullable|string|max:255',
             'motherboard' => 'nullable|string|max:255',
-            'vga' => 'nullable|string|max:255',
-            'cpu_fan' => 'nullable|string|max:255',
+            'vga'         => 'nullable|string|max:255',
+            'cpu_fan'     => 'nullable|string|max:255',
             'powersupply' => 'nullable|string|max:255',
+            'keterangan'  => 'nullable|string',
         ]);
 
         $old = array_filter([
@@ -106,9 +107,8 @@ class PcController extends Controller
     {
         $request->validate(['status_pc' => 'required|in:active,inactive']);
         $pc->update(['status_pc' => $request->status_pc]);
-
         return redirect()->back()
-            ->with('success', 'Status PC berhasil diubah menjadi '.$request->status_pc)
+            ->with('success', 'Status PC berhasil diubah menjadi ' . $request->status_pc)
             ->with('section', 'pc');
     }
 
