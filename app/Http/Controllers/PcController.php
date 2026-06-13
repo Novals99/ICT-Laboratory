@@ -104,26 +104,12 @@ class PcController extends Controller
 
     public function updateStatus(Request $request, Pc $pc)
     {
-<<<<<<< HEAD
-        // 1. Validasi data yang masuk untuk memastikan hanya status yang valid yang diterima
-        $request->validate([
-            'status_pc' => 'required|in:active,inactive',
-        ]);
-
-        // 2. Update field status_pc di database
-        $pc->update([
-            'status_pc' => $request->status_pc,
-        ]);
-
-        // 3. Kembalikan ke halaman sebelumnya dengan alert sukses
-        return redirect()->back()->with('success', 'Status PC berhasil diubah menjadi '.$request->status_pc);
-=======
         $request->validate(['status_pc' => 'required|in:active,inactive']);
         $pc->update(['status_pc' => $request->status_pc]);
+
         return redirect()->back()
-            ->with('success', 'Status PC berhasil diubah menjadi ' . $request->status_pc)
+            ->with('success', 'Status PC berhasil diubah menjadi '.$request->status_pc)
             ->with('section', 'pc');
->>>>>>> 206761705a3d0043394f15b54a392ae939e8253d
     }
 
     /* ─────────────────────────────────────────
