@@ -13,7 +13,7 @@ class Laboratory extends Model
         'lab_name',
         'capacity',
         'total_pc_active',
-        'total_pc_inactive'
+        'total_pc_inactive',
     ];
 
     public function users()
@@ -23,6 +23,14 @@ class Laboratory extends Model
             'staff_labs',
             'lab_id',
             'user_id'
+        );
+    }
+
+    public function staffLabs()
+    {
+        return $this->hasMany(
+            StaffLab::class,
+            'lab_id'
         );
     }
 

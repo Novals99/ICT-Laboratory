@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+
 // use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
@@ -19,14 +20,21 @@ class User extends Authenticatable
         'username',
         'password',
         'status_user',
-        'email'
+        'email',
     ];
 
-    public function labs() {
+    public function labs()
+    {
         return $this->belongsToMany(Laboratory::class, 'staff_labs', 'user_id', 'lab_id');
     }
 
-    public function request_labs() {
+    public function staffLabs()
+    {
+        return $this->hasMany(StaffLab::class, 'user_id');
+    }
+
+    public function request_labs()
+    {
         return $this->hasMany(RequestLab::class);
     }
 

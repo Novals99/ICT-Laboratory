@@ -1,11 +1,8 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
-      x-data
-      x-init="
-        if (localStorage.getItem('theme') === 'dark') {
-            document.documentElement.classList.add('dark');
-        }
-      ">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data x-init="if (localStorage.getItem('theme') === 'dark') {
+    document.documentElement.classList.add('dark');
+}">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,7 +13,9 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
-        *, *::before, *::after {
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
         }
 
@@ -56,6 +55,30 @@
             display: none !important;
         }
 
+        :root {
+            --bg-card: #ffffff;
+            --bg-modal: #ffffff;
+            --bg-table-header: #f3f4f6;
+            --bg-input: #ffffff;
+            --bg-notes: #f9fafb;
+            --border-color: #e5e7eb;
+            --text-primary: #111827;
+            --text-secondary: #374151;
+            --text-muted: #6b7280;
+        }
+
+        .dark {
+            --bg-card: #1e2130;
+            --bg-modal: #1e2130;
+            --bg-table-header: #2a2d3e;
+            --bg-input: #2a2d3e;
+            --bg-notes: #252840;
+            --border-color: #2d3148;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+        }
+
         @media (max-width: 768px) {
             .admin-content {
                 padding: 16px 12px;
@@ -85,7 +108,7 @@
 
             {{-- navbar --}}
             @include('panel.navbar', [
-                'title' => trim($__env->yieldContent('title', 'Dashboard'))
+                'title' => trim($__env->yieldContent('title', 'Dashboard')),
             ])
 
             {{-- content area --}}
@@ -98,4 +121,5 @@
 
     @stack('scripts')
 </body>
+
 </html>

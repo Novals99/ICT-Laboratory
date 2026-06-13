@@ -2,120 +2,133 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AssetLog;
-use App\Models\LabRequest;
-use App\Models\RequestLab;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
-
 use App\Models\Asset;
+use App\Models\Laboratory;
+use App\Models\RequestItem;
+use App\Models\RequestLab;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class RequestLabController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        $requests = RequestLab::with([
+        $query = RequestLab::with([
             'user',
             'lab',
-            'request_items.asset'
-        ])->latest()->paginate(11);
+            'request_items.asset',
+        ]);
 
-        return view('pages.dashboard.requestlab.index', compact('requests'));
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw("CONCAT('REQ-', LPAD(id, 3, '0')) = ?", [$search])
+                    ->orWhereHas('user', function ($user) use ($search) {
+                        $user->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->whereIn('request_status', (array) $request->status);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('request_date', $request->date_to);
+        }
+
+        $requests = $query
+            ->latest()
+            ->paginate(11)
+            ->withQueryString();
+
+        $laboratories = Laboratory::orderBy('lab_name')->get();
+        $assets = Asset::orderBy('asset_name')->get();
+
+        return view('pages.requestlab.index', compact('requests', 'laboratories', 'assets'));
     }
 
-    // ---------------------------------------------------------------
-    // DETAIL (AJAX/JSON) — dipanggil dari modal
-    // GET /requestlab/{id}/detail
-    //
-    // Mengambil data LabRequest lalu join ke AssetLog untuk
-    // mendapatkan daftar aset yang diminta (electronic & non-electronic)
-    // berdasarkan field 'type' di model AssetLog
-    // ---------------------------------------------------------------
-   public function detail($id)
-{
-    $labRequest = LabRequest::findOrFail($id);
+    public function detail($id)
+    {
+        $labRequest = RequestLab::with([
+            'user',
+            'request_items.asset',
+        ])->findOrFail($id);
 
-        $electronic = Asset::where('asset_category', 'electronic')
-            ->get()
-            ->map(function ($asset) {
-                return [
-                    'asset_name' => $asset->asset_name,
-                    'quantity'   => $asset->total_asset,
-                ];
-            })
-            ->toArray();
-
-        $nonElectronic = Asset::where('asset_category', 'non-electronic')
-            ->get()
-            ->map(function ($asset) {
-                return [
-                    'asset_name' => $asset->asset_name,
-                    'quantity'   => $asset->total_asset,
-                ];
-            })
-            ->toArray();
+        $electronic = $this->itemsForCategory($labRequest, 'electronic');
+        $nonElectronic = $this->itemsForCategory($labRequest, 'non-electronic');
 
         return response()->json([
-            'request_id'     => 'REQ-' . $labRequest->id,
-            'user_name'      => $labRequest->user->name ?? '-',
-            'total_request'  => $labRequest->request_items->sum('total_request'),
-            'notes'          => null,
-            'request_date'   => $labRequest->request_date,
-            'status'         => $labRequest->request_status,
-            'electronic'     => $electronic,
+            'request_id' => 'REQ-'.str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
+            'user_name' => $labRequest->user->name ?? '-',
+            'total_request' => $labRequest->request_items->sum('total_request'),
+            'electronic' => $electronic,
             'non_electronic' => $nonElectronic,
         ]);
     }
 
-    // ---------------------------------------------------------------
-    // UPDATE STATUS — Approved / Rejected dari tombol modal
-    // PATCH /requestlab/{id}/status
-    // ---------------------------------------------------------------
     public function updateStatus(Request $request, $id)
     {
         $validated = $request->validate([
-            'status' => 'required|in:Approved,Partially Approved,Rejected',
+            'status' => 'required|in:approved,rejected',
         ]);
 
-        $labRequest = RequestLab::findOrFail($id);
-        $labRequest->update([
-            'request_status' => strtolower($validated['status']),
-            'approved_by' => null,
-        ]);
+        $labRequest = RequestLab::with('request_items')->findOrFail($id);
 
-        return redirect()->route('requestlab.index')
-            ->with('success', 'Status berhasil diubah menjadi ' . $validated['status'] . '.');
+        DB::transaction(function () use ($labRequest, $validated) {
+            $labRequest->request_items()->update([
+                'status' => $validated['status'],
+            ]);
+
+            $labRequest->update([
+                'request_status' => $validated['status'],
+            ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'request_status' => $labRequest->fresh()->request_status,
+        ]);
     }
 
-    // ---------------------------------------------------------------
-    // DESTROY — hapus data request
-    // DELETE /requestlab/{id}
-    // ---------------------------------------------------------------
+    public function updateItemStatus(Request $request, $itemId)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:approved,rejected',
+        ]);
+
+        $requestStatus = DB::transaction(function () use ($itemId, $validated) {
+            $item = RequestItem::findOrFail($itemId);
+            $item->update(['status' => $validated['status']]);
+
+            $labRequest = RequestLab::with('request_items')->findOrFail($item->request_lab_id);
+            $requestStatus = $this->resolveRequestStatus($labRequest->request_items);
+            $labRequest->update(['request_status' => $requestStatus]);
+
+            return $requestStatus;
+        });
+
+        return response()->json([
+            'success' => true,
+            'request_status' => $requestStatus,
+        ]);
+    }
+
     public function destroy($id)
     {
         DB::beginTransaction();
         try {
-            $labRequest = RequestLab::findOrFail($id);
+            $labRequest = LabRequest::findOrFail($id);
             $labRequest->delete();
 
             DB::commit();
 
-            return redirect()->route('requestlab.index')
-                ->with('success', 'Request berhasil dihapus.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
-        }
+        return redirect()->route('requestlab.index')
+            ->with('success', 'Request berhasil dihapus.');
     }
 
-    // ---------------------------------------------------------------
-    // STORE — simpan request baru
-    // POST /requestlab
-    // ---------------------------------------------------------------
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -125,7 +138,7 @@ class RequestLabController extends Controller
             'status'        => 'nullable|in:Pending,Approved,Partially Approved,Rejected',
         ]);
 
-        RequestLab::create([
+        LabRequest::create([
             'name'          => $validated['name'],
             'total_request' => $validated['total_request'],
             'request_date'  => $validated['request_date'],
@@ -136,20 +149,12 @@ class RequestLabController extends Controller
             ->with('success', 'Request berhasil ditambahkan.');
     }
 
-    // ---------------------------------------------------------------
-    // EDIT — form edit (halaman terpisah, opsional)
-    // GET /requestlab/{id}/edit
-    // ---------------------------------------------------------------
     public function edit($id)
     {
-        $labRequest = RequestLab::findOrFail($id);
+        $labRequest = LabRequest::findOrFail($id);
         return view('pages.dashboard.requestlab.edit', compact('labRequest'));
     }
 
-    // ---------------------------------------------------------------
-    // UPDATE — simpan perubahan
-    // PUT /requestlab/{id}
-    // ---------------------------------------------------------------
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
@@ -159,21 +164,49 @@ class RequestLabController extends Controller
             'status'        => 'nullable|in:Pending,Approved,Rejected',
         ]);
 
-        $labRequest = RequestLab::findOrFail($id);
+        $labRequest = LabRequest::findOrFail($id);
         $labRequest->update($validated);
 
         return redirect()->route('requestlab.index')
-            ->with('success', 'Request berhasil diperbarui.');
+            ->with('error', 'Edit request lab dilakukan melalui status item di popup detail.');
     }
 
     public function exportPdf()
     {
-        $requests = LabRequest::all();
+        $requests = RequestLab::with(['user', 'request_items'])
+            ->latest()
+            ->get();
 
         $pdf = Pdf::loadView('pdf.lab-requests', [
-            'requests' => $requests
+            'requests' => $requests,
         ]);
 
         return $pdf->download('Request-Lab.pdf');
+    }
+
+    private function itemsForCategory(RequestLab $labRequest, string $category): array
+    {
+        return $labRequest->request_items()
+            ->whereHas('asset', fn ($q) => $q->where('asset_category', $category))
+            ->get()
+            ->map(fn ($item) => [
+                'item_id' => $item->id,
+                'asset_name' => $item->asset->asset_name ?? '-',
+                'quantity' => $item->total_request,
+                'status' => $item->status ?? 'pending',
+            ])
+            ->toArray();
+    }
+
+    private function resolveRequestStatus($items): string
+    {
+        $allApproved = $items->every(fn ($item) => $item->status === 'approved');
+        $allRejected = $items->every(fn ($item) => $item->status === 'rejected');
+
+        return match (true) {
+            $allApproved => 'approved',
+            $allRejected => 'rejected',
+            default => 'partial',
+        };
     }
 }
