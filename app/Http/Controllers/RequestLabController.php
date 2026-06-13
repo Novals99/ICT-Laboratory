@@ -64,7 +64,7 @@ class RequestLabController extends Controller
         ])->findOrFail($id);
 
         return response()->json([
-            'request_id' => 'REQ-'.str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
+            'request_id' => 'REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
             'user_name' => $labRequest->user->name ?? '-',
             'total_request' => $labRequest->request_items->sum('total_request'),
             'electronic' => $this->itemsForCategory($labRequest, 'electronic'),
@@ -209,9 +209,9 @@ class RequestLabController extends Controller
     private function itemsForCategory(RequestLab $labRequest, string $category): array
     {
         return $labRequest->request_items()
-            ->whereHas('asset', fn ($q) => $q->where('asset_category', $category))
+            ->whereHas('asset', fn($q) => $q->where('asset_category', $category))
             ->get()
-            ->map(fn ($item) => [
+            ->map(fn($item) => [
                 'item_id' => $item->id,
                 'asset_name' => $item->asset->asset_name ?? '-',
                 'quantity' => $item->total_request,
@@ -222,8 +222,8 @@ class RequestLabController extends Controller
 
     private function resolveRequestStatus($items): string
     {
-        $allApproved = $items->every(fn ($item) => $item->status === 'approved');
-        $allRejected = $items->every(fn ($item) => $item->status === 'rejected');
+        $allApproved = $items->every(fn($item) => $item->status === 'approved');
+        $allRejected = $items->every(fn($item) => $item->status === 'rejected');
 
         return match (true) {
             $allApproved => 'approved',

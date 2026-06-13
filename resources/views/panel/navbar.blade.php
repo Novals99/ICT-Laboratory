@@ -21,7 +21,7 @@
 
     {{-- kanan: search global + profil --}}
     <div class="navbar-right">
-        <x-button.search.global-search />
+        {{-- <x-button.search.global-search /> --}}
 
         {{-- ── DESKTOP: dropdown profil (dark/light mode + logout) ── --}}
         <div class="navbar-profile navbar-profile-desktop"

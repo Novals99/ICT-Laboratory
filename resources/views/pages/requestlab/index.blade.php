@@ -58,23 +58,25 @@ $assetGroups = $assets
                 </div>
                 @endif
 
-                <div class="filter-section">
-                    <div class="filter-section-title">Request Status</div>
-                    @foreach (['pending', 'approved', 'partial', 'rejected'] as $status)
-                    <label class="filter-checkbox-row">
-                        <input type="checkbox" name="status[]" value="{{ $status }}"
-                            {{ in_array($status, (array) request('status', [])) ? 'checked' : '' }}
-                            style="accent-color: #111B4C;">
-                        <span>{{ $status === 'partial' ? 'Partially Approved' : ucwords($status) }}</span>
-                    </label>
-                    @endforeach
-                </div>
+                @if ($role !== 'admin')
+                    <div class="filter-section">
+                        <div class="filter-section-title">Request Status</div>
+                        @foreach (['pending', 'approved', 'partial', 'rejected'] as $status)
+                        <label class="filter-checkbox-row">
+                            <input type="checkbox" name="status[]" value="{{ $status }}"
+                                {{ in_array($status, (array) request('status', [])) ? 'checked' : '' }}
+                                style="accent-color: #111B4C;">
+                            <span>{{ $status === 'partial' ? 'Partially Approved' : ucwords($status) }}</span>
+                        </label>
+                        @endforeach
+                    </div>
 
-                <div class="filter-section">
-                    <div class="filter-section-title">Request Date</div>
-                    <input type="date" name="date_to" value="{{ request('date_to') }}"
-                        class="w-full rounded-lg border px-3 py-2 text-sm">
-                </div>
+                    <div class="filter-section">
+                        <div class="filter-section-title">Request Date</div>
+                        <input type="date" name="date_to" value="{{ request('date_to') }}"
+                            class="w-full rounded-lg border px-3 py-2 text-sm">
+                    </div>
+                @endif
             </x-button.filter>
 
             @if ($isSpv)
