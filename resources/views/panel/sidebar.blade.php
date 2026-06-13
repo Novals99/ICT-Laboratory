@@ -1,4 +1,9 @@
 <aside class="sidebar">
+    @php
+        $role = auth()->user()->role;
+        $isAdmin = $role === 'admin';
+        $isSpv = $role === 'spv inventory';
+    @endphp
 
     {{-- logo ict --}}
     <div class="sidebar-brand">
@@ -61,8 +66,8 @@
 
                 <a href="{{ route('laboratory.index') }}"
                     style="flex:1; display:flex; align-items:center; gap:inherit; color:inherit; text-decoration:none;">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                        stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                         <polyline points="9 22 9 12 15 12 15 22" />
                     </svg>
@@ -81,12 +86,14 @@
 
             <div x-show="open" x-collapse class="sidebar-submenu">
                 @forelse ($laboratories ?? [] as $lab)
-                            <a href="{{ route('laboratory.show', $lab->id) }}" class="sidebar-subitem
-                                              {{ request()->routeIs('laboratory.show') && request()->route('laboratory')?->id == $lab->id
-                    ? 'sidebar-subitem-active' : '' }}">
-                                <span class="subitem-dot" aria-hidden="true"></span>
-                                {{ $lab->lab_name }}
-                            </a>
+                    <a href="{{ route('laboratory.show', $lab->id) }}"
+                        class="sidebar-subitem
+                                  {{ request()->routeIs('laboratory.show') && request()->route('laboratory')?->id == $lab->id
+                                      ? 'sidebar-subitem-active'
+                                      : '' }}">
+                        <span class="subitem-dot" aria-hidden="true"></span>
+                        {{ $lab->lab_name }}
+                    </a>
                 @empty
                     <p class="sidebar-subitem-empty">Belum ada laboratorium</p>
                 @endforelse
@@ -140,18 +147,21 @@
                 Activity Log
             </a>
 
-            {{-- asset log --}}
-            <a href="{{ route('assetlog.index') }}"
-                class="sidebar-item {{ request()->routeIs('assetlog.*') ? 'sidebar-item-active' : '' }}">
-                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-                Asset Log
-            </a>
+        {{-- asset log --}}
+        <a href="{{ route('assetlog.index') }}"
+            class="sidebar-item {{ request()->routeIs('assetlog.*') ? 'sidebar-item-active' : '' }}">
+            <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            Asset Log
+        </a>
+
+        @endif
+
 
         @endif
 
@@ -165,8 +175,8 @@
 
         <button @click="open = !open" class="sidebar-profile-btn" aria-label="Profile menu">
             <div class="sidebar-profile-avatar" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                    stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="8" r="4" />
                     <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
                 </svg>
@@ -200,8 +210,8 @@
                 document.documentElement.classList.toggle('dark', val === 'dark');
             })">
                 <button @click="theme = 'light'" :class="theme === 'light' ? 'theme-btn-active' : 'theme-btn'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                        stroke-linejoin="round" width="15" height="15">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                        stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
                         <circle cx="12" cy="12" r="5" />
                         <line x1="12" y1="1" x2="12" y2="3" />
                         <line x1="12" y1="21" x2="12" y2="23" />
@@ -215,8 +225,8 @@
                     Light
                 </button>
                 <button @click="theme = 'dark'" :class="theme === 'dark' ? 'theme-btn-active' : 'theme-btn'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                        stroke-linejoin="round" width="15" height="15">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                        stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" />
                     </svg>
                     Dark
@@ -229,8 +239,8 @@
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit" class="dropdown-logout">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                        stroke-linejoin="round" width="15" height="15">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                        stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                         <polyline points="16 17 21 12 16 7" />
                         <line x1="21" y1="12" x2="9" y2="12" />

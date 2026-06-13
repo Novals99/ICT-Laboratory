@@ -22,7 +22,6 @@ class RequestLabController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-
             $query->where(function ($q) use ($search) {
                 $q->whereRaw("CONCAT('REQ-', LPAD(id, 3, '0')) = ?", [$search])
                     ->orWhereHas('user', function ($user) use ($search) {
@@ -35,15 +34,23 @@ class RequestLabController extends Controller
             $query->whereIn('request_status', (array) $request->status);
         }
 
+        if ($request->filled('request_role')) {
+            $query->whereHas('user', function ($user) use ($request) {
+                $user->whereIn('role', (array) $request->request_role);
+            });
+        }
+
         if ($request->filled('date_to')) {
             $query->whereDate('request_date', $request->date_to);
         }
 
-        $requests = $query
-            ->latest()
-            ->paginate(11)
-            ->withQueryString();
+        if ($request->filled('role')) {
+            $query->whereHas('user', function ($q) use ($request) {
+                $q->where('role', $request->role);
+            });
+        }
 
+        $requests = $query->latest()->paginate(11)->withQueryString();
         $laboratories = Laboratory::orderBy('lab_name')->get();
         $assets = Asset::orderBy('asset_name')->get();
 
@@ -57,20 +64,65 @@ class RequestLabController extends Controller
             'request_items.asset',
         ])->findOrFail($id);
 
-        $electronic = $this->itemsForCategory($labRequest, 'electronic');
-        $nonElectronic = $this->itemsForCategory($labRequest, 'non-electronic');
-
         return response()->json([
+            'request_id' => 'REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
             'request_id' => 'REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
             'user_name' => $labRequest->user->name ?? '-',
             'total_request' => $labRequest->request_items->sum('total_request'),
-            'electronic' => $electronic,
-            'non_electronic' => $nonElectronic,
+            'electronic' => $this->itemsForCategory($labRequest, 'electronic'),
+            'non_electronic' => $this->itemsForCategory($labRequest, 'non-electronic'),
         ]);
+    }
+
+    public function store(Request $request)
+    {
+        abort_unless(in_array(auth()->user()->role, ['admin', 'pic', 'assistant'], true), 403);
+
+        $validated = $request->validate([
+            'lab_id' => ['required', 'exists:laboratories,id'],
+            'request_date' => ['required', 'date'],
+            'items' => ['required', 'array'],
+            'items.*' => ['nullable', 'array'],
+            'items.*.*.asset_id' => ['nullable', 'exists:assets,id'],
+            'items.*.*.total_request' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $items = collect($validated['items'])
+            ->flatMap(fn ($categoryItems) => $categoryItems ?? [])
+            ->filter(fn ($item) => ! empty($item['asset_id']) && ! empty($item['total_request']))
+            ->values();
+
+        if ($items->isEmpty()) {
+            return back()
+                ->withInput()
+                ->withErrors(['items' => 'Pilih minimal satu asset yang ingin direquest.']);
+        }
+
+        DB::transaction(function () use ($validated, $items) {
+            $labRequest = RequestLab::create([
+                'user_id' => auth()->id(),
+                'lab_id' => $validated['lab_id'],
+                'request_date' => $validated['request_date'],
+                'request_status' => 'pending',
+            ]);
+
+            foreach ($items as $item) {
+                $labRequest->request_items()->create([
+                    'asset_id' => $item['asset_id'],
+                    'total_request' => $item['total_request'],
+                    'status' => 'pending',
+                ]);
+            }
+        });
+
+        return redirect()->route('requestlab.index')
+            ->with('success', 'Request berhasil ditambahkan.');
     }
 
     public function updateStatus(Request $request, $id)
     {
+        abort_unless(auth()->user()->role === 'spv inventory', 403);
+
         $validated = $request->validate([
             'status' => 'required|in:approved,rejected',
         ]);
@@ -95,6 +147,8 @@ class RequestLabController extends Controller
 
     public function updateItemStatus(Request $request, $itemId)
     {
+        abort_unless(auth()->user()->role === 'spv inventory', 403);
+
         $validated = $request->validate([
             'status' => 'required|in:approved,rejected',
         ]);
@@ -124,11 +178,13 @@ class RequestLabController extends Controller
             $labRequest = RequestLab::findOrFail($id);
             $labRequest->delete();
 
-            DB::commit();
+        DB::transaction(function () use ($id) {
+            RequestLab::findOrFail($id)->delete();
+        });
 
             return redirect()->route('requestlab.index')
                 ->with('success', 'Request berhasil dihapus.');
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
             DB::rollBack();
 
             return redirect()->route('requestlab.index')
@@ -138,19 +194,29 @@ class RequestLabController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name'          => 'required|string|max:255',
-            'total_request' => 'required|integer|min:1',
-            'request_date'  => 'required|date',
-            'status'        => 'nullable|in:Pending,Approved,Partially Approved,Rejected',
+        $request->validate([
+            'lab_id'       => 'required|exists:laboratories,id',
+            'request_date' => 'required|date',
         ]);
 
-        LabRequest::create([
-            'name'          => $validated['name'],
-            'total_request' => $validated['total_request'],
-            'request_date'  => $validated['request_date'],
-            'status'        => $validated['status'] ?? 'Pending',
+        $labRequest = RequestLab::create([
+            'user_id'        => auth()->id(),
+            'lab_id'         => $request->lab_id,
+            'request_date'   => $request->request_date,
+            'request_status' => 'pending',
         ]);
+
+        foreach ($request->items ?? [] as $category => $categoryItems) {
+            foreach ($categoryItems as $item) {
+                if (!empty($item['asset_id']) && !empty($item['total_request'])) {
+                    $labRequest->request_items()->create([
+                        'asset_id'      => $item['asset_id'],
+                        'total_request' => $item['total_request'],
+                        'status'        => 'pending',
+                    ]);
+                }
+            }
+        }
 
         return redirect()->route('requestlab.index')
             ->with('success', 'Request berhasil ditambahkan.');
@@ -158,7 +224,7 @@ class RequestLabController extends Controller
 
     public function edit($id)
     {
-        $labRequest = LabRequest::findOrFail($id);
+        $labRequest = RequestLab::findOrFail($id);
         return view('pages.dashboard.requestlab.edit', compact('labRequest'));
     }
 
@@ -171,7 +237,7 @@ class RequestLabController extends Controller
             'status'        => 'nullable|in:Pending,Approved,Rejected',
         ]);
 
-        $labRequest = LabRequest::findOrFail($id);
+        $labRequest = RequestLab::findOrFail($id);
         $labRequest->update($validated);
 
         return redirect()->route('requestlab.index')
@@ -180,6 +246,8 @@ class RequestLabController extends Controller
 
     public function exportPdf()
     {
+        abort_unless(auth()->user()->role === 'spv inventory', 403);
+
         $requests = RequestLab::with(['user', 'request_items'])
             ->latest()
             ->get();
