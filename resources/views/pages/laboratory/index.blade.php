@@ -172,9 +172,9 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
         </x-table.index>
     </div>
 
-    {{-- ── PAGINATION ── --}}
+    {{-- pagination --}}
     {{-- @if($laboratories->hasPages())
-        <div class="mt-5 display:flex; justify-content:flex-end;">
+        <div class="mt-5">
             {{ $laboratories->links() }}
         </div>
     @endif --}}
@@ -187,9 +187,8 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
 </form>
 @endif
 
-{{-- ══ MODAL CREATE (SPV only) (SPV only) ══ --}}
+{{-- ══ MODAL CREATE (SPV only) ══ --}}
 @if($isSPV)
-@if(auth()->user()->role === 'spv inventory')
 <div id="modal-create" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50; align-items:center; justify-content:center;">
     <div style="background:#fff; border-radius:16px; width:100%; max-width:560px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15);">
 
@@ -203,6 +202,7 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
             <div id="clab-bar-2" style="flex:1; height:4px; border-radius:2px; background:#e5e7eb;"></div>
             <div id="clab-bar-3" style="flex:1; height:4px; border-radius:2px; background:#e5e7eb;"></div>
         </div>
+
         <form method="POST" action="{{ route('laboratory.store') }}" id="createLabForm">
             @csrf
 
