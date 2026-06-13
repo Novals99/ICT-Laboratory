@@ -7,6 +7,8 @@ use App\Models\AssetLog;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
+use App\Exports\AssetExport;
+
 class AssetController extends Controller
 {
     /**
@@ -25,13 +27,16 @@ class AssetController extends Controller
                         ->orWhere('total_loss', 'like', "%{$search}%");
                 });
             })
+            ->when(request('category'), function ($query, $categories) {
+                $query->whereIn('asset_category', (array) $categories);
+            })
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
         return view('pages.asset.index', compact('assets'));
     }
-
+    
     /**
      * Show the form for creating a new resource.
      */
@@ -216,5 +221,17 @@ class AssetController extends Controller
         return redirect()
             ->route('asset.index')
             ->with('success', 'Asset berhasil dihapus.');
+    }
+
+    public function export(string $format)
+    {
+        $export = new AssetExport();
+
+        return match ($format) {
+            'pdf'   => $export->downloadPdf(),
+            'excel' => $export->downloadExcel(),
+            'csv'   => $export->downloadCsv(),
+            default => abort(404),
+        };
     }
 }

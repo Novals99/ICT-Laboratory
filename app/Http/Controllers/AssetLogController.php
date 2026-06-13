@@ -11,6 +11,8 @@ use App\Models\Laboratory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
+use App\Exports\AssetlogExport;
+
 class AssetLogController extends Controller
 {
     /**
@@ -553,5 +555,17 @@ class AssetLogController extends Controller
         });
 
         return back()->with('success', 'Adjustment asset berhasil dicatat.');
+    }
+
+    public function export(string $format)
+    {
+        $export = new AssetLogExport();
+
+        return match ($format) {
+            'pdf'   => $export->downloadPdf(),
+            'excel' => $export->downloadExcel(),
+            'csv'   => $export->downloadCsv(),
+            default => abort(404),
+        };
     }
 }

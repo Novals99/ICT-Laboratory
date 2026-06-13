@@ -8,30 +8,45 @@ use App\Models\AssetLab;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+use App\Exports\LabExport;
+
 class LaboratoryController extends Controller
 {
-    public function index()
-{
-    $user = Auth::user();
+    public function index(Request $request)
+    {
+        $user = Auth::user();
 
         $user = auth()->user();
 
-    $laboratories = Laboratory::withCount([
-        'pcs as total_pc_active' => fn($q) => $q->where('status_pc', 'active'),
-        'pcs as total_pc_inactive' => fn($q) => $q->where('status_pc', 'inactive'),
-    ])
-    ->with(['users', 'assets'])
-    ->orderBy('lab_name')
-    ->paginate(15);
+        $search = $request->input('search');
 
-    $myLabIds = [];
-    $allAssets = Asset::orderBy('asset_name')->get();
+        $laboratories = Laboratory::query()
+            ->withCount([
+                'pcs as total_pc_active' => fn($q) => $q->where('status_pc', 'active'),
+                'pcs as total_pc_inactive' => fn($q) => $q->where('status_pc', 'inactive'),
+            ])
+            ->with(['users', 'assets'])
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('lab_name', 'like', "%{$search}%")
+                        ->orWhere('capacity', 'like', "%{$search}%")
+                        ->orWhereHas('users', function ($userQuery) use ($search) {
+                            $userQuery->where('name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->orderBy('lab_name')
+            ->paginate(15)
+            ->withQueryString();
 
-    return view(
-        'pages.laboratory.index',
-        compact('laboratories', 'myLabIds', 'user', 'allAssets')
-    );
-}
+        $myLabIds = [];
+        $allAssets = Asset::orderBy('asset_name')->get();
+
+        return view(
+            'pages.laboratory.index',
+            compact('laboratories', 'myLabIds', 'user', 'allAssets')
+        );
+    }
 
     public function show(Laboratory $laboratory)
     {
@@ -66,8 +81,16 @@ class LaboratoryController extends Controller
             ->values();
 
         return view('pages.laboratory.show', compact(
-            'laboratory', 'totalActive', 'totalInactive',
-            'allAssets', 'pic', 'admins', 'assistants'
+            'laboratory',
+            'totalActive',
+            'totalInactive',
+            'allAssets',
+            'pic',
+            'admins',
+            'assistants',
+            'canEdit',
+            'myLabIds',
+            'pcComponents'
         ));
     }
 
@@ -265,14 +288,19 @@ class LaboratoryController extends Controller
         // 1. Kembalikan component PC ke stok asset_lab
         foreach ($laboratory->pcs as $pc) {
             $components = array_filter([
-                $pc->processor, $pc->ram, $pc->ssd, $pc->motherboard,
-                $pc->vga, $pc->cpu_fan, $pc->powersupply
+                $pc->processor,
+                $pc->ram,
+                $pc->ssd,
+                $pc->motherboard,
+                $pc->vga,
+                $pc->cpu_fan,
+                $pc->powersupply
             ]);
             foreach ($components as $name) {
                 $al = AssetLab::where('lab_id', $laboratory->id)
                     ->whereHas('asset', function ($q) use ($name) {
                         $q->where('asset_category', 'component-pc')
-                          ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)]);
+                            ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)]);
                     })
                     ->first();
                 if ($al) {
@@ -308,58 +336,15 @@ class LaboratoryController extends Controller
             ->with('success', "Lab {$laboratory->lab_name} berhasil dihapus.");
     }
 
-        public function bulkDestroy(Request $request)
+    public function export(string $format)
     {
-        $ids = $request->input('ids', []);
-        if (empty($ids)) {
-            return back()->with('error', 'Pilih minimal satu lab.');
-        }
+        $export = new LabExport();
 
-        $labs = Laboratory::whereIn('id', $ids)->get();
-        foreach ($labs as $lab) {
-            // Balikin component PC ke stok asset_lab
-            foreach ($lab->pcs as $pc) {
-                $components = array_filter([
-                    $pc->processor, $pc->ram, $pc->ssd, $pc->motherboard,
-                    $pc->vga, $pc->cpu_fan, $pc->powersupply
-                ]);
-                foreach ($components as $name) {
-                    $al = AssetLab::where('lab_id', $lab->id)
-                        ->whereHas('asset', function ($q) use ($name) {
-                            $q->where('asset_category', 'component-pc')
-                              ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)]);
-                        })
-                        ->first();
-                    if ($al) {
-                        $al->increment('total_good_lab');
-                        $al->update([
-                            'total_asset_lab' => $al->total_good_lab + $al->total_damaged_lab + $al->total_loss_lab
-                        ]);
-                    }
-                }
-            }
-
-            // Balikin asset ke SPV
-            foreach ($lab->assets as $asset) {
-                $pivot = $asset->pivot;
-                if ($pivot->total_good_lab > 0) {
-                    $asset->increment('total_good', $pivot->total_good_lab);
-                }
-                if ($pivot->total_damaged_lab > 0) {
-                    $asset->increment('total_damaged', $pivot->total_damaged_lab);
-                }
-                if ($pivot->total_loss_lab > 0) {
-                    $asset->increment('total_loss', $pivot->total_loss_lab);
-                }
-                $asset->refresh();
-                $asset->update([
-                    'total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss
-                ]);
-            }
-
-            $lab->delete();
-        }
-
-        return back()->with('success', count($ids) . ' lab berhasil dihapus.');
+        return match ($format) {
+            'pdf'   => $export->downloadPdf(),
+            'excel' => $export->downloadExcel(),
+            'csv'   => $export->downloadCsv(),
+            default => abort(404),
+        };
     }
 }

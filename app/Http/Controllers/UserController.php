@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
+use App\Models\Laboratory;
+use App\Exports\UserExport;
+
 class UserController extends Controller
 {
     /**
@@ -194,4 +197,15 @@ class UserController extends Controller
 
         return $labIds;
     }
+    public function export(string $format)
+   {
+      $export = new UserExport();
+
+      return match($format) {
+         'pdf'   => $export->downloadPdf(),
+         'excel' => $export->downloadExcel(),
+         'csv'   => $export->downloadCsv(),
+         default => abort(404),
+      };
+   }
 }
