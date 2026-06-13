@@ -25,6 +25,8 @@
         'lab_ids',
         $user ? $user->labs->pluck('id')->toArray() : []
     );
+
+    $selectedStatus = old('status_user', $user->status_user ?? 1);
 @endphp
 
 <x-modal.index
@@ -255,6 +257,53 @@
             </p>
 
             @error('email')
+                <p class="panel-form-error">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+
+    {{-- Status --}}
+    <div class="panel-form-row">
+        <label class="panel-form-label">
+            Status:
+        </label>
+
+        <div class="panel-form-field">
+            <div class="user-role-options" data-role-group>
+                <label
+                    for="{{ $modalId }}-status-active"
+                    class="user-role-option {{ $selectedStatus == 1 ? 'is-selected' : '' }}"
+                >
+                    <input
+                        id="{{ $modalId }}-status-active"
+                        type="radio"
+                        name="status_user"
+                        value="1"
+                        class="hidden"
+                        data-progress-field
+                        {{ $selectedStatus == 1 ? 'checked' : '' }}
+                    >
+                    <span>Active</span>
+                </label>
+
+                <label
+                    for="{{ $modalId }}-status-inactive"
+                    class="user-role-option {{ $selectedStatus == 0 ? 'is-selected' : '' }}"
+                >
+                    <input
+                        id="{{ $modalId }}-status-inactive"
+                        type="radio"
+                        name="status_user"
+                        value="0"
+                        class="hidden"
+                        data-progress-field
+                        {{ $selectedStatus == 0 ? 'checked' : '' }}
+                    >
+                    <span>Non-active</span>
+                </label>
+            </div>
+
+            @error('status_user')
                 <p class="panel-form-error">{{ $message }}</p>
             @enderror
         </div>

@@ -67,7 +67,8 @@ class LaboratoryController extends Controller
 
         return view('pages.laboratory.show', compact(
             'laboratory', 'totalActive', 'totalInactive',
-            'allAssets', 'pic', 'admins', 'assistants'
+            'allAssets', 'pic', 'admins', 'assistants',
+            'pcComponents', 'canEdit'
         ));
     }
 

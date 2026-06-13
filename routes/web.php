@@ -111,7 +111,13 @@ require __DIR__ . '/auth.php';
         return 'Export belum dibuat';
     })->name('activity-log.export');
 
-
-
+        // Request Lab
+    Route::get('/requestlab', [RequestLabController::class, 'index'])->name('requestlab.index');
+    Route::post('/requestlab', [RequestLabController::class, 'store'])->name('requestlab.store');
+    Route::get('/requestlab/{id}/detail', [RequestLabController::class, 'detail'])->name('requestlab.detail');
+    Route::patch('/requestlab/{id}/status', [RequestLabController::class, 'updateStatus'])->name('requestlab.status');
+    Route::patch('/requestlab/{id}/item/{itemId}/status', [RequestLabController::class, 'updateItemStatus'])->name('requestlab.item.status');
+    Route::delete('/requestlab/{id}', [RequestLabController::class, 'destroy'])->name('requestlab.destroy');
+    Route::get('/requestlab/export', [RequestLabController::class, 'export'])->name('requestlab.export');
 
 require __DIR__.'/auth.php';
