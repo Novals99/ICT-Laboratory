@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+
 use App\Exports\UserExport;
 
 class UserController extends Controller
@@ -172,4 +173,41 @@ class UserController extends Controller
             ->route('users.index')
             ->with('success', 'User berhasil dihapus.');
     }
+
+<<<<<<<<< Temporary merge branch 1
+    public function export(string $format)
+   {
+      $export = new UserExport();
+
+      return match($format) {
+         'pdf'   => $export->downloadPdf(),
+         'excel' => $export->downloadExcel(),
+         'csv'   => $export->downloadCsv(),
+         default => abort(404),
+      };
+   }
+=========
+    private function validatedLabIdsForRole(string $role, array $labIds): array
+    {
+        $labIds = array_values(array_unique(array_filter($labIds)));
+
+        if ($role === 'spv inventory') {
+            return [];
+        }
+
+        if (empty($labIds)) {
+            throw ValidationException::withMessages([
+                'lab_ids' => 'Pilih minimal satu laboratory untuk role ini.',
+            ]);
+        }
+
+        if (in_array($role, ['admin', 'assistant'], true) && count($labIds) !== 1) {
+            throw ValidationException::withMessages([
+                'lab_ids' => 'Admin dan Assistant hanya boleh terhubung ke satu laboratory.',
+            ]);
+        }
+
+        return $labIds;
+    }
+>>>>>>>>> Temporary merge branch 2
 }
