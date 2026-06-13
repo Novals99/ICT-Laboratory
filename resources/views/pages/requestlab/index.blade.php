@@ -3,17 +3,17 @@
 @section('title', 'Request Lab')
 
 @php
-$role = auth()->user()->role;
-$isSpv = $role === 'spv inventory';
-$canCreateRequest = in_array($role, ['admin', 'pic', 'assistant'], true);
-$canReviewRequest = $isSpv;
-$canDeleteRequest = $isSpv;
-$assetGroups = $assets
-->groupBy('asset_category')
-->map(fn ($items) => $items->map(fn ($asset) => [
-'id' => $asset->id,
-'name' => $asset->asset_name,
-])->values());
+    $role = auth()->user()->role;
+    $isSpv = $role === 'spv inventory';
+    $canCreateRequest = in_array($role, ['admin', 'pic', 'assistant'], true);
+    $canReviewRequest = $isSpv;
+    $canDeleteRequest = $isSpv;
+    $assetGroups = $assets
+        ->groupBy('asset_category')
+        ->map(fn ($items) => $items->map(fn ($asset) => [
+            'id' => $asset->id,
+            'name' => $asset->asset_name,
+        ])->values());
 @endphp
 
 @section('content')
@@ -39,65 +39,56 @@ $assetGroups = $assets
                 </div>
             </form>
 
-
             <x-button.filter :action="route('requestlab.index')">
                 @if (request('search'))
-                <input type="hidden" name="search" value="{{ request('search') }}">
+                    <input type="hidden" name="search" value="{{ request('search') }}">
                 @endif
 
-                    {{-- Filter Role - hanya untuk admin --}}
-                    @if ($canCreateRequest)
-                        <div class="filter-section">
-                            <div class="filter-section-title">User Role</div>
+                @if ($role === 'admin')
+                    <div class="filter-section">
+                        <div class="filter-section-title">User Role</div>
+                        @foreach (['' => 'All', 'admin' => 'Admin', 'assistant' => 'Assistant'] as $filterRole => $label)
                             <label class="filter-checkbox-row">
-                                <input type="radio" name="role" value="" {{ !request('role') ? 'checked' : '' }}
+                                <input type="radio" name="role" value="{{ $filterRole }}"
+                                    {{ request('role', '') === $filterRole ? 'checked' : '' }}
                                     style="accent-color: #111B4C;">
-                                <span>All</span>
+                                <span>{{ $label }}</span>
                             </label>
-                            <label class="filter-checkbox-row">
-                                <input type="radio" name="role" value="admin"
-                                    {{ request('role') === 'admin' ? 'checked' : '' }} style="accent-color: #111B4C;">
-                                <span>Admin</span>
-                            </label>
-                            <label class="filter-checkbox-row">
-                                <input type="radio" name="role" value="assistant"
-                                    {{ request('role') === 'assistant' ? 'checked' : '' }} style="accent-color: #111B4C;">
-                                <span>Assistant</span>
-                            </label>
-                        </div>
-                    @endif
+                        @endforeach
+                    </div>
+                @endif
 
-                    {{-- Filter Status - hanya untuk SPV --}}
-                    @if ($isSpv)
-                        <div class="filter-section">
-                            <div class="filter-section-title">Request Status</div>
-                            @foreach (['pending', 'approved', 'partial', 'rejected'] as $status)
-                                <label class="filter-checkbox-row">
-                                    <input type="checkbox" name="status[]" value="{{ $status }}"
-                                        {{ in_array($status, (array) request('status', [])) ? 'checked' : '' }}
-                                        style="accent-color: #111B4C;">
-                                    <span>{{ $status === 'partial' ? 'Partially Approved' : ucwords($status) }}</span>
-                                </label>
-                            @endforeach
-                        </div>
-                    @endif
+                @if ($isSpv)
+                    <div class="filter-section">
+                        <div class="filter-section-title">Request Status</div>
+                        @foreach (['pending', 'approved', 'partial', 'rejected'] as $status)
+                            <label class="filter-checkbox-row">
+                                <input type="checkbox" name="status[]" value="{{ $status }}"
+                                    {{ in_array($status, (array) request('status', [])) ? 'checked' : '' }}
+                                    style="accent-color: #111B4C;">
+                                <span>{{ $status === 'partial' ? 'Partially Approved' : ucwords($status) }}</span>
+                            </label>
+                        @endforeach
+                    </div>
 
                     <div class="filter-section">
                         <div class="filter-section-title">Request Date</div>
                         <input type="date" name="date_to" value="{{ request('date_to') }}"
                             class="w-full rounded-lg border px-3 py-2 text-sm">
                     </div>
-                </x-button.filter>
-                @if ($isSpv)
-                    <x-button.export href="{{ route('requestlab.export.pdf') }}">
-                        Export
-                    </x-button.export>
                 @endif
+            </x-button.filter>
+
+            @if ($isSpv)
+                <x-button.export href="{{ route('requestlab.export.pdf') }}">
+                    Export
+                </x-button.export>
+            @endif
 
             @if ($canCreateRequest)
-            <x-button.add type="button" onclick="openPanelModal('addRequestModal')">
-                Add Request
-            </x-button.add>
+                <x-button.add type="button" onclick="openPanelModal('addRequestModal')">
+                    Add Request
+                </x-button.add>
             @endif
         </div>
     </div>
@@ -117,76 +108,74 @@ $assetGroups = $assets
             </thead>
             <tbody>
                 @forelse ($requests as $request)
-                <tr style="border-bottom:1px solid var(--border-color);" class="transition-colors">
-                    <td class="px-4 py-3" style="color:var(--text-secondary);">
-                        REQ-{{ str_pad($request->id, 3, '0', STR_PAD_LEFT) }}
-                    </td>
-                    <td class="px-4 py-3 font-medium" style="color:var(--text-primary);">
-                        {{ $request->user->name ?? '-' }}
-                    </td>
-                    <td class="px-4 py-3" style="color:var(--text-secondary);">
-                        {{ $request->lab->lab_name ?? '-' }}
-                    </td>
-                    <td class="px-4 py-3 text-center" style="color:var(--text-primary);">
-                        {{ $request->request_items->sum('total_request') }}
-                    </td>
-                    <td class="px-4 py-3 text-center" style="color:var(--text-secondary);">
-                        {{ $request->request_date ? \Carbon\Carbon::parse($request->request_date)->format('d-m-y') : '-' }}
-                    </td>
-                    <td class="px-4 py-3 text-center">
-                        <span class="inline-block rounded-md px-4 py-1 text-xs font-semibold"
-                            data-request-status="{{ $request->id }}"
-                            style="{{ match ($request->request_status) {
-                                        'approved' => 'background:#16a34a;color:#fff;',
-                                        'rejected' => 'background:#dc2626;color:#fff;',
-                                        'partial' => 'background:#2563eb;color:#fff;',
-                                        default => 'background:#facc15;color:#713f12;',
-                                    } }}">
-                                    {{ $request->request_status === 'partial' ? 'Partially Approved' : ucwords($request->request_status) }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="flex items-center justify-center gap-3">
-                                    {{-- View detail untuk semua role --}}
-                                    <button type="button" onclick="openRequestModal({{ $request->id }})"
-                                        title="Lihat Detail"
-                                        style="background:none; border:none; cursor:pointer; padding:4px; color:#9ca3af;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5m-1.414-9.414a2 2 0 1 1 2.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                    </button>
+                    <tr style="border-bottom:1px solid var(--border-color);" class="transition-colors">
+                        <td class="px-4 py-3" style="color:var(--text-secondary);">
+                            REQ-{{ str_pad($request->id, 3, '0', STR_PAD_LEFT) }}
+                        </td>
+                        <td class="px-4 py-3 font-medium" style="color:var(--text-primary);">
+                            {{ $request->user->name ?? '-' }}
+                        </td>
+                        <td class="px-4 py-3" style="color:var(--text-secondary);">
+                            {{ $request->lab->lab_name ?? '-' }}
+                        </td>
+                        <td class="px-4 py-3 text-center" style="color:var(--text-primary);">
+                            {{ $request->request_items->sum('total_request') }}
+                        </td>
+                        <td class="px-4 py-3 text-center" style="color:var(--text-secondary);">
+                            {{ $request->request_date ? \Carbon\Carbon::parse($request->request_date)->format('d-m-y') : '-' }}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-block rounded-md px-4 py-1 text-xs font-semibold"
+                                data-request-status="{{ $request->id }}"
+                                style="{{ match ($request->request_status) {
+                                    'approved' => 'background:#16a34a;color:#fff;',
+                                    'rejected' => 'background:#dc2626;color:#fff;',
+                                    'partial' => 'background:#2563eb;color:#fff;',
+                                    default => 'background:#facc15;color:#713f12;',
+                                } }}">
+                                {{ $request->request_status === 'partial' ? 'Partially Approved' : ucwords($request->request_status) }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center gap-3">
+                                <button type="button" onclick="openRequestModal({{ $request->id }})"
+                                    title="Lihat Detail"
+                                    style="background:none; border:none; cursor:pointer; padding:4px; color:#9ca3af;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5m-1.414-9.414a2 2 0 1 1 2.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </button>
 
-                                    {{-- Delete hanya untuk SPV --}}
-                                    @if ($isSpv)
-                                        <form action="{{ route('requestlab.destroy', $request->id) }}" method="POST"
-                                            onsubmit="return confirm('Yakin ingin menghapus data ini?')"
-                                            style="display:inline;">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" title="Hapus"
-                                                style="background:none; border:none; cursor:pointer; padding:4px; color:#9ca3af;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                                    stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
-                                        </form>
-                                    @endif
-                                </div>
-                            </td>
-                        <tr>
-                            <td colspan="7" class="px-4 py-10 text-center text-gray-400">
-                                Tidak ada data request.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                                @if ($canDeleteRequest)
+                                    <form action="{{ route('requestlab.destroy', $request->id) }}" method="POST"
+                                        onsubmit="return confirm('Yakin ingin menghapus data ini?')" style="display:inline;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" title="Hapus"
+                                            style="background:none; border:none; cursor:pointer; padding:4px; color:#9ca3af;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="7" class="px-4 py-10 text-center text-gray-400">
+                            Tidak ada data request.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
     <div class="mt-6">
         {{ $requests->links() }}
@@ -268,11 +257,11 @@ $assetGroups = $assets
             </div>
         </div>
 
-        @if($isSpv)
-        <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 32px 24px 32px;">
-            <button onclick="rejectAll()">Reject All</button>
-            <button onclick="approveAll()">Approve All</button>
-        </div>
+        @if ($isSpv)
+            <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 32px 24px 32px;">
+                <button onclick="rejectAll()">Reject All</button>
+                <button onclick="approveAll()">Approve All</button>
+            </div>
         @endif
     </div>
 </div>
@@ -291,56 +280,56 @@ $assetGroups = $assets
             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
             <option value="">Pilih Lab</option>
             @foreach ($laboratories as $lab)
-            <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
+                <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
             @endforeach
         </select>
     </div>
 
     <div style="display:flex; gap:8px; margin-bottom:16px;">
         @foreach (['electronic' => 'Electronic', 'non-electronic' => 'Non-Electronic', 'component-pc' => 'PC Component'] as $category => $label)
-        <button type="button" onclick="switchTab('{{ $category }}')" id="tab-{{ $category }}"
-            style="padding:6px 16px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; border:{{ $loop->first ? 'none' : '1px solid var(--border-color)' }}; background:{{ $loop->first ? '#111B4C' : 'var(--bg-input)' }}; color:{{ $loop->first ? '#fff' : 'var(--text-secondary)' }};">
-            {{ $label }}
-        </button>
+            <button type="button" onclick="switchTab('{{ $category }}')" id="tab-{{ $category }}"
+                style="padding:6px 16px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; border:{{ $loop->first ? 'none' : '1px solid var(--border-color)' }}; background:{{ $loop->first ? '#111B4C' : 'var(--bg-input)' }}; color:{{ $loop->first ? '#fff' : 'var(--text-secondary)' }};">
+                {{ $label }}
+            </button>
         @endforeach
     </div>
 
     @foreach (['electronic', 'non-electronic', 'component-pc'] as $category)
-    <div id="items-{{ $category }}" style="{{ $loop->first ? '' : 'display:none;' }}">
-        <div id="itemList-{{ $category }}">
-            <div class="item-row"
-                style="border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative;">
-                <button type="button" onclick="removeItemRow(this)"
-                    style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted);">x</button>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
-                    <select name="items[{{ $category }}][0][asset_id]"
-                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                        <option value="">Choose asset...</option>
-                        @foreach ($assets->where('asset_category', $category) as $asset)
-                        <option value="{{ $asset->id }}">{{ $asset->asset_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
-                    <input type="number" name="items[{{ $category }}][0][total_request]" min="1"
-                        placeholder="Enter here..."
-                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+        <div id="items-{{ $category }}" style="{{ $loop->first ? '' : 'display:none;' }}">
+            <div id="itemList-{{ $category }}">
+                <div class="item-row"
+                    style="border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative;">
+                    <button type="button" onclick="removeItemRow(this)"
+                        style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted);">x</button>
+                    <div style="margin-bottom:8px;">
+                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
+                        <select name="items[{{ $category }}][0][asset_id]"
+                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                            <option value="">Choose asset...</option>
+                            @foreach ($assets->where('asset_category', $category) as $asset)
+                                <option value="{{ $asset->id }}">{{ $asset->asset_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
+                        <input type="number" name="items[{{ $category }}][0][total_request]" min="1"
+                            placeholder="Enter here..."
+                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    </div>
                 </div>
             </div>
+            <button type="button" onclick="addItem('{{ $category }}')"
+                class="inline-flex items-center justify-center gap-2 rounded-lg bg-[#111B4C] px-4 py-2 text-sm font-semibold text-white">
+                + Add Item
+            </button>
         </div>
-        <button type="button" onclick="addItem('{{ $category }}')"
-            class="inline-flex items-center justify-center gap-2 rounded-lg bg-[#111B4C] px-4 py-2 text-sm font-semibold text-white">
-            + Add Item
-        </button>
-    </div>
     @endforeach
 </x-modal.index>
 @endsection
 
 @push('styles')
-@vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 @endpush
 
 @push('scripts')
@@ -389,25 +378,24 @@ $assetGroups = $assets
         const catAssets = assets[category] ?? [];
         const div = document.createElement('div');
         div.className = 'item-row';
-        div.style =
-                'border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative;';
+        div.style = 'border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative;';
         div.innerHTML = `
-                <button type="button" onclick="removeItemRow(this)"
-                    style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted);">x</button>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
-                    <select name="items[${category}][${idx}][asset_id]"
-                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                        <option value="">Choose asset...</option>
-                        ${catAssets.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
-                    </select>
-                </div>
-                <div>
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
-                    <input type="number" name="items[${category}][${idx}][total_request]" placeholder="Enter here..." min="1"
-                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                </div>
-            `;
+            <button type="button" onclick="removeItemRow(this)"
+                style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted);">x</button>
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
+                <select name="items[${category}][${idx}][asset_id]"
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    <option value="">Choose asset...</option>
+                    ${catAssets.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
+                <input type="number" name="items[${category}][${idx}][total_request]" placeholder="Enter here..." min="1"
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+            </div>
+        `;
         document.getElementById(`itemList-${category}`).appendChild(div);
     }
 
@@ -423,8 +411,7 @@ $assetGroups = $assets
         modal.style.display = 'flex';
         document.getElementById('modalProgress').style.width = '30%';
 
-        const loading =
-                '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
+        const loading = '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
         document.getElementById('modal_electronic').innerHTML = loading;
         document.getElementById('modal_nonelectronic').innerHTML = loading;
 
@@ -468,40 +455,37 @@ $assetGroups = $assets
         }
 
         return items.map(item => `
-                <tr style="border-top:1px solid var(--border-color);">
-                    <td style="padding:8px 14px;color:var(--text-primary);">${item.asset_name}</td>
-                    <td style="padding:8px 14px;color:var(--text-primary);">${item.quantity}</td>
-                    <td style="padding:8px 14px;text-align:center;">
-                        <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
-                            ${itemStatusBadge(item.status)}
-                            ${canReviewRequest ? `
-                                <select onchange="updateItemStatus(${item.item_id}, this.value)"
-                                    style="min-width:100px;padding:4px 8px;font-size:11px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);cursor:pointer;">
-                                    <option value="" ${item.status === 'pending' ? 'selected' : ''} disabled>Pilih</option>
-                                    <option value="approved" ${item.status === 'approved' ? 'selected' : ''}>Approve</option>
-                                    <option value="rejected" ${item.status === 'rejected' ? 'selected' : ''}>Reject</option>
-                                </select>
-                            ` : ''}
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            <tr style="border-top:1px solid var(--border-color);">
+                <td style="padding:8px 14px;color:var(--text-primary);">${item.asset_name}</td>
+                <td style="padding:8px 14px;color:var(--text-primary);">${item.quantity}</td>
+                <td style="padding:8px 14px;text-align:center;">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
+                        ${itemStatusBadge(item.status)}
+                        ${canReviewRequest ? `
+                            <select onchange="updateItemStatus(${item.item_id}, this.value)"
+                                style="min-width:100px;padding:4px 8px;font-size:11px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);cursor:pointer;">
+                                <option value="" ${item.status === 'pending' ? 'selected' : ''} disabled>Pilih</option>
+                                <option value="approved" ${item.status === 'approved' ? 'selected' : ''}>Approve</option>
+                                <option value="rejected" ${item.status === 'rejected' ? 'selected' : ''}>Reject</option>
+                            </select>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
     }
 
     function updateItemStatus(itemId, status) {
         if (!status) return;
+
         fetch(`/requestlab/items/${itemId}/status`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({
-                   
-                        status
-               
-                    })
-                })
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ status })
+        })
             .then(res => res.json())
             .then(data => {
                 if (!data.success) return;
@@ -536,17 +520,13 @@ $assetGroups = $assets
 
     function updateRequestStatus(status) {
         fetch(`/requestlab/${currentRequestId}/status`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({
-                       
-                    status
-                   
-                })
-                })
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ status })
+        })
             .then(res => res.json())
             .then(data => {
                 if (data.success) updateRowBadge(currentRequestId, data.request_status);
@@ -554,17 +534,18 @@ $assetGroups = $assets
             });
     }
 
-        document.getElementById('requestModal').addEventListener('click', function(event) {
-            if (event.target === this) closeRequestModal();
-        });
+    document.getElementById('requestModal').addEventListener('click', function(event) {
+        if (event.target === this) closeRequestModal();
+    });
 
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeRequestModal();
-                document.querySelectorAll('.panel-modal-overlay:not(.hidden)').forEach(modal => modal.classList.add(
-                    'hidden'));
-                document.body.style.overflow = '';
-            }
-        });
-    </script>
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeRequestModal();
+            document.querySelectorAll('.panel-modal-overlay:not(.hidden)').forEach(modal => {
+                modal.classList.add('hidden');
+            });
+            document.body.style.overflow = '';
+        }
+    });
+</script>
 @endpush
