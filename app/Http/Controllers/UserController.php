@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Laboratory;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
-
-use App\Models\Laboratory;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use App\Exports\UserExport;
 
 class UserController extends Controller
@@ -17,38 +17,37 @@ class UserController extends Controller
      */
     public function index()
     {
-       $users = User::with('labs')
-               ->when(request('search'), function ($query, $search) {
-                     $query->where(function ($q) use ($search) {
-                            $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('nim', 'like', "%{$search}%")
-                            ->orWhere('username', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%")
-                            ->orWhere('role', 'like', "%{$search}%");
-                     });
-               })
-               ->when(request('role'), function ($query, $roles) {
-                     $query->whereIn('role', $roles);
-               })
-               ->when(request('status') !== null, function ($query) {
-                     $query->whereIn('status_user', request('status'));
-               })
-       ->latest()
-       ->paginate(10)
-       ->withQueryString();
+        $users = User::with('labs')
+            ->when(request('search'), function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('nim', 'like', "%{$search}%")
+                        ->orWhere('username', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('role', 'like', "%{$search}%");
+                });
+            })
+            ->when(request('role'), function ($query, $roles) {
+                $query->whereIn('role', $roles);
+            })
+            ->when(request('status') !== null, function ($query) {
+                $query->whereIn('status_user', request('status'));
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
-       $laboratories = Laboratory::orderBy('lab_name')->get();
+        $laboratories = Laboratory::orderBy('lab_name')->get();
 
-       return view('pages.user.index', compact('users', 'laboratories'));
-    }    
-
+        return view('pages.user.index', compact('users', 'laboratories'));
+    }
 
     /**
      * Show the form for creating a new resource.
      */
     public function create()
     {
-       return redirect()->route('users.index');
+        return redirect()->route('users.index');
     }
 
     /**
@@ -56,8 +55,8 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-       // dd($request->all());
-       $validated = $request->validate([
+        // dd($request->all());
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'nim' => ['required', 'string', 'max:10', 'unique:users,nim'],
             'role' => ['required', Rule::in(['spv inventory', 'pic', 'admin', 'assistant'])],
@@ -68,22 +67,23 @@ class UserController extends Controller
 
             'lab_ids' => ['nullable', 'array'],
             'lab_ids.*' => ['exists:laboratories,id'],
-       ]);
+        ]);
 
-       $user = User::create([
-              'name' => $validated['name'],
-              'nim' => $validated['nim'],
-              'role' => $validated['role'],
-              'username' => $validated['username'],
-              'email' => $validated['email'],
-              'password' => Hash::make($validated['password']),
-              'status_user' => true,
-       ]);
+        $labIds = $this->validatedLabIdsForRole($validated['role'], $validated['lab_ids'] ?? []);
 
+        $user = User::create([
+            'name' => $validated['name'],
+            'nim' => $validated['nim'],
+            'role' => $validated['role'],
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'status_user' => true,
+        ]);
 
-       $user->labs()->sync($validated['lab_ids'] ?? []);
+        $user->labs()->sync($labIds);
 
-       return redirect()
+        return redirect()
             ->route('users.index')
             ->with('success', 'User berhasil ditambahkan.');
     }
@@ -93,7 +93,7 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-       return view('pages.users.show', compact('user'));
+        return redirect()->route('users.index');
     }
 
     /**
@@ -101,7 +101,7 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-       return view('pages.users.edit', compact('user'));
+        return redirect()->route('users.index');
     }
 
     /**
@@ -109,7 +109,7 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
-       $validated = $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'nim' => [
                 'required',
@@ -135,9 +135,11 @@ class UserController extends Controller
 
             'lab_ids' => ['nullable', 'array'],
             'lab_ids.*' => ['exists:laboratories,id'],
-       ]);
+        ]);
 
-       $data = [
+        $labIds = $this->validatedLabIdsForRole($validated['role'], $validated['lab_ids'] ?? []);
+
+        $data = [
             'name' => $validated['name'],
             'nim' => $validated['nim'],
             'role' => $validated['role'],
@@ -146,15 +148,15 @@ class UserController extends Controller
             'status_user' => $request->boolean('status_user'),
         ];
 
-       if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $data['password'] = Hash::make($validated['password']);
-       }
+        }
 
-       $user->update($data);
+        $user->update($data);
 
-       $user->labs()->sync($validated['lab_ids'] ?? []);
+        $user->labs()->sync($labIds);
 
-       return redirect()
+        return redirect()
             ->route('users.index')
             ->with('success', 'User berhasil diperbarui.');
     }
@@ -164,22 +166,10 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-       $user->delete();
+        $user->delete();
 
-       return redirect()
+        return redirect()
             ->route('users.index')
             ->with('success', 'User berhasil dihapus.');
     }
-
-    public function export(string $format)
-   {
-      $export = new UserExport();
-
-      return match($format) {
-         'pdf'   => $export->downloadPdf(),
-         'excel' => $export->downloadExcel(),
-         'csv'   => $export->downloadCsv(),
-         default => abort(404),
-      };
-   }
 }

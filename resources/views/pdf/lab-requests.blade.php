@@ -43,11 +43,11 @@
         <tbody>
             @foreach($requests as $request)
                 <tr>
-                    <td>{{ $request->request_id }}</td>
-                    <td>{{ $request->name }}</td>
-                    <td>{{ $request->total_request }}</td>
+                    <td>REQ-{{ str_pad($request->id, 3, '0', STR_PAD_LEFT) }}</td>
+                    <td>{{ $request->user->name ?? '-' }}</td>
+                    <td>{{ $request->request_items->sum('total_request') }}</td>
                     <td>{{ $request->request_date }}</td>
-                    <td>{{ $request->status }}</td>
+                    <td>{{ $request->request_status === 'partial' ? 'Partially Approved' : ucwords($request->request_status) }}</td>
                 </tr>
             @endforeach
         </tbody>

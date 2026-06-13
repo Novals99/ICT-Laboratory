@@ -41,17 +41,23 @@ class AssetLog extends Model
         'notes',
     ];
 
-    public function asset() {
+    public function asset()
+    {
         return $this->belongsTo(Asset::class, 'asset_id');
     }
-    public function user() {
+
+    public function user()
+    {
         return $this->belongsTo(User::class, 'user_id');
     }
-    public function fromLab() {
+
+    public function fromLab()
+    {
         return $this->belongsTo(Laboratory::class, 'from_lab_id');
     }
-    public function toLab() {
+
+    public function toLab()
+    {
         return $this->belongsTo(Laboratory::class, 'to_lab_id');
     }
-
 }

@@ -138,26 +138,26 @@
                                                  </div>
                                           </x-table.td>
 
-                                          <x-table.td>
-                                                 @php
-                                                        $typeLabel = match ($log->type) {
-                                                               'stock_in' => 'Stock In',
-                                                               'stock_out' => 'Stock Out',
-                                                               'transfer' => 'Transfer',
-                                                               'adjustment' => 'Adjustment',
-                                                               'status_change' => 'Status Change',
-                                                               default => ucwords(str_replace('_', ' ', $log->type)),
-                                                        };
+                                   <x-table.td>
+                                          @php
+                                                 $typeLabel = match ($log->type) {
+                                                        'stock_in' => 'Stock In',
+                                                        'stock_out' => 'Stock Out',
+                                                        'transfer' => 'Transfer',
+                                                        'adjustment' => 'Adjustment',
+                                                        'status_change' => 'Status Change',
+                                                        default => ucwords(str_replace('_', ' ', $log->type)),
+                                                 };
 
-                                                        $typeClass = match ($log->type) {
-                                                               'stock_in' => 'panel-badge panel-badge-green',
-                                                               'stock_out' => 'panel-badge panel-badge-red',
-                                                               'transfer' => 'panel-badge panel-badge-blue',
-                                                               'adjustment' => 'panel-badge panel-badge-yellow',
-                                                               'status_change' => 'panel-badge panel-badge-purple',
-                                                               default => 'panel-badge bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700', // opsional ganti gray badge kalau mau
-                                                        };
-                                                 @endphp
+                                                 $typeClass = match ($log->type) {
+                                                        'stock_in' => 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-900',
+                                                        'stock_out' => 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-900',
+                                                        'transfer' => 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900',
+                                                        'adjustment' => 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/30 dark:text-yellow-300 dark:border-yellow-900',
+                                                        'status_change' => 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-900',
+                                                        default => 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
+                                                 };
+                                          @endphp
 
                                                  <span class="{{ $typeClass }}">
                                                         {{ $typeLabel }}
