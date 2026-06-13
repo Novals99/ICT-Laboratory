@@ -24,8 +24,7 @@
                 
                 {{-- 
                     Toolbar: Search + Filter + Export
-                    Pakai form GET supaya filter ke-passing di URL,
-                    bisa di-share & di-bookmark
+                    Pakai form GET supaya filter ke-passing di URL
                 --}}
                
                     
@@ -37,7 +36,7 @@
                     {{-- Filter Button (toggle filter panel) --}}
                     <x-button.filter :action="route('activity-log.index')">
 
-                        {{-- tetap bawa search --}}
+                        
                         @if(request('search'))
                             <input type="hidden" name="search" value="{{ request('search') }}">
                         @endif
@@ -90,11 +89,6 @@
                     </x-button.filter>
                     
                     {{-- Export Button --}}
-                    {{-- 
-                        Trik: kita pakai JS untuk ambil semua nilai form,
-                        lalu redirect ke route export dengan query string yang sama.
-                        Atau cara simple: bikin link langsung dengan query saat ini.
-                    --}}
                    <x-button.export
     href="{{ route('activity-log.export', request()->query()) }}">
                   Export
@@ -102,11 +96,7 @@
                 </form>
             </div>
             
-            {{-- 
-                FILTER PANEL — hidden by default, muncul kalau klik tombol Filter
-                Ini bonus dari saya. Activity Diagram halaman 23 menyebut "Pilih Filter, 
-                input Filter, kirim filter" — jadi kita kasih panel yang proper.
-            --}}
+
             <div id="filterPanel" class="{{ $startDate || $endDate || $role ? '' : 'hidden' }} mt-4 pt-4 border-t border-slate-100">
                 <form method="GET" action="{{ route('activity-log.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-3">
                     
@@ -165,19 +155,9 @@
                 </thead>
                 <tbody class="divide-y divide-slate-700/30">
                     
-                    {{-- 
-                        @forelse: loop yang ada fallback kalau data kosong.
-                        Sama seperti @foreach + cek kosong, tapi lebih ringkas.
-                    --}}
                     @forelse ($logs as $index => $log)
                         <tr class="hover:bg-slate-50/50 transition">
                             
-                            {{-- 
-                                Nomor urut yang benar saat paginasi:
-                                Halaman 2 dengan 10 item/halaman -> item pertama nomor 11
-                                Rumus: (halaman_skrg - 1) * per_page + index + 1
-                                Atau pakai: $logs->firstItem() + $index
-                            --}}
                             <x-table.td>
                                 {{ $logs->firstItem() + $index }}
                             </x-table.td>
@@ -192,10 +172,6 @@
                                 </div>
                             </x-table.td>
                             
-                            {{-- 
-                                Nama User dengan avatar
-                                Pakai null-safe (?->) kalau-kalau user sudah dihapus
-                            --}}
                             <x-table.td>
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600">
@@ -277,11 +253,7 @@
         {{-- ========================================== --}}
         @if ($logs->hasPages())
             <div class="px-6 py-4 border-t border-slate-100">
-                {{-- 
-                    $logs->links() = render pagination default Laravel
-                    Tapi defaultnya pakai Bootstrap. Kita pakai custom Tailwind
-                    dengan parameter view. Atau gunakan pagination yang sudah kita custom di bawah.
-                --}}
+
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
                     <p class="text-slate-500">
                         Menampilkan 
@@ -339,10 +311,6 @@
     {{-- </div> --}}
 </div>
 
-{{-- 
-    @push('scripts') = tambah script ke @stack('scripts') di layout.
-    Berguna kalau view ini butuh JS tambahan yang gak ada di view lain.
---}}
 @push('scripts')
 <script>
     // Re-render icons setelah content berubah (misal setelah filter)
