@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\RequestLabExport;
 use App\Models\Asset;
+use App\Models\AssetLab;
 use App\Models\Laboratory;
 use App\Models\RequestItem;
 use App\Models\RequestLab;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -75,6 +76,7 @@ class RequestLabController extends Controller
             'total_request' => $labRequest->request_items->sum('total_request'),
             'electronic' => $this->itemsForCategory($labRequest, 'electronic'),
             'non_electronic' => $this->itemsForCategory($labRequest, 'non-electronic'),
+            'component_pc' => $this->itemsForCategory($labRequest, 'component-pc'),
         ]);
     }
 
@@ -87,12 +89,20 @@ class RequestLabController extends Controller
             'request_date' => ['required', 'date'],
             'items' => ['required', 'array'],
             'items.*' => ['nullable', 'array'],
+            'items.*.asset_id' => ['nullable', 'exists:assets,id'],
+            'items.*.total_request' => ['nullable', 'integer', 'min:1'],
             'items.*.*.asset_id' => ['nullable', 'exists:assets,id'],
             'items.*.*.total_request' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $items = collect($validated['items'])
-            ->flatMap(fn ($categoryItems) => $categoryItems ?? [])
+            ->flatMap(function ($itemOrCategoryItems) {
+                if (isset($itemOrCategoryItems['asset_id']) || isset($itemOrCategoryItems['total_request'])) {
+                    return [$itemOrCategoryItems];
+                }
+
+                return $itemOrCategoryItems ?? [];
+            })
             ->filter(fn ($item) => ! empty($item['asset_id']) && ! empty($item['total_request']))
             ->values();
 
@@ -125,47 +135,30 @@ class RequestLabController extends Controller
 
     public function updateItemStatus(Request $request, $itemId)
     {
+        abort_unless(auth()->user()->role === 'spv inventory', 403);
+
         $validated = $request->validate([
             'status' => 'required|in:approved,rejected',
         ]);
 
         $item = RequestItem::findOrFail($itemId);
 
-        if ($item->status !== 'pending') {
-            return response()->json(['success' => false, 'message' => 'Item sudah diproses sebelumnya.'], 422);
-        }
-
         $labRequest = RequestLab::findOrFail($item->request_lab_id);
 
-        DB::transaction(function () use ($item, $validated, $labRequest) {
-            if ($validated['status'] === 'approved') {
-                $asset = Asset::findOrFail($item->asset_id);
-                $qty = $item->total_request;
+        try {
+            DB::transaction(function () use ($item, $validated, $labRequest) {
+                $this->applyItemStatus($item, $labRequest, $validated['status']);
 
-                if ($asset->total_good < $qty) {
-                    throw new \Exception("Stok {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good}).");
-                }
-
-                // 1. Kurangi stok SPV
-                $asset->total_good -= $qty;
-                $asset->save(); // auto recalculate total_asset
-
-                // 2. Tambah ke Lab
-                $assetLab = AssetLab::firstOrCreate(
-                    ['lab_id' => $labRequest->lab_id, 'asset_id' => $item->asset_id],
-                    ['total_good_lab' => 0, 'total_damaged_lab' => 0, 'total_loss_lab' => 0]
-                );
-                $assetLab->total_good_lab += $qty;
-                $assetLab->save(); // auto recalculate total_asset_lab
-            }
-
-            // Update status item
-            $item->update(['status' => $validated['status']]);
-
-            // Recalculate status request
-            $requestStatus = $this->resolveRequestStatus($labRequest->fresh()->request_items);
-            $labRequest->update(['request_status' => $requestStatus]);
-        });
+                // Recalculate status request
+                $requestStatus = $this->resolveRequestStatus($labRequest->fresh()->request_items);
+                $labRequest->update(['request_status' => $requestStatus]);
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
@@ -175,45 +168,29 @@ class RequestLabController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
+        abort_unless(auth()->user()->role === 'spv inventory', 403);
+
         $validated = $request->validate([
             'status' => 'required|in:approved,rejected',
         ]);
 
         $labRequest = RequestLab::with('request_items')->findOrFail($id);
 
-        DB::transaction(function () use ($labRequest, $validated) {
-            foreach ($labRequest->request_items as $item) {
-                // Lewati kalau sudah diproses
-                if ($item->status !== 'pending') continue;
-
-                if ($validated['status'] === 'approved') {
-                    $asset = Asset::find($item->asset_id);
-                    if (!$asset) continue;
-                    
-                    $qty = $item->total_request;
-                    if ($asset->total_good < $qty) {
-                        throw new \Exception("Stok {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good}).");
-                    }
-
-                    // Kurangi SPV
-                    $asset->total_good -= $qty;
-                    $asset->save();
-
-                    // Tambah ke Lab
-                    $assetLab = AssetLab::firstOrCreate(
-                        ['lab_id' => $labRequest->lab_id, 'asset_id' => $item->asset_id],
-                        ['total_good_lab' => 0, 'total_damaged_lab' => 0, 'total_loss_lab' => 0]
-                    );
-                    $assetLab->total_good_lab += $qty;
-                    $assetLab->save();
+        try {
+            DB::transaction(function () use ($labRequest, $validated) {
+                foreach ($labRequest->request_items as $item) {
+                    $this->applyItemStatus($item, $labRequest, $validated['status']);
                 }
 
-                $item->update(['status' => $validated['status']]);
-            }
-
-            $requestStatus = $this->resolveRequestStatus($labRequest->fresh()->request_items);
-            $labRequest->update(['request_status' => $requestStatus]);
-        });
+                $requestStatus = $this->resolveRequestStatus($labRequest->fresh()->request_items);
+                $labRequest->update(['request_status' => $requestStatus]);
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
@@ -233,8 +210,6 @@ class RequestLabController extends Controller
         if ($pending === $total) return 'pending';
         if ($approved === $total) return 'approved';
         if ($rejected === $total) return 'rejected';
-        if ($pending === 0) return 'done'; // semua sudah diproses (approved / rejected)
-
         return 'partial';
     }
 
@@ -263,17 +238,21 @@ class RequestLabController extends Controller
 
     public function exportPdf()
     {
+        return $this->export('pdf');
+    }
+
+    public function export(string $format)
+    {
         abort_unless(auth()->user()->role === 'spv inventory', 403);
 
-        $requests = RequestLab::with(['user', 'request_items'])
-            ->latest()
-            ->get();
+        $export = new RequestLabExport();
 
-        $pdf = Pdf::loadView('pdf.lab-requests', [
-            'requests' => $requests,
-        ]);
-
-        return $pdf->download('Request-Lab.pdf');
+        return match ($format) {
+            'pdf' => $export->downloadPdf(),
+            'excel' => $export->downloadExcel(),
+            'csv' => $export->downloadCsv(),
+            default => abort(404),
+        };
     }
 
     private function itemsForCategory(RequestLab $labRequest, string $category): array
@@ -288,5 +267,51 @@ class RequestLabController extends Controller
                 'status' => $item->status ?? 'pending',
             ])
             ->toArray();
+    }
+
+    private function applyItemStatus(RequestItem $item, RequestLab $labRequest, string $newStatus): void
+    {
+        $oldStatus = $item->status ?? 'pending';
+        $qty = (int) $item->total_request;
+
+        if ($oldStatus === $newStatus) {
+            $item->update(['status' => $newStatus]);
+            return;
+        }
+
+        if ($oldStatus === 'approved') {
+            $asset = Asset::findOrFail($item->asset_id);
+            $asset->total_good += $qty;
+            $asset->save();
+
+            $assetLab = AssetLab::where('lab_id', $labRequest->lab_id)
+                ->where('asset_id', $item->asset_id)
+                ->first();
+
+            if ($assetLab) {
+                $assetLab->total_good_lab = max(0, (int) $assetLab->total_good_lab - $qty);
+                $assetLab->save();
+            }
+        }
+
+        if ($newStatus === 'approved') {
+            $asset = Asset::findOrFail($item->asset_id);
+
+            if ($asset->total_good < $qty) {
+                throw new \Exception("Stok {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good}).");
+            }
+
+            $asset->total_good -= $qty;
+            $asset->save();
+
+            $assetLab = AssetLab::firstOrCreate(
+                ['lab_id' => $labRequest->lab_id, 'asset_id' => $item->asset_id],
+                ['total_good_lab' => 0, 'total_damaged_lab' => 0, 'total_loss_lab' => 0]
+            );
+            $assetLab->total_good_lab += $qty;
+            $assetLab->save();
+        }
+
+        $item->update(['status' => $newStatus]);
     }
 }

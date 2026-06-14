@@ -55,8 +55,8 @@ Route::middleware('auth')->group(function () {
         ->name('requestlab.update');
     Route::delete('/requestlab/{id}', [RequestLabController::class, 'destroy'])
         ->name('requestlab.destroy');
-    Route::get('/requestlab/export/pdf', [RequestLabController::class, 'exportPdf'])
-        ->name('requestlab.export.pdf');
+    Route::get('/requestlab/export/{format}', [RequestLabController::class, 'export'])
+        ->name('requestlab.export');
     Route::delete('/laboratory/bulk-destroy', [LaboratoryController::class, 'bulkDestroy'])
         ->name('laboratory.bulkDestroy');
 

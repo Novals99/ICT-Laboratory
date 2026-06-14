@@ -80,9 +80,12 @@
             </x-button.filter>
 
             @if ($isSpv)
-                <x-button.export href="{{ route('requestlab.export.pdf') }}">
-                    Export
-                </x-button.export>
+                <x-button.export.export
+                    menuId="requestLabExportMenu"
+                    pdfUrl="{{ route('requestlab.export', 'pdf') }}"
+                    excelUrl="{{ route('requestlab.export', 'excel') }}"
+                    csvUrl="{{ route('requestlab.export', 'csv') }}"
+                />
             @endif
 
             @if ($canCreateRequest)
@@ -141,11 +144,22 @@
                                 <button type="button" onclick="openRequestModal({{ $request->id }})"
                                     title="Lihat Detail"
                                     style="background:none; border:none; cursor:pointer; padding:4px; color:#9ca3af;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5m-1.414-9.414a2 2 0 1 1 2.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
+                                    @if ($isSpv)
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                        </svg>
+                                    @else
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+                                    @endif
                                 </button>
 
                                 @if ($canDeleteRequest)
@@ -226,7 +240,7 @@
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+            <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:20px; margin-bottom:20px;">
                 <div>
                     <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Electronic Category</p>
                     <table style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
@@ -254,20 +268,40 @@
                         <tbody id="modal_nonelectronic"></tbody>
                     </table>
                 </div>
+
+                <div>
+                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">PC Component Category</p>
+                    <table style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
+                        <thead>
+                            <tr style="background:var(--bg-table-header);">
+                                <th style="padding:8px 14px; text-align:left;">Asset Name</th>
+                                <th style="padding:8px 14px; text-align:left;">Qty</th>
+                                <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal_componentpc"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         @if ($isSpv)
             <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 32px 24px 32px;">
-                <button onclick="rejectAll()">Reject All</button>
-                <button onclick="approveAll()">Approve All</button>
+                <button type="button" onclick="rejectAll()"
+                    style="border:1px solid #dc2626; background:#dc2626; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Reject All
+                </button>
+                <button type="button" onclick="approveAll()"
+                    style="border:1px solid #16a34a; background:#16a34a; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Approve All
+                </button>
             </div>
         @endif
     </div>
 </div>
 
 <x-modal.index id="addRequestModal" title="Create Request" :action="route('requestlab.store')" submitText="Submit"
-    cancelText="Cancel">
+    cancelText="Cancel" boxClass="request-lab-create-modal" innerClass="request-lab-create-inner">
     <div style="margin-bottom:16px;">
         <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Submission Date</label>
         <input type="date" name="request_date" required
@@ -285,61 +319,73 @@
         </select>
     </div>
 
-    <div style="display:flex; gap:8px; margin-bottom:16px;">
-        @foreach (['electronic' => 'Electronic', 'non-electronic' => 'Non-Electronic', 'component-pc' => 'PC Component'] as $category => $label)
-            <button type="button" onclick="switchTab('{{ $category }}')" id="tab-{{ $category }}"
-                style="padding:6px 16px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; border:{{ $loop->first ? 'none' : '1px solid var(--border-color)' }}; background:{{ $loop->first ? '#111B4C' : 'var(--bg-input)' }}; color:{{ $loop->first ? '#fff' : 'var(--text-secondary)' }};">
-                {{ $label }}
-            </button>
-        @endforeach
+    <div id="requestItemList">
+        <div class="item-row"
+            style="border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative;">
+            <button type="button" onclick="removeItemRow(this)"
+                style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted);">x</button>
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Category:</label>
+                <select name="items[0][category]" onchange="updateItemAssetOptions(this)"
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    <option value="electronic">Electronic</option>
+                    <option value="non-electronic">Non-Electronic</option>
+                    <option value="component-pc">PC Component</option>
+                </select>
+            </div>
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
+                <select name="items[0][asset_id]" data-asset-select
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    <option value="">Choose asset...</option>
+                    @foreach ($assets->where('asset_category', 'electronic') as $asset)
+                        <option value="{{ $asset->id }}">{{ $asset->asset_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
+                <input type="number" name="items[0][total_request]" min="1" placeholder="Enter here..."
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+            </div>
+        </div>
     </div>
 
-    @foreach (['electronic', 'non-electronic', 'component-pc'] as $category)
-        <div id="items-{{ $category }}" style="{{ $loop->first ? '' : 'display:none;' }}">
-            <div id="itemList-{{ $category }}">
-                <div class="item-row"
-                    style="border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative;">
-                    <button type="button" onclick="removeItemRow(this)"
-                        style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted);">x</button>
-                    <div style="margin-bottom:8px;">
-                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
-                        <select name="items[{{ $category }}][0][asset_id]"
-                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                            <option value="">Choose asset...</option>
-                            @foreach ($assets->where('asset_category', $category) as $asset)
-                                <option value="{{ $asset->id }}">{{ $asset->asset_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
-                        <input type="number" name="items[{{ $category }}][0][total_request]" min="1"
-                            placeholder="Enter here..."
-                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                    </div>
-                </div>
-            </div>
-            <button type="button" onclick="addItem('{{ $category }}')"
-                class="inline-flex items-center justify-center gap-2 rounded-lg bg-[#111B4C] px-4 py-2 text-sm font-semibold text-white">
-                + Add Item
-            </button>
-        </div>
-    @endforeach
+    <button type="button" onclick="addItem()"
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-[#111B4C] px-4 py-2 text-sm font-semibold text-white">
+        + Add Item
+    </button>
 </x-modal.index>
 @endsection
 
 @push('styles')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        .request-lab-create-modal {
+            max-height: calc(100vh - 48px);
+            min-height: auto;
+        }
+
+        .request-lab-create-modal .panel-modal-form {
+            min-height: 0;
+        }
+
+        .request-lab-create-inner {
+            max-height: calc(100vh - 210px);
+            overflow-y: auto;
+            padding-right: 20px;
+        }
+
+        .request-lab-create-modal .panel-modal-footer {
+            flex-shrink: 0;
+        }
+    </style>
 @endpush
 
 @push('scripts')
 <script>
     let currentRequestId = null;
-    const itemIndexes = {
-        'electronic': 1,
-        'non-electronic': 1,
-        'component-pc': 1
-    };
+    let requestItemIndex = 1;
     const assets = @json($assetGroups);
     const canReviewRequest = @json($canReviewRequest);
 
@@ -361,21 +407,20 @@
         if (event.target.id === id) closePanelModal(id);
     };
 
-    function switchTab(category) {
-        ['electronic', 'non-electronic', 'component-pc'].forEach(cat => {
-            const panel = document.getElementById(`items-${cat}`);
-            const tab = document.getElementById(`tab-${cat}`);
-            if (!panel || !tab) return;
-            panel.style.display = cat === category ? 'block' : 'none';
-            tab.style.background = cat === category ? '#111B4C' : 'var(--bg-input)';
-            tab.style.color = cat === category ? '#fff' : 'var(--text-secondary)';
-            tab.style.border = cat === category ? 'none' : '1px solid var(--border-color)';
-        });
+    function assetOptions(category) {
+        const categoryAssets = assets[category] ?? [];
+        return '<option value="">Choose asset...</option>' +
+            categoryAssets.map(asset => `<option value="${asset.id}">${asset.name}</option>`).join('');
     }
 
-    function addItem(category) {
-        const idx = itemIndexes[category]++;
-        const catAssets = assets[category] ?? [];
+    function updateItemAssetOptions(categorySelect) {
+        const row = categorySelect.closest('.item-row');
+        const assetSelect = row.querySelector('[data-asset-select]');
+        assetSelect.innerHTML = assetOptions(categorySelect.value);
+    }
+
+    function addItem() {
+        const idx = requestItemIndex++;
         const div = document.createElement('div');
         div.className = 'item-row';
         div.style = 'border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative;';
@@ -383,24 +428,32 @@
             <button type="button" onclick="removeItemRow(this)"
                 style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted);">x</button>
             <div style="margin-bottom:8px;">
-                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
-                <select name="items[${category}][${idx}][asset_id]"
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Category:</label>
+                <select name="items[${idx}][category]" onchange="updateItemAssetOptions(this)"
                     style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                    <option value="">Choose asset...</option>
-                    ${catAssets.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
+                    <option value="electronic">Electronic</option>
+                    <option value="non-electronic">Non-Electronic</option>
+                    <option value="component-pc">PC Component</option>
+                </select>
+            </div>
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
+                <select name="items[${idx}][asset_id]" data-asset-select
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    ${assetOptions('electronic')}
                 </select>
             </div>
             <div>
                 <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
-                <input type="number" name="items[${category}][${idx}][total_request]" placeholder="Enter here..." min="1"
+                <input type="number" name="items[${idx}][total_request]" placeholder="Enter here..." min="1"
                     style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
             </div>
         `;
-        document.getElementById(`itemList-${category}`).appendChild(div);
+        document.getElementById('requestItemList').appendChild(div);
     }
 
     function removeItemRow(btn) {
-        const list = btn.closest('[id^="itemList-"]');
+        const list = btn.closest('#requestItemList');
         if (list && list.querySelectorAll('.item-row').length === 1) return;
         btn.closest('.item-row').remove();
     }
@@ -414,6 +467,7 @@
         const loading = '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
         document.getElementById('modal_electronic').innerHTML = loading;
         document.getElementById('modal_nonelectronic').innerHTML = loading;
+        document.getElementById('modal_componentpc').innerHTML = loading;
 
         fetch(`/requestlab/${requestId}/detail`)
             .then(res => res.json())
@@ -424,12 +478,14 @@
                 document.getElementById('modal_total').value = data.total_request;
                 document.getElementById('modal_electronic').innerHTML = rowHtml(data.electronic);
                 document.getElementById('modal_nonelectronic').innerHTML = rowHtml(data.non_electronic);
+                document.getElementById('modal_componentpc').innerHTML = rowHtml(data.component_pc);
             })
             .catch(() => {
                 const error = '<tr><td colspan="3" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Gagal memuat data</td></tr>';
                 document.getElementById('modalProgress').style.width = '100%';
                 document.getElementById('modal_electronic').innerHTML = error;
                 document.getElementById('modal_nonelectronic').innerHTML = error;
+                document.getElementById('modal_componentpc').innerHTML = error;
             });
     }
 
@@ -478,7 +534,7 @@
     function updateItemStatus(itemId, status) {
         if (!status) return;
 
-        fetch(`/requestlab/items/${itemId}/status`, {
+        fetch(`/requestlab/item/${itemId}/status`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -488,10 +544,14 @@
         })
             .then(res => res.json())
             .then(data => {
-                if (!data.success) return;
+                if (!data.success) {
+                    alert(data.message || 'Status item gagal diubah.');
+                    return;
+                }
                 openRequestModal(currentRequestId);
                 updateRowBadge(currentRequestId, data.request_status);
-            });
+            })
+            .catch(() => alert('Status item gagal diubah.'));
     }
 
     function updateRowBadge(requestId, status) {
@@ -510,15 +570,20 @@
         badge.textContent = text;
     }
 
-    function approveAll() {
+    window.approveAll = function() {
         updateRequestStatus('approved');
-    }
+    };
 
-    function rejectAll() {
+    window.rejectAll = function() {
         updateRequestStatus('rejected');
-    }
+    };
 
     function updateRequestStatus(status) {
+        if (!currentRequestId) {
+            alert('Buka detail request terlebih dahulu.');
+            return;
+        }
+
         fetch(`/requestlab/${currentRequestId}/status`, {
             method: 'PATCH',
             headers: {
@@ -529,9 +594,15 @@
         })
             .then(res => res.json())
             .then(data => {
-                if (data.success) updateRowBadge(currentRequestId, data.request_status);
+                if (!data.success) {
+                    alert(data.message || 'Status request gagal diubah.');
+                    return;
+                }
+
+                updateRowBadge(currentRequestId, data.request_status);
                 closeRequestModal();
-            });
+            })
+            .catch(() => alert('Status request gagal diubah.'));
     }
 
     document.getElementById('requestModal').addEventListener('click', function(event) {
