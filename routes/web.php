@@ -11,6 +11,8 @@ use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetLabController;
 use App\Http\Controllers\AssetLogController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\ReturnRequestController;
+use App\Http\Controllers\TransferRequestController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -28,6 +30,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('laboratory', LaboratoryController::class);
     Route::get('/laboratory/export/{format}', [LaboratoryController::class, 'export'])->name('laboratory.export');
+    Route::get('/laboratory/recycle-bin', [LaboratoryController::class, 'recycleBin'])->name('laboratory.recycle-bin');
 
 
     Route::post('/laboratory/{laboratory}/pc', [PcController::class, 'store'])->name('pc.store');
@@ -90,5 +93,45 @@ Route::middleware('auth')->group(function () {
     Route::get('/activity-log/export', function () {
         return 'Export belum dibuat';
     })->name('activity-log.export');
-});
+    // ── RETURN REQUESTS (Retur Lab → Gudang) ─────────────────────────────────────
+
+    Route::prefix('return-requests')->name('return-requests.')->group(function () {
+
+        Route::get('/',       [ReturnRequestController::class, 'index'])->name('index');
+        Route::get('/create', [ReturnRequestController::class, 'create'])->name('create');
+        Route::post('/',      [ReturnRequestController::class, 'store'])->name('store');
+
+        Route::get('/{returnRequest}',         [ReturnRequestController::class, 'show'])->name('show');
+        Route::post('/{returnRequest}/approve', [ReturnRequestController::class, 'approve'])
+            ->middleware(\App\Http\Middleware\EnsureSpv::class)
+            ->name('approve');
+        Route::post('/{returnRequest}/reject',  [ReturnRequestController::class, 'reject'])
+            ->middleware(\App\Http\Middleware\EnsureSpv::class)
+            ->name('reject');
+    });
+
+    // ── ENDPOINT AJAX — Ambil aset di lab (dipakai kedua form) ───────────────────
+    // Diletakkan di luar prefix agar bisa diakses dari form transfer maupun return.
+    // Jika ingin lebih rapi, pisah ke routes/api.php.
+
+    Route::get('/api/labs/{labId}/assets', [ReturnRequestController::class, 'getLabAssets'])
+        ->name('api.labs.assets');
+
+    // ── TRANSFER REQUESTS (Mutasi Antar Lab) ─────────────────────────────────────
+
+    Route::prefix('transfer-requests')->name('transfer-requests.')->group(function () {
+
+        Route::get('/',       [TransferRequestController::class, 'index'])->name('index');
+        Route::get('/create', [TransferRequestController::class, 'create'])->name('create');
+        Route::post('/',      [TransferRequestController::class, 'store'])->name('store');
+
+        Route::get('/{transferRequest}',          [TransferRequestController::class, 'show'])->name('show');
+        Route::post('/{transferRequest}/approve',  [TransferRequestController::class, 'approve'])
+            ->middleware(\App\Http\Middleware\EnsureSpv::class)
+            ->name('approve');
+        Route::post('/{transferRequest}/reject',   [TransferRequestController::class, 'reject'])
+            ->middleware(\App\Http\Middleware\EnsureSpv::class)
+            ->name('reject');
+    });
+    });
 require __DIR__ . '/auth.php';

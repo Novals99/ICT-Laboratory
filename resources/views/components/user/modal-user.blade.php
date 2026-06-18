@@ -99,7 +99,7 @@
 
         <div class="panel-form-field">
             <div class="user-role-options" data-role-group>
-                @foreach (['spv inventory', 'pic', 'admin', 'assistant'] as $role)
+                @foreach (['spv inventory', 'staff'] as $role)
                     @php
                         $roleId = $modalId . '-role-' . str_replace(' ', '-', $role);
                     @endphp
@@ -167,7 +167,7 @@
             </div>
 
             <p class="panel-form-help">
-                Admin/Assistant must select 1 lab. PIC can select multiple labs. SPV can be left blank.
+                Staff must select 1 lab. SPV can be left blank.
             </p>
 
             @error('lab_ids')

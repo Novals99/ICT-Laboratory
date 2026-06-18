@@ -313,7 +313,7 @@ function submitBulkDelete() {
     if (!confirm('Hapus ' + checked.length + ' lab yang dipilih? Semua asset dan PC akan dikembalikan ke stok.')) {
         return;
     }
-    
+
     const form = document.getElementById('bulkDeleteForm');
     // Hapus input lama
     form.querySelectorAll('input[name="ids[]"]').forEach(i => i.remove());
@@ -325,7 +325,7 @@ function submitBulkDelete() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     form.submit();
 }
 
@@ -401,22 +401,23 @@ function addCreateAssetRow(type) {
     div.style.cssText = 'border:1px solid #e5e7eb; border-radius:8px; padding:12px; position:relative;';
     div.innerHTML = `
         <button type="button" onclick="this.closest('.asset-row').remove()"
-                style="position:absolute; top:6px; right:8px; background:none; border:none; cursor:pointer; color:#9ca3af; font-size:16px;">×</button>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                class="absolute top-1.5 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-base bg-transparent border-none cursor-pointer">×</button>
+        <div class="grid grid-cols-2 gap-2.5">
             <div>
-                <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">Asset Name:</label>
+                <label class="block text-xs text-gray-500 dark:text-gray-300 mb-1">Asset Name:</label>
                 <select name="lab_assets[${idx}][asset_id]"
-                        style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
+                        class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md px-2.5 py-2 text-sm box-border">
                     <option value="">Choose asset...</option>
                     ${options.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
                 </select>
             </div>
             <div>
-                <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">Quantity:</label>
+                <label class="block text-xs text-gray-500 dark:text-gray-300 mb-1">Quantity:</label>
                 <input type="number" name="lab_assets[${idx}][quantity]" value="0" min="0"
-                       style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
+                    class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md px-2.5 py-2 text-sm box-border">
             </div>
-        </div>`;
+        </div>
+    `;
     container.appendChild(div);
 }
 

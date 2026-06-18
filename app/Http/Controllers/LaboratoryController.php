@@ -67,9 +67,9 @@ class LaboratoryController extends Controller
         $totalInactive = $laboratory->pcs->where('status_pc', 'inactive')->count();
         $allAssets     = Asset::orderBy('asset_name')->get();
 
-        $pic        = $laboratory->users->firstWhere('role', 'pic');
-        $admins     = $laboratory->users->where('role', 'admin')->values();
-        $assistants = $laboratory->users->where('role', 'assistant')->values();
+        $pic        = null; // Deprecated
+        $admins     = collect(); // Deprecated
+        $assistants = collect(); // Deprecated
 
         $myLabIds  = $user->labs()->pluck('laboratories.id')->toArray();
         $canEdit   = $user->role === 'spv inventory' || in_array($laboratory->id, $myLabIds);
@@ -243,17 +243,18 @@ class LaboratoryController extends Controller
                         }
 
                         if ($qty > 0) {
+                            $existingDamaged = 0;
+                            $existingLoss = 0;
+                            if ($existingInLab->has($a['asset_id'])) {
+                                $existingDamaged = $existingInLab[$a['asset_id']]->pivot->total_damaged_lab ?? 0;
+                                $existingLoss = $existingInLab[$a['asset_id']]->pivot->total_loss_lab ?? 0;
+                            }
+
                             $sync[$a['asset_id']] = [
-                                'total_asset_lab'     => $qty
-                                    + ($existingInLab->has($a['asset_id']) ? $existingInLab[$a['asset_id']]->pivot->total_damaged_lab : 0)
-                                    + ($existingInLab->has($a['asset_id']) ? $existingInLab[$a['asset_id']]->pivot->total_loss_lab : 0),
-                                'total_good_lab'      => $qty,
-                                'total_damaged_lab'   => $existingInLab->has($a['asset_id'])
-                                    ? $existingInLab[$a['asset_id']]->pivot->total_damaged_lab
-                                    : 0,
-                                'total_loss_lab'      => $existingInLab->has($a['asset_id'])
-                                    ? $existingInLab[$a['asset_id']]->pivot->total_loss_lab
-                                    : 0,
+                                'total_asset_lab'   => $qty + $existingDamaged + $existingLoss,
+                                'total_good_lab'    => $qty,
+                                'total_damaged_lab' => (int) $existingDamaged,
+                                'total_loss_lab'    => (int) $existingLoss,
                             ];
                         }
                     }
@@ -351,5 +352,12 @@ class LaboratoryController extends Controller
             'csv'   => $export->downloadCsv(),
             default => abort(404),
         };
+    }
+
+    public function recycleBin()
+    {
+        // TODO: Implement soft delete functionality for laboratories
+        // For now, show a placeholder view
+        return view('pages.laboratory.recycle-bin');
     }
 }

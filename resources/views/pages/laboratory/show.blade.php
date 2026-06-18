@@ -13,39 +13,26 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 
 <div class="db-wrap">
 
-    {{-- ── HEADER ── --}}
-    <div class="db-card" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
-        <div style="flex:1; min-width:0;">
-            <h2 style="font-size:20px; font-weight:700; color:#111827; margin:0 0 6px;">{{ $laboratory->lab_name }}</h2>
-            <p style="font-size:13px; color:#6b7280; margin:0 0 14px;">
-                Capacity: <strong>{{ $laboratory->capacity }} PC</strong> &nbsp;·&nbsp;
-                Active: <strong style="color:#16a34a;">{{ $totalActive }}</strong> &nbsp;·&nbsp;
-                Inactive: <strong style="color:#dc2626;">{{ $totalInactive }}</strong>
-            </p>
+            {{-- ── HEADER ── --}}
+            <div class="db-card bg-white dark:bg-gray-800 flex items-start justify-between flex-wrap gap-4" style="flex:1; min-width:0;">
+                <div style="flex:1; min-width:0;">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1.5">{{ $laboratory->lab_name }}</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3.5">
+                        Capacity: <strong class="text-gray-900 dark:text-white">{{ $laboratory->capacity }} PC</strong> &nbsp;·&nbsp;
+                        Active: <strong class="text-green-600 dark:text-green-400">{{ $totalActive }}</strong>
+                    </p>
             <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:8px;">
+                @php
+                    $staffUsers = $laboratory->users->where('role', 'staff')->values();
+                @endphp
+                @forelse($staffUsers as $staff)
                 <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px;">
-                    <p style="font-size:11px; color:#9ca3af; font-weight:600; margin:0 0 3px; text-transform:uppercase; letter-spacing:.5px;">PIC</p>
-                    <p style="font-size:13px; font-weight:600; color:#374151; margin:0;">{{ $pic?->name ?? '-' }}</p>
-                </div>
-                @forelse($admins as $admin)
-                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px;">
-                    <p style="font-size:11px; color:#9ca3af; font-weight:600; margin:0 0 3px; text-transform:uppercase; letter-spacing:.5px;">Admin</p>
-                    <p style="font-size:13px; font-weight:600; color:#374151; margin:0;">{{ $admin->name }}</p>
-                </div>
-                @empty
-                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px;">
-                    <p style="font-size:11px; color:#9ca3af; font-weight:600; margin:0 0 3px; text-transform:uppercase; letter-spacing:.5px;">Admin</p>
-                    <p style="font-size:13px; color:#9ca3af; margin:0;">-</p>
-                </div>
-                @endforelse
-                @forelse($assistants as $asst)
-                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px;">
-                    <p style="font-size:11px; color:#9ca3af; font-weight:600; margin:0 0 3px; text-transform:uppercase; letter-spacing:.5px;">Assistant</p>
-                    <p style="font-size:13px; font-weight:600; color:#374151; margin:0;">{{ $asst->name }}</p>
+                    <p style="font-size:11px; color:#9ca3af; font-weight:600; margin:0 0 3px; text-transform:uppercase; letter-spacing:.5px;">Staff</p>
+                    <p style="font-size:13px; font-weight:600; color:#374151; margin:0;">{{ $staff->name }}</p>
                 </div>
                 @empty
                 <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px;">
-                    <p style="font-size:11px; color:#9ca3af; font-weight:600; margin:0 0 3px; text-transform:uppercase; letter-spacing:.5px;">Assistant</p>
+                    <p style="font-size:11px; color:#9ca3af; font-weight:600; margin:0 0 3px; text-transform:uppercase; letter-spacing:.5px;">Staff</p>
                     <p style="font-size:13px; color:#9ca3af; margin:0;">-</p>
                 </div>
                 @endforelse
@@ -165,13 +152,59 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
         </div>
     </div>
 
+<style>
+/* Definisikan warna default (Light Mode) */
+:root {
+    --bg-main: #ffffff;
+    --bg-light: #f3f4f6;
+    --bg-hover: #f9fafb;
+    --text-bold: #111827;
+    --text-normal: #374151;
+    --text-muted: #9ca3af;
+    --border-main: #d1d5db;
+    --border-light: #e5e7eb;
+    --bg-primary: #111B4C;
+    --text-primary: #ffffff;
+
+    /* Warna Status */
+    --bg-danger: #fef2f2;
+    --text-danger: #dc2626;
+    --bg-warning: #fffbeb;
+    --text-warning: #f59e0b;
+    --bg-success: #dcfce7;
+    --text-success: #16a34a;
+}
+
+/* Definisikan warna untuk Dark Mode
+   PENTING: Sesuaikan '.dark' dengan class/trigger dark mode di project kamu (bisa jadi [data-theme="dark"] atau body.dark-mode) */
+.dark, [data-theme="dark"] {
+    --bg-main: #1f2937;
+    --bg-light: #374151;
+    --bg-hover: #4b5563;
+    --text-bold: #f9fafb;
+    --text-normal: #d1d5db;
+    --text-muted: #9ca3af;
+    --border-main: #4b5563;
+    --border-light: #374151;
+    --bg-primary: #3b82f6;
+    --text-primary: #ffffff;
+
+    --bg-danger: rgba(220, 38, 38, 0.2);
+    --text-danger: #f87171;
+    --bg-warning: rgba(245, 158, 11, 0.2);
+    --text-warning: #fbbf24;
+    --bg-success: rgba(22, 163, 74, 0.2);
+    --text-success: #4ade80;
+}
+</style>
+
     {{-- ══ SECTION 2: ASSET INFORMATION ══ --}}
     <div id="section-asset" class="db-card" style="display:none; padding:0; overflow:hidden;">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px 14px; border-bottom:1px solid #f3f4f6;">
-            <h3 style="font-size:15px; font-weight:700; color:#111827; margin:0;">Asset Information</h3>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px 14px; border-bottom:1px solid var(--border-light);">
+            <h3 style="font-size:15px; font-weight:700; color:var(--text-bold); margin:0;">Asset Information</h3>
             @if($isSPV)
             <button onclick="openAddAssetModal()"
-                    style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:600;">
+                    style="background:var(--bg-primary); color:var(--text-primary); border:none; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:600;">
                 + Add Asset
             </button>
             @endif
@@ -204,14 +237,14 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                                     @csrf
                                     <input type="hidden" name="field" value="total_good_lab">
                                     <input type="hidden" name="action" value="decrement">
-                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">−</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid var(--border-main); border-radius:6px; background:var(--bg-main); color:var(--text-normal); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">−</button>
                                 </form>
-                                <span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; background:#f3f4f6; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_good_lab ?? 0 }}</span>
+                                <span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; background:var(--bg-light); color:var(--text-bold); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_good_lab ?? 0 }}</span>
                                 <form method="POST" action="{{ route('lab.assetlab.adjust', [$laboratory->id, $asset->id]) }}" style="display:inline">
                                     @csrf
                                     <input type="hidden" name="field" value="total_good_lab">
                                     <input type="hidden" name="action" value="increment">
-                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">+</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid var(--border-main); border-radius:6px; background:var(--bg-main); color:var(--text-normal); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">+</button>
                                 </form>
                             </div>
                         </td>
@@ -222,14 +255,14 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                                     @csrf
                                     <input type="hidden" name="field" value="total_damaged_lab">
                                     <input type="hidden" name="action" value="decrement">
-                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">−</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid var(--border-main); border-radius:6px; background:var(--bg-main); color:var(--text-normal); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">−</button>
                                 </form>
-                                <span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; color:#dc2626; background:#fef2f2; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_damaged_lab ?? 0 }}</span>
+                                <span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; color:var(--text-danger); background:var(--bg-danger); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_damaged_lab ?? 0 }}</span>
                                 <form method="POST" action="{{ route('lab.assetlab.adjust', [$laboratory->id, $asset->id]) }}" style="display:inline">
                                     @csrf
                                     <input type="hidden" name="field" value="total_damaged_lab">
                                     <input type="hidden" name="action" value="increment">
-                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">+</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid var(--border-main); border-radius:6px; background:var(--bg-main); color:var(--text-normal); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">+</button>
                                 </form>
                             </div>
                         </td>
@@ -240,24 +273,24 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                                     @csrf
                                     <input type="hidden" name="field" value="total_loss_lab">
                                     <input type="hidden" name="action" value="decrement">
-                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">−</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid var(--border-main); border-radius:6px; background:var(--bg-main); color:var(--text-normal); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">−</button>
                                 </form>
-                                <span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; color:#f59e0b; background:#fffbeb; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_loss_lab ?? 0 }}</span>
+                                <span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; color:var(--text-warning); background:var(--bg-warning); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_loss_lab ?? 0 }}</span>
                                 <form method="POST" action="{{ route('lab.assetlab.adjust', [$laboratory->id, $asset->id]) }}" style="display:inline">
                                     @csrf
                                     <input type="hidden" name="field" value="total_loss_lab">
                                     <input type="hidden" name="action" value="increment">
-                                    <button type="submit" style="width:28px; height:28px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">+</button>
+                                    <button type="submit" style="width:28px; height:28px; border:1px solid var(--border-main); border-radius:6px; background:var(--bg-main); color:var(--text-normal); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-weight:600;">+</button>
                                 </form>
                             </div>
                         </td>
                         @else
-                        <td style="text-align:center; font-weight:700; font-size:14px; background:#f3f4f6; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_good_lab ?? 0 }}</td>
-                        <td style="text-align:center; font-weight:700; font-size:14px; color:#dc2626; background:#fef2f2; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_damaged_lab ?? 0 }}</td>
-                        <td style="text-align:center; font-weight:700; font-size:14px; color:#f59e0b; background:#fffbeb; padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_loss_lab ?? 0 }}</td>
+                        <td style="text-align:center; font-weight:700; font-size:14px; background:var(--bg-light); color:var(--text-bold); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_good_lab ?? 0 }}</td>
+                        <td style="text-align:center; font-weight:700; font-size:14px; color:var(--text-danger); background:var(--bg-danger); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_damaged_lab ?? 0 }}</td>
+                        <td style="text-align:center; font-weight:700; font-size:14px; color:var(--text-warning); background:var(--bg-warning); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_loss_lab ?? 0 }}</td>
                         @endif
 
-                        <td style="text-align:center; font-weight:700; font-size:14px; color:#111827;">
+                        <td style="text-align:center; font-weight:700; font-size:14px; color:var(--text-bold);">
                             {{ $asset->pivot->total_asset_lab }}
                         </td>
 
@@ -280,16 +313,16 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="{{ $canEdit ? 7 : 6 }}" style="text-align:center; padding:32px; color:#9ca3af; font-size:13px;">Belum ada aset di lab ini</td>
+                        <td colspan="{{ $canEdit ? 7 : 6 }}" style="text-align:center; padding:32px; color:var(--text-muted); font-size:13px;">Belum ada aset di lab ini</td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
 
-        <div style="padding:16px 24px; border-top:1px solid #f3f4f6;">
+        <div style="padding:16px 24px; border-top:1px solid var(--border-light);">
             <button type="button" onclick="showSection('pc')"
-                    style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:500; display:inline-flex; align-items:center; gap:6px;">
+                    style="border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:500; display:inline-flex; align-items:center; gap:6px;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
                     <polyline points="15 18 9 12 15 6"/>
                 </svg>
@@ -303,55 +336,55 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 {{-- ══ MODAL ADD PC ══ --}}
 @if($canEdit)
 <div id="modal-add-pc" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50; align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:16px; width:100%; max-width:500px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; display:flex; flex-direction:column;">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid #e5e7eb; flex-shrink:0;">
-            <h3 style="font-size:16px; font-weight:700; color:#111827; margin:0;">Add PC</h3>
-            <button onclick="closeAddPcModal()" style="background:none; border:none; cursor:pointer; color:#9ca3af; font-size:22px;">&times;</button>
+    <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:500px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border-light); flex-shrink:0;">
+            <h3 style="font-size:16px; font-weight:700; color:var(--text-bold); margin:0;">Add PC</h3>
+            <button onclick="closeAddPcModal()" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:22px;">&times;</button>
         </div>
         <form method="POST" action="{{ route('pc.store', $laboratory->id) }}" style="overflow-y:auto; flex:1; padding:24px; display:flex; flex-direction:column; gap:14px;">
             @csrf
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                 <div>
-                    <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">Type</label>
-                    <select name="type_pc" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
+                    <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Type</label>
+                    <select name="type_pc" style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
                         <option value="mahasiswa">Mahasiswa</option>
                         <option value="dosen">Dosen</option>
                     </select>
                 </div>
                 <div>
-                    <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">Processor</label>
+                    <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Processor</label>
                     <input type="hidden" name="processor" id="apc_processor_val">
                     <input type="text" id="apc_processor_search"
                            placeholder="Search component or type manually..."
                            autocomplete="off"
                            oninput="filterAddDropdown('processor')"
                            onfocus="showAddDropdown('processor')"
-                           style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
+                           style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
                     <div id="apc_processor_dropdown"
-                         style="display:none; position:relative; z-index:200; background:#fff; border:1px solid #d1d5db; border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); margin-top:2px;">
+                         style="display:none; position:relative; z-index:200; background:var(--bg-main); border:1px solid var(--border-main); border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); margin-top:2px;">
                     </div>
                 </div>
             </div>
             @foreach(['ram'=>'RAM','ssd'=>'SSD','motherboard'=>'Motherboard','vga'=>'VGA','cpu_fan'=>'CPU Fan','powersupply'=>'Power Supply'] as $f => $l)
             <div style="position:relative;">
-                <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">{{ $l }}</label>
+                <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">{{ $l }}</label>
                 <input type="hidden" name="{{ $f }}" id="apc_{{ $f }}_val">
                 <input type="text" id="apc_{{ $f }}_search"
                        placeholder="Search component or type manually..."
                        autocomplete="off"
                        oninput="filterAddDropdown('{{ $f }}')"
                        onfocus="showAddDropdown('{{ $f }}')"
-                       style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
+                       style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
                 <div id="apc_{{ $f }}_dropdown"
-                     style="display:none; position:relative; z-index:200; background:#fff; border:1px solid #d1d5db; border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); margin-top:2px;">
+                     style="display:none; position:relative; z-index:200; background:var(--bg-main); border:1px solid var(--border-main); border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); margin-top:2px;">
                 </div>
             </div>
             @endforeach
             <div style="display:flex; justify-content:flex-end; gap:8px; padding-top:4px;">
                 <button type="button" onclick="closeAddPcModal()"
-                        style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
+                        style="border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
                 <button type="submit"
-                        style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Save</button>
+                        style="background:var(--bg-primary); color:var(--text-primary); border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Save</button>
             </div>
         </form>
     </div>
@@ -359,24 +392,24 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 
 {{-- ══ MODAL EDIT PC ══ --}}
 <div id="modal-edit-pc" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50; align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:16px; width:100%; max-width:500px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; display:flex; flex-direction:column;">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid #e5e7eb; flex-shrink:0;">
-            <h3 id="edit-pc-title" style="font-size:16px; font-weight:700; color:#111827; margin:0;">Edit PC</h3>
-            <button onclick="closeEditPcModal()" style="background:none; border:none; cursor:pointer; color:#9ca3af; font-size:22px;">&times;</button>
+    <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:500px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border-light); flex-shrink:0;">
+            <h3 id="edit-pc-title" style="font-size:16px; font-weight:700; color:var(--text-bold); margin:0;">Edit PC</h3>
+            <button onclick="closeEditPcModal()" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:22px;">&times;</button>
         </div>
         <form method="POST" id="editPcForm" style="overflow-y:auto; flex:1; padding:24px; display:flex; flex-direction:column; gap:14px;">
             @csrf @method('PUT')
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                 <div>
-                    <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">Type</label>
-                    <select name="type_pc" id="epc_type_pc" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
+                    <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Type</label>
+                    <select name="type_pc" id="epc_type_pc" style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
                         <option value="mahasiswa">Mahasiswa</option>
                         <option value="dosen">Dosen</option>
                     </select>
                 </div>
                 <div>
-                    <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">Status</label>
-                    <select name="status_pc" id="epc_status_pc" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
+                    <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Status</label>
+                    <select name="status_pc" id="epc_status_pc" style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                     </select>
@@ -387,25 +420,25 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 
             @foreach($pcFields as $f => $l)
             <div style="position:relative;">
-                <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">{{ $l }}</label>
+                <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">{{ $l }}</label>
                 <input type="hidden" name="{{ $f }}" id="epc_{{ $f }}_val">
                 <input type="text" id="epc_{{ $f }}_search"
                        placeholder="Search component or type manually..."
                        autocomplete="off"
                        oninput="filterDropdown('{{ $f }}')"
                        onfocus="showDropdown('{{ $f }}')"
-                       style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
+                       style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
                 <div id="epc_{{ $f }}_dropdown"
-                     style="display:none; position:absolute; z-index:200; background:#fff; border:1px solid #d1d5db; border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); top:calc(100% + 2px); left:0;">
+                     style="display:none; position:absolute; z-index:200; background:var(--bg-main); border:1px solid var(--border-main); border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); top:calc(100% + 2px); left:0;">
                 </div>
             </div>
             @endforeach
 
             <div style="display:flex; justify-content:flex-end; gap:8px; padding-top:4px;">
                 <button type="button" onclick="closeEditPcModal()"
-                        style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
+                        style="border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
                 <button type="submit"
-                        style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Update</button>
+                        style="background:var(--bg-primary); color:var(--text-primary); border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Update</button>
             </div>
         </form>
     </div>
@@ -413,10 +446,10 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 
 {{-- ══ MODAL ADD ASSET ══ --}}
 <div id="modal-add-asset" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50; align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:16px; width:100%; max-width:500px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15);">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid #e5e7eb;">
-            <h3 style="font-size:16px; font-weight:700; color:#111827; margin:0;">Add Asset</h3>
-            <button onclick="closeAddAssetModal()" style="background:none; border:none; cursor:pointer; color:#9ca3af; font-size:22px;">&times;</button>
+    <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:500px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border-light);">
+            <h3 style="font-size:16px; font-weight:700; color:var(--text-bold); margin:0;">Add Asset</h3>
+            <button onclick="closeAddAssetModal()" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:22px;">&times;</button>
         </div>
         <form method="POST" action="{{ route('laboratory.update', $laboratory->id) }}" style="padding:24px; display:flex; flex-direction:column; gap:14px;">
             @csrf @method('PUT')
@@ -440,9 +473,9 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
             @endforeach
 
             <div>
-                <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">Asset Name:</label>
+                <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Asset Name:</label>
                 <select name="lab_assets[new0][asset_id]"
-                        style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
+                        style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
                     <option value="">Choose asset...</option>
                     @foreach($allAssets as $a)
                     <option value="{{ $a->id }}">{{ $a->asset_name }} ({{ ucfirst($a->asset_category) }})</option>
@@ -450,15 +483,15 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                 </select>
             </div>
             <div>
-                <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">Quantity:</label>
+                <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Quantity:</label>
                 <input type="number" name="lab_assets[new0][quantity]" value="1" min="1"
-                       style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
+                       style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
             </div>
             <div style="display:flex; justify-content:flex-end; gap:8px;">
                 <button type="button" onclick="closeAddAssetModal()"
-                        style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
+                        style="border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
                 <button type="submit"
-                        style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Add</button>
+                        style="background:var(--bg-primary); color:var(--text-primary); border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Add</button>
             </div>
         </form>
     </div>
@@ -505,7 +538,7 @@ function showAddDropdown(field) {
 
     const emptyOpt = document.createElement('div');
     emptyOpt.textContent = '— Kosongkan / Ketik Manual —';
-    emptyOpt.style.cssText = 'padding:8px 12px; font-size:13px; cursor:pointer; color:#9ca3af; border-bottom:1px solid #f3f4f6;';
+    emptyOpt.style.cssText = 'padding:8px 12px; font-size:13px; cursor:pointer; color:var(--text-muted); border-bottom:1px solid var(--border-light);';
     emptyOpt.onmousedown = () => {
         const txt = document.getElementById(`apc_${field}_search`).value;
         selectAddComponent(field, txt, txt);
@@ -518,13 +551,13 @@ function showAddDropdown(field) {
             const item = document.createElement('div');
             item.style.cssText = `padding:8px 12px; font-size:13px; cursor:${disabled?'not-allowed':'pointer'}; display:flex; justify-content:space-between; align-items:center;`;
             item.innerHTML = `
-                <span style="color:${disabled?'#9ca3af':'#374151'};">${comp.name}</span>
-                <span style="font-size:11px; background:${disabled?'#fee2e2':'#dcfce7'}; color:${disabled?'#dc2626':'#16a34a'}; padding:2px 6px; border-radius:4px; font-weight:600;">
+                <span style="color:${disabled?'var(--text-muted)':'var(--text-normal)'};">${comp.name}</span>
+                <span style="font-size:11px; background:${disabled?'var(--bg-danger)':'var(--bg-success)'}; color:${disabled?'var(--text-danger)':'var(--text-success)'}; padding:2px 6px; border-radius:4px; font-weight:600;">
                     Stok: ${comp.stock}
                 </span>`;
             if (!disabled) {
                 item.onmousedown = () => selectAddComponent(field, comp.name, comp.name);
-                item.onmouseover = () => item.style.background = '#f9fafb';
+                item.onmouseover = () => item.style.background = 'var(--bg-hover)';
                 item.onmouseout  = () => item.style.background = '';
             }
             dropdown.appendChild(item);
@@ -552,6 +585,7 @@ document.addEventListener('click', e => {
         }
     });
 });
+
 // ── Add PC ──
 function openAddPcModal()  { document.getElementById('modal-add-pc').style.display = 'flex'; }
 function closeAddPcModal() { document.getElementById('modal-add-pc').style.display = 'none'; }
@@ -594,7 +628,7 @@ function showDropdown(field) {
 
     const emptyOpt = document.createElement('div');
     emptyOpt.textContent = '— Kosongkan / Ketik Manual —';
-    emptyOpt.style.cssText = 'padding:8px 12px; font-size:13px; cursor:pointer; color:#9ca3af; border-bottom:1px solid #f3f4f6;';
+    emptyOpt.style.cssText = 'padding:8px 12px; font-size:13px; cursor:pointer; color:var(--text-muted); border-bottom:1px solid var(--border-light);';
     emptyOpt.onmousedown = () => {
         const txt = document.getElementById(`epc_${field}_search`).value;
         selectComponent(field, txt, txt);
@@ -607,13 +641,13 @@ function showDropdown(field) {
             const item = document.createElement('div');
             item.style.cssText = `padding:8px 12px; font-size:13px; cursor:${disabled?'not-allowed':'pointer'}; display:flex; justify-content:space-between; align-items:center;`;
             item.innerHTML = `
-                <span style="color:${disabled?'#9ca3af':'#374151'};">${comp.name}</span>
-                <span style="font-size:11px; background:${disabled?'#fee2e2':'#dcfce7'}; color:${disabled?'#dc2626':'#16a34a'}; padding:2px 6px; border-radius:4px; font-weight:600;">
+                <span style="color:${disabled?'var(--text-muted)':'var(--text-normal)'};">${comp.name}</span>
+                <span style="font-size:11px; background:${disabled?'var(--bg-danger)':'var(--bg-success)'}; color:${disabled?'var(--text-danger)':'var(--text-success)'}; padding:2px 6px; border-radius:4px; font-weight:600;">
                     Stok: ${comp.stock}
                 </span>`;
             if (!disabled) {
                 item.onmousedown = () => selectComponent(field, comp.name, comp.name);
-                item.onmouseover = () => item.style.background = '#f9fafb';
+                item.onmouseover = () => item.style.background = 'var(--bg-hover)';
                 item.onmouseout  = () => item.style.background = '';
             }
             dropdown.appendChild(item);
