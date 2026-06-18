@@ -24,23 +24,17 @@ class AssetLab extends Model
     use HasFactory;
 
     protected $fillable = [
-        'lab_id',
-        'asset_id',
-        'total_asset_lab',
-        'total_good_lab',
-        'total_damaged_lab',
-        'total_loss_lab',
-    ];
+    'lab_id',
+    'asset_id',
+    'total_asset_lab',
 
-    // ── Relasi ────────────────────────────────────────────────────────────────
+];
 
-    public function lab()
-    {
+    public function lab() {
         return $this->belongsTo(Laboratory::class, 'lab_id');
     }
 
-    public function asset()
-    {
+    public function asset() {
         return $this->belongsTo(Asset::class, 'asset_id');
     }
 

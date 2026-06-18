@@ -50,7 +50,7 @@ Route::middleware('auth')->group(function () {
         ->name('requestlab.detail');
     Route::patch('/requestlab/{id}/status', [RequestLabController::class, 'updateStatus'])
         ->name('requestlab.status');
-    Route::patch('/requestlab/items/{itemId}/status', [RequestLabController::class, 'updateItemStatus'])
+    Route::patch('/requestlab/item/{itemId}/status', [RequestLabController::class, 'updateItemStatus'])
         ->name('requestlab.item.status');
     Route::get('/requestlab/{id}/edit', [RequestLabController::class, 'edit'])
         ->name('requestlab.edit');
@@ -58,8 +58,8 @@ Route::middleware('auth')->group(function () {
         ->name('requestlab.update');
     Route::delete('/requestlab/{id}', [RequestLabController::class, 'destroy'])
         ->name('requestlab.destroy');
-    Route::get('/requestlab/export/pdf', [RequestLabController::class, 'exportPdf'])
-        ->name('requestlab.export.pdf');
+    Route::get('/requestlab/export/{format}', [RequestLabController::class, 'export'])
+        ->name('requestlab.export');
     Route::delete('/laboratory/bulk-destroy', [LaboratoryController::class, 'bulkDestroy'])
         ->name('laboratory.bulkDestroy');
 
