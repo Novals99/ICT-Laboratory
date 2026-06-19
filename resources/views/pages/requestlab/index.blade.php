@@ -1,6 +1,6 @@
 @extends('panel.content')
 
-@section('title', 'Request Lab')
+@section('title', 'Admin Dashboard')
 
 @php
     $role = auth()->user()->role;
