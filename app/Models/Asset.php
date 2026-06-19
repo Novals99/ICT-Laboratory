@@ -28,7 +28,13 @@ class Asset extends Model
     }
 
     public function labs() {
-        return $this->belongsToMany(Laboratory::class, 'asset_labs');
+        return $this->belongsToMany(Laboratory::class, 'asset_labs')
+            ->withPivot([
+                'total_asset_lab',
+                'total_good_lab',
+                'total_damaged_lab',
+                'total_loss_lab',
+            ]);
     }
 
     public function logs() {
