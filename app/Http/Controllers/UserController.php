@@ -61,7 +61,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'nim' => ['required', 'string', 'max:10', 'unique:users,nim'],
             'role' => ['required', Rule::in(['spv inventory', 'pic', 'admin', 'assistant'])],
-            'username' => ['required', 'string', 'max:100', 'unique:users,username'],
+            'username' => ['required', 'string', 'min:8', 'max:25', 'unique:users,username', 'alpha_num:ascii' ],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
             'status_user' => ['nullable', 'boolean'],
@@ -122,7 +122,9 @@ class UserController extends Controller
             'username' => [
                 'required',
                 'string',
-                'max:100',
+                'min:8',
+                'max:25',
+                'alpha_num:ascii',
                 Rule::unique('users', 'username')->ignore($user->id),
             ],
             'email' => [
