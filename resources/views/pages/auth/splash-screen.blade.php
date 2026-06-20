@@ -37,6 +37,7 @@
        </div>
 
        @include('components.auth.modal-login')
-
+       <x-feedback.loading />
+       <x-feedback.toast />
 </body>
 </html>
