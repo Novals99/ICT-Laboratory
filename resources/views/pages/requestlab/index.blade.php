@@ -1,6 +1,6 @@
 @extends('panel.content')
 
-@section('title', 'Admin Dashboard')
+@section('title', 'spv Dashboard')
 
 @php
     $role = auth()->user()->role;
