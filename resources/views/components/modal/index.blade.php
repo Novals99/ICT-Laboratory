@@ -8,6 +8,7 @@
     'cancelText' => 'Cancel',
     'boxClass' => '',
     'innerClass' => '',
+    'loading' => true,
 ])
 
 <div
@@ -29,12 +30,13 @@
         </div>
 
         {{-- form --}}
-        <form
-            method="POST"
-            action="{{ $action }}"
-            class="panel-modal-form"
-            data-panel-form
-        >
+<form
+    method="POST"
+    action="{{ $action }}"
+    class="panel-modal-form"
+    data-panel-form
+    @if ($loading) data-loading="true" @endif
+>
             @csrf
 
             @if (! in_array(strtoupper($method), ['GET', 'POST']))

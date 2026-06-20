@@ -114,6 +114,9 @@
             {{-- content area --}}
             <main class="admin-content" id="main-content">
                 @yield('content')
+                    <x-feedback.toast />
+                    <x-feedback.loading />
+                    <x-feedback.confirm />
             </main>
 
         </div>
