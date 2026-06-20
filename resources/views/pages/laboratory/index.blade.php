@@ -1,5 +1,5 @@
 @extends('panel.content')
-@section('title', 'Admin Dashboard')
+@section('title', auth()->user()->role === 'spv inventory' ? 'SPV Dashboard' : 'Staff Dashboard')
 
 @section('content')
 
@@ -7,6 +7,7 @@
 $isSPV = auth()->user()->role === 'spv inventory';
 $electronicAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'electronic')->values();
 $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'electronic')->values();
+$componentPcAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'component-pc')->values(); // ← tambahan
 @endphp
 
 <div class="panel-page-card">
@@ -126,7 +127,7 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
                                     <form
                                         method="POST"
                                         action="{{ route('laboratory.destroy', $lab->id) }}"
-                                        onsubmit="return confirm('Hapus lab {{ addslashes($lab->lab_name) }}?')"
+                                        onsubmit="return confirm('Pindahkan lab {{ addslashes($lab->lab_name) }} ke Recycle Bin?')"
                                     >
                                         @csrf
                                         @method('DELETE')
@@ -310,7 +311,7 @@ function submitBulkDelete() {
         alert('Pilih minimal satu lab.');
         return;
     }
-    if (!confirm('Hapus ' + checked.length + ' lab yang dipilih? Semua asset dan PC akan dikembalikan ke stok.')) {
+    if (!confirm('Pindahkan ' + checked.length + ' lab yang dipilih ke Recycle Bin?')) {
         return;
     }
 
@@ -356,42 +357,104 @@ function clabGoStep(step) {
         buildCreatePcList(cap);
     }
 }
+const pcComponentOptions = @json($componentPcAssets->map(fn($a) => ['id'=>$a->id,'name'=>$a->asset_name,'stock'=>$a->total_good])->values());
+const pcFieldLabels = {
+    processor: 'Processor', ram: 'RAM', ssd: 'SSD', motherboard: 'Motherboard',
+    vga: 'VGA', cpu_fan: 'CPU Fan', powersupply: 'Power Supply',
+};
 
 function buildCreatePcList(cap) {
     const c = document.getElementById('clab-pc-list');
     c.innerHTML = '';
     for (let i = 0; i < cap; i++) {
+        const fieldsHtml = Object.keys(pcFieldLabels).map(f => `
+            <div style="position:relative;">
+                <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">${pcFieldLabels[f]}</label>
+                <input type="hidden" name="pcs[${i}][${f}]" id="clab_${i}_${f}_val">
+                <input type="text" id="clab_${i}_${f}_search"
+                       placeholder="Search component or type manually..."
+                       autocomplete="off"
+                       oninput="showClabDropdown(${i}, '${f}')"
+                       onfocus="showClabDropdown(${i}, '${f}')"
+                       style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
+                <div id="clab_${i}_${f}_dropdown"
+                     style="display:none; position:relative; z-index:200; background:#fff; border:1px solid #d1d5db; border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); margin-top:2px;">
+                </div>
+            </div>`).join('');
+
         c.innerHTML += `
         <details style="border:1px solid #e5e7eb; border-radius:10px; margin-bottom:10px;">
             <summary style="padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; background:#f9fafb;">
                 PC-${String(i).padStart(2,'0')}
             </summary>
             <div style="padding:14px; display:grid; gap:10px;">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div>
-                        <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">Type</label>
-                        <select name="pcs[${i}][type_pc]" style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px;">
-                            <option value="mahasiswa">Mahasiswa</option>
-                            <option value="dosen">Dosen</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">Processor</label>
-                        <input type="text" name="pcs[${i}][processor]" placeholder="e.g. i3-8100"
-                               style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
-                    </div>
-                </div>
-                ${['ram','ssd','motherboard','vga','cpu_fan','powersupply'].map(f => `
                 <div>
-                    <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">${f.replace('_',' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</label>
-                    <input type="text" name="pcs[${i}][${f}]"
-                           style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
-                </div>`).join('')}
+                    <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">Type</label>
+                    <select name="pcs[${i}][type_pc]" style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px;">
+                        <option value="mahasiswa">Mahasiswa</option>
+                        <option value="dosen">Dosen</option>
+                    </select>
+                </div>
+                ${fieldsHtml}
             </div>
         </details>`;
     }
 }
 
+function showClabDropdown(i, field) {
+    const search   = document.getElementById(`clab_${i}_${field}_search`);
+    const dropdown = document.getElementById(`clab_${i}_${field}_dropdown`);
+    if (!search || !dropdown) return;
+
+    const query    = search.value.toLowerCase();
+    const filtered = pcComponentOptions.filter(c => c.name.toLowerCase().includes(query));
+
+    dropdown.innerHTML = '';
+
+    const manualOpt = document.createElement('div');
+    manualOpt.textContent = '— Kosongkan / Ketik Manual —';
+    manualOpt.style.cssText = 'padding:8px 12px; font-size:13px; cursor:pointer; color:#9ca3af; border-bottom:1px solid #e5e7eb;';
+    manualOpt.onmousedown = () => selectClabComponent(i, field, search.value, search.value);
+    dropdown.appendChild(manualOpt);
+
+    filtered.forEach(comp => {
+        const disabled = comp.stock < 1;
+        const item = document.createElement('div');
+        item.style.cssText = `padding:8px 12px; font-size:13px; cursor:${disabled ? 'not-allowed' : 'pointer'}; display:flex; justify-content:space-between; align-items:center;`;
+        item.innerHTML = `
+            <span style="color:${disabled ? '#9ca3af' : '#374151'};">${comp.name}</span>
+            <span style="font-size:11px; background:${disabled ? '#fee2e2' : '#dcfce7'}; color:${disabled ? '#dc2626' : '#16a34a'}; padding:2px 6px; border-radius:4px; font-weight:600;">
+                Stok: ${comp.stock}
+            </span>`;
+        if (!disabled) {
+            item.onmousedown = () => selectClabComponent(i, field, comp.name, comp.name);
+            item.onmouseover = () => item.style.background = '#f9fafb';
+            item.onmouseout  = () => item.style.background = '';
+        }
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+function selectClabComponent(i, field, value, label) {
+    document.getElementById(`clab_${i}_${field}_val`).value    = value;
+    document.getElementById(`clab_${i}_${field}_search`).value = label;
+    document.getElementById(`clab_${i}_${field}_dropdown`).style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+    document.querySelectorAll('[id^="clab_"][id$="_dropdown"]').forEach(dropdown => {
+        const baseId = dropdown.id.replace('_dropdown', '');
+        const search = document.getElementById(`${baseId}_search`);
+        if (search && !search.contains(e.target) && !dropdown.contains(e.target)) {
+            if (dropdown.style.display !== 'none') {
+                document.getElementById(`${baseId}_val`).value = search.value;
+                dropdown.style.display = 'none';
+            }
+        }
+    });
+});
 function addCreateAssetRow(type) {
     const idx       = createAssetCounter++;
     const container = document.getElementById(type === 'electronic' ? 'clab-electronic-rows' : 'clab-non-electronic-rows');

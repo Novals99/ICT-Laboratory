@@ -5,7 +5,7 @@
 @php
     $role = auth()->user()->role;
     $isSpv = $role === 'spv inventory';
-    $canCreateRequest = in_array($role, ['admin', 'pic', 'assistant'], true);
+    $canCreateRequest = $role === 'staff';
     $canReviewRequest = $isSpv;
     $canDeleteRequest = $isSpv;
     $assetGroups = $assets

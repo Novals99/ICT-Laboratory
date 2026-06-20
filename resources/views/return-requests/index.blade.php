@@ -96,14 +96,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    @forempty($returnRequests)
-                    <tr>
-                        <td colspan="7" class="px-4 py-12 text-center text-gray-400 text-sm">
-                            Belum ada return request
-                        </td>
-                    </tr>
-                    @else
-                    @foreach($returnRequests as $req)
+                    @forelse($returnRequests as $req)
                     <tr class="hover:bg-gray-50 transition">
                         <td class="px-4 py-3">
                             <span class="font-mono text-sm font-semibold text-blue-600">
@@ -132,13 +125,18 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                             <a href="{{ route('return-requests.show', $req) }}"
-                               class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                            class="text-sm text-blue-600 hover:text-blue-800 font-medium">
                                 Detail →
                             </a>
                         </td>
                     </tr>
-                    @endforeach
-                    @endforempty
+                    @empty
+                    <tr>
+                        <td colspan="7" class="px-4 py-12 text-center text-gray-400 text-sm">
+                            Belum ada return request
+                        </td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
 

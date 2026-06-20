@@ -102,13 +102,16 @@ class ReturnRequestController extends Controller
 
         $assets = AssetLab::with('asset:id,asset_name,asset_category')
             ->where('lab_id', $labId)
-            ->where('total_asset_lab', '>', 0) // hanya yang ada stoknya
+            ->where('total_asset_lab', '>', 0)
             ->get()
             ->map(fn($item) => [
-                'asset_id' => $item->asset_id,
-                'name'     => $item->asset->asset_name,    // assets.asset_name (bukan name!)
-                'category' => $item->asset->asset_category,
-                'stock'    => $item->total_asset_lab,       // kolom yang benar
+                'asset_id'      => $item->asset_id,
+                'name'          => $item->asset->asset_name,
+                'category'      => $item->asset->asset_category,
+                'stock'         => $item->total_good_lab,    // default = good (dipakai form Transfer)
+                'stock_good'    => $item->total_good_lab,
+                'stock_damaged' => $item->total_damaged_lab,
+                'stock_loss'    => $item->total_loss_lab,
             ]);
 
         return response()->json($assets);
@@ -130,12 +133,20 @@ class ReturnRequestController extends Controller
 
         try {
             DB::transaction(function () use ($validated) {
-                // Validasi stok tiap item SEBELUM buat request
+                // Validasi stok tiap item SEBELUM buat request, sesuai kondisi barang
                 foreach ($validated['items'] as $item) {
+                    $field = match ($item['condition']) {
+                        'good'    => 'total_good_lab',
+                        'damaged' => 'total_damaged_lab',
+                        'lost'    => 'total_loss_lab',
+                        default   => 'total_good_lab',
+                    };
+
                     $this->mutationService->validateLabStock(
                         labId:        $validated['lab_id'],
                         assetId:      $item['asset_id'],
                         requestedQty: $item['quantity'],
+                        field:        $field,
                     );
                 }
 

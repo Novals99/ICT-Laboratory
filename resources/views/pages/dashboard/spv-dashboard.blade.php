@@ -1,6 +1,6 @@
 @extends('panel.content')
 
-@section('title', 'Admin Dashboard')
+@section('title', auth()->user()->role === 'spv inventory' ? 'SPV Dashboard' : 'Staff Dashboard')
 
 @section('content')
 

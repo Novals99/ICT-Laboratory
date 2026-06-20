@@ -37,8 +37,6 @@ class AssetLab extends Model
 
     public function asset()
     {
-    public function asset(): BelongsTo
-    {
         return $this->belongsTo(Asset::class, 'asset_id');
     }
 

@@ -163,7 +163,7 @@
                                         </span>
                                     </td>
 
-                                    @if(Auth::user()->role === 'spv' && $transferRequest->isPending())
+                                    @if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
                                     <td class="px-4 py-3 text-center">
                                         <input type="hidden" name="items[{{ $loop->index }}][id]" value="{{ $item->id }}">
                                         <input type="number"

@@ -1,6 +1,6 @@
 @extends('panel.content')
 
-@section('title', 'Admin Dashboard')
+@section('title', auth()->user()->role === 'spv inventory' ? 'SPV Dashboard' : 'Staff Dashboard')
 
 @section('content')
     <div class="panel-page-card">
@@ -36,33 +36,10 @@
                     excelUrl="{{ route('asset.export', 'excel') }}" csvUrl="{{ route('asset.export', 'csv') }}" />
 
 
-                {{-- Add Asset with category option --}}
-                <div class="asset-add-wrap">
-                    <x-button.add type="button" onclick="toggleAssetCategoryMenu(event)">
-                        Add Asset
-                    </x-button.add>
-
-                    <div id="assetCategoryMenu" class="asset-category-menu hidden">
-                        <div class="asset-category-menu-title">
-                            Choose Category
-                        </div>
-
-                        <button type="button" class="asset-category-menu-item"
-                            onclick="openAssetCreateModal('electronic', 'Electronic')">
-                            Electronic
-                        </button>
-
-                        <button type="button" class="asset-category-menu-item"
-                            onclick="openAssetCreateModal('non-electronic', 'Non-Electronic')">
-                            Non-Electronic
-                        </button>
-
-                        <button type="button" class="asset-category-menu-item"
-                            onclick="openAssetCreateModal('component-pc', 'PC Component')">
-                            Component PC
-                        </button>
-                    </div>
-                </div>
+                {{-- Add Asset --}}
+                <x-button.add type="button" onclick="openAssetCreateModal()">
+                    Add Asset
+                </x-button.add>
             </div>
         </div>
 
@@ -189,59 +166,31 @@
 
 @push('scripts')
     <script>
-        function toggleAssetCategoryMenu(event) {
-            event.stopPropagation();
+        let assetItemIndex = 1;
 
-            const menu = document.getElementById('assetCategoryMenu');
+        const assetCategoryLabels = {
+            electronic: 'Electronic',
+            'non-electronic': 'Non-Electronic',
+            'component-pc': 'PC Component',
+        };
 
-            if (!menu) return;
-
-            menu.classList.toggle('hidden');
+        function getSelectedAssetCategoryLabel() {
+            const select = document.getElementById('create-asset-category');
+            return (select && assetCategoryLabels[select.value]) || 'Choose category first';
         }
 
-        function openAssetCreateModal(category, label) {
-            const menu = document.getElementById('assetCategoryMenu');
-            const categoryInput = document.getElementById('create-asset-category');
-            const categoryTitle = document.getElementById('create-asset-category-title');
-
-            currentAssetCategoryLabel = label;
-
-            if (menu) {
-                menu.classList.add('hidden');
-            }
-
-            if (categoryInput) {
-                categoryInput.value = category;
-                categoryInput.dispatchEvent(new Event('input', { bubbles: true }));
-                categoryInput.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-
-            if (categoryTitle) {
-                categoryTitle.textContent = `${label} Category`;
-            }
-
-            document.querySelectorAll('[data-category-display]').forEach((input) => {
-                input.value = label;
-            });
-
-            bindAllAssetTabs();
-
+        function openAssetCreateModal() {
             openPanelModal('create-modal-asset');
+            bindAllAssetTabs();
         }
 
-        document.addEventListener('click', function (event) {
-            const menu = document.getElementById('assetCategoryMenu');
-            const wrap = document.querySelector('.asset-add-wrap');
-
-            if (!menu || !wrap) return;
-
-            if (!wrap.contains(event.target)) {
-                menu.classList.add('hidden');
+        document.addEventListener('change', function (event) {
+            if (event.target && event.target.id === 'create-asset-category') {
+                document.querySelectorAll('[data-category-display]').forEach((input) => {
+                    input.value = getSelectedAssetCategoryLabel();
+                });
             }
         });
-
-        let assetItemIndex = 1;
-        let currentAssetCategoryLabel = 'Choose category first';
 
         function updateAssetItemIndexes() {
             const items = document.querySelectorAll('#assetItemsWrapper [data-asset-item]');
@@ -277,7 +226,7 @@
             });
 
             item.querySelectorAll('[data-category-display]').forEach((input) => {
-                input.value = currentAssetCategoryLabel;
+                input.value = getSelectedAssetCategoryLabel();
             });
 
             wrapper.appendChild(item);

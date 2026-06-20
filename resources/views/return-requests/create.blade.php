@@ -67,15 +67,18 @@
                     this.items.splice(i, 1);
                 },
 
-                getStock(assetId) {
-                    const a = this.availableAssets.find(x => x.asset_id == assetId);
-                    return a ? a.stock : null;
+                getStock(item) {
+                    const a = this.availableAssets.find(x => x.asset_id == item.asset_id);
+                    if (!a) return null;
+                    if (item.condition === 'damaged') return a.stock_damaged;
+                    if (item.condition === 'lost') return a.stock_loss;
+                    return a.stock_good;
                 },
 
                 overStock(item) {
-                    const s = this.getStock(item.asset_id);
+                    const s = this.getStock(item);
                     return s !== null && item.quantity > s;
-                }
+                },
             }"
             x-init="if (labId) onLabChange(labId)">
 
@@ -198,7 +201,7 @@
                                                 <span x-show="item.asset_id"
                                                       class="text-xs font-semibold px-2 py-0.5 rounded-full"
                                                       :class="overStock(item) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'">
-                                                    <span x-text="getStock(item.asset_id)"></span>
+                                                    <span x-text="getStock(item)"></span>
                                                 </span>
                                             </td>
 
@@ -210,7 +213,7 @@
                                                        :class="overStock(item) ? 'border-red-400 bg-red-50' : ''"
                                                        x-model.number="item.quantity"
                                                        min="1"
-                                                       :max="getStock(item.asset_id)"
+                                                       :max="getStock(item)"
                                                        required>
                                                 <p x-show="overStock(item)" class="text-red-500 text-xs mt-0.5 text-center">
                                                     Melebihi stok!

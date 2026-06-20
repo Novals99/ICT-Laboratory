@@ -15,7 +15,7 @@ class LabExport extends BaseExport
                             return [
                                    'lab_name'           => $laboratories->lab_name,
                                    'capacity'           => $laboratories->capacity,
-                                   'admin'              => $laboratories->users->where('role', 'admin')->pluck('name')->join(', '),
+                                   'admin'              => $laboratories->users->pluck('name')->join(', '),
                                    'total_pc_active'    => $laboratories->total_pc_active,
                                    'total_pc_inactive'  => $laboratories->total_pc_inactive,
                             ];

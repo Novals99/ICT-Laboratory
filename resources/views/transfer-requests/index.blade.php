@@ -79,14 +79,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    @forempty($transferRequests)
-                    <tr>
-                        <td colspan="9" class="px-4 py-12 text-center text-gray-400 text-sm">
-                            Belum ada transfer request
-                        </td>
-                    </tr>
-                    @else
-                    @foreach($transferRequests as $req)
+                    @forelse($transferRequests as $req)
                     <tr class="hover:bg-gray-50 transition">
                         <td class="px-4 py-3 font-mono text-sm font-semibold text-blue-600">
                             {{ $req->request_code }}
@@ -117,13 +110,18 @@
                         <td class="px-4 py-3 text-sm text-gray-500">{{ $req->created_at->format('d M Y') }}</td>
                         <td class="px-4 py-3 text-right">
                             <a href="{{ route('transfer-requests.show', $req) }}"
-                               class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                            class="text-sm text-blue-600 hover:text-blue-800 font-medium">
                                 Detail →
                             </a>
                         </td>
                     </tr>
-                    @endforeach
-                    @endforempty
+                    @empty
+                    <tr>
+                        <td colspan="9" class="px-4 py-12 text-center text-gray-400 text-sm">
+                            Belum ada transfer request
+                        </td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
 

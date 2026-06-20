@@ -60,7 +60,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'nim' => ['required', 'string', 'max:10', 'unique:users,nim'],
-            'role' => ['required', Rule::in(['spv inventory', 'pic', 'admin', 'assistant'])],
+            'role' => ['required', Rule::in(['spv inventory', 'staff'])],
             'username' => ['required', 'string', 'max:100', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
@@ -199,13 +199,6 @@ class UserController extends Controller
                 'lab_ids' => 'Pilih minimal satu laboratory untuk role ini.',
             ]);
         }
-
-        if (in_array($role, ['admin', 'assistant'], true) && count($labIds) !== 1) {
-            throw ValidationException::withMessages([
-                'lab_ids' => 'Admin dan Assistant hanya boleh terhubung ke satu laboratory.',
-            ]);
-        }
-
         return $labIds;
     }
 }
