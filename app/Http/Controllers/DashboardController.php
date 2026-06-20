@@ -10,7 +10,7 @@ use App\Models\Asset;
 
 class DashboardController extends Controller
 {
-    public function __invoke()
+    public function index()
     {
         $user = auth()->user();
 

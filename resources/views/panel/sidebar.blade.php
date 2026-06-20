@@ -8,7 +8,7 @@
     {{-- logo ict --}}
     <div class="sidebar-brand">
         <div class="sidebar-logo">
-            <img src="{{ asset('images/logo-ict.png') }}" alt="Logo" width="40" height="40"
+            <img src="{{ asset('images/ict.png') }}" alt="Logo" width="40" height="40"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
             {{-- fallback SVG klo logo gada --}}
             <div
