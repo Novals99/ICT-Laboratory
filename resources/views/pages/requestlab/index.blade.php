@@ -249,7 +249,7 @@
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:20px; margin-bottom:20px;">
+            <div style="display:flex; flex-direction:column; gap:20px; margin-bottom:20px;">
                 <div>
                     <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Electronic Category</p>
                     <table style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
