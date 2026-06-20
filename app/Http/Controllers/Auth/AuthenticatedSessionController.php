@@ -27,8 +27,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // Diubah dari 'dashboard' menjadi 'laboratory.index' (atau rute lain yang kamu inginkan)
-        return redirect()->intended(route('laboratory.index', absolute: false));
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
     /**
