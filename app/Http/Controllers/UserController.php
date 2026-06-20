@@ -60,8 +60,8 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'nim' => ['required', 'string', 'max:10', 'unique:users,nim'],
-            'role' => ['required', Rule::in(['spv inventory', 'pic', 'admin', 'assistant'])],
-            'username' => ['required', 'string', 'max:100', 'unique:users,username'],
+            'role' => ['required', Rule::in(['spv inventory', 'staff'])],
+            'username' => ['required', 'string', 'min:8', 'max:25', 'unique:users,username', 'alpha_num:ascii' ],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
             'status_user' => ['nullable', 'boolean'],
@@ -118,11 +118,13 @@ class UserController extends Controller
                 'max:10',
                 Rule::unique('users', 'nim')->ignore($user->id),
             ],
-            'role' => ['required', Rule::in(['spv inventory', 'pic', 'admin', 'assistant'])],
+            'role' => ['required', Rule::in(['spv inventory', 'staff'])],
             'username' => [
                 'required',
                 'string',
-                'max:100',
+                'min:8',
+                'max:25',
+                'alpha_num:ascii',
                 Rule::unique('users', 'username')->ignore($user->id),
             ],
             'email' => [
