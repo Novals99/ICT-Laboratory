@@ -23,6 +23,7 @@ class AssetLab extends Model
 {
     use HasFactory;
 
+
     protected $fillable = [
     'lab_id',
     'asset_id',
@@ -34,7 +35,10 @@ class AssetLab extends Model
         return $this->belongsTo(Laboratory::class, 'lab_id');
     }
 
-    public function asset() {
+    public function asset()
+    {
+    public function asset(): BelongsTo
+    {
         return $this->belongsTo(Asset::class, 'asset_id');
     }
 

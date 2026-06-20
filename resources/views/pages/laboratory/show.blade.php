@@ -290,7 +290,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                         <td style="text-align:center; font-weight:700; font-size:14px; color:var(--text-warning); background:var(--bg-warning); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_loss_lab ?? 0 }}</td>
                         @endif
 
-                        <td style="text-align:center; font-weight:700; font-size:14px; color:#111827;">
+                        <td style="text-align:center; font-weight:700; font-size:14px; color:var(--text-bold);">
                             {{ $asset->pivot->total_asset_lab }}
                         </td>
 
