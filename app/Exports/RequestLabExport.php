@@ -21,9 +21,11 @@ class RequestLabExport extends BaseExport
                     'request_date' => $request->request_date
                         ? \Carbon\Carbon::parse($request->request_date)->format('Y-m-d')
                         : '-',
-                    'status' => $request->request_status === 'partial'
-                        ? 'Partially Approved'
-                        : ucwords($request->request_status),
+                    'status' => match ($request->request_status) {
+                        'partial' => 'Partially Approved',
+                        'done' => 'Done',
+                        default => ucwords($request->request_status),
+                    },
                 ];
             });
     }
