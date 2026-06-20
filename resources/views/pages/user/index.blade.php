@@ -153,12 +153,27 @@
                                 </x-table.action>
 
                                 {{-- delete --}}
-                                <form method="POST" action="{{ route('users.destroy', $user->id) }}"
-                                    onsubmit="return confirm('Hapus user ini?')">
+                                <form
+                                    id="delete-user-{{ $user->id }}"
+                                    method="POST"
+                                    action="{{ route('users.destroy', $user->id) }}"
+                                    data-loading="true"
+                                >
                                     @csrf
                                     @method('DELETE')
 
-                                    <x-table.action type="submit" variant="delete" title="Delete">
+                                    <x-table.action
+                                        type="button"
+                                        variant="delete"
+                                        title="Delete"
+                                        onclick="window.dispatchEvent(new CustomEvent('open-confirm', {
+                                            detail: {
+                                                title: 'Delete User?',
+                                                message: 'Are you sure want to delete {{ $user->name }}?',
+                                                formId: 'delete-user-{{ $user->id }}'
+                                            }
+                                        }))"
+                                    >
                                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <polyline points="3 6 5 6 21 6" />

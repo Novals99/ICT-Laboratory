@@ -10,6 +10,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 use App\Exports\UserExport;
+use Throwable;
 
 class UserController extends Controller
 {
@@ -167,14 +168,20 @@ class UserController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(User $user)
-    {
+public function destroy(User $user)
+{
+    try {
         $user->delete();
 
         return redirect()
             ->route('users.index')
             ->with('success', 'User berhasil dihapus.');
+    } catch (Throwable $e) {
+        return redirect()
+            ->route('users.index')
+            ->with('error', 'User gagal dihapus.');
     }
+}
 
     public function export(string $format)
     {
