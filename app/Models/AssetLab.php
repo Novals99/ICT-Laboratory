@@ -25,11 +25,23 @@ class AssetLab extends Model
 
 
     protected $fillable = [
-    'lab_id',
-    'asset_id',
-    'total_asset_lab',
+        'lab_id',
+        'asset_id',
+        'total_asset_lab',
+        'total_good_lab',
+        'total_damaged_lab',
+        'total_loss_lab',
+    ];
 
-];
+    protected static function booted(): void
+    {
+        static::saving(function (AssetLab $assetLab) {
+            $assetLab->total_asset_lab =
+                (int) ($assetLab->total_good_lab ?? 0)
+                + (int) ($assetLab->total_damaged_lab ?? 0)
+                + (int) ($assetLab->total_loss_lab ?? 0);
+        });
+    }
 
     public function lab() {
         return $this->belongsTo(Laboratory::class, 'lab_id');

@@ -1,6 +1,6 @@
 @extends('panel.content')
 
-@section('title', 'Request Lab')
+@section('title', 'Admin Dashboard')
 
 @php
     $role = auth()->user()->role;
@@ -61,12 +61,16 @@
                 @if ($isSpv)
                     <div class="filter-section">
                         <div class="filter-section-title">Request Status</div>
-                        @foreach (['pending', 'approved', 'partial', 'rejected'] as $status)
+                        @foreach (['pending', 'partial', 'done', 'approved', 'rejected'] as $status)
                             <label class="filter-checkbox-row">
                                 <input type="checkbox" name="status[]" value="{{ $status }}"
                                     {{ in_array($status, (array) request('status', [])) ? 'checked' : '' }}
                                     style="accent-color: #111B4C;">
-                                <span>{{ $status === 'partial' ? 'Partially Approved' : ucwords($status) }}</span>
+                                <span>{{ match ($status) {
+                                    'partial' => 'Partially Approved',
+                                    'done' => 'Done',
+                                    default => ucwords($status),
+                                } }}</span>
                             </label>
                         @endforeach
                     </div>
@@ -134,9 +138,14 @@
                                     'approved' => 'background:#16a34a;color:#fff;',
                                     'rejected' => 'background:#dc2626;color:#fff;',
                                     'partial' => 'background:#2563eb;color:#fff;',
+                                    'done' => 'background:#7c3aed;color:#fff;',
                                     default => 'background:#facc15;color:#713f12;',
                                 } }}">
-                                {{ $request->request_status === 'partial' ? 'Partially Approved' : ucwords($request->request_status) }}
+                                {{ match ($request->request_status) {
+                                    'partial' => 'Partially Approved',
+                                    'done' => 'Done',
+                                    default => ucwords($request->request_status),
+                                } }}
                             </span>
                         </td>
                         <td class="px-4 py-3">
@@ -294,6 +303,10 @@
                 <button type="button" onclick="approveAll()"
                     style="border:1px solid #16a34a; background:#16a34a; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
                     Approve All
+                </button>
+                <button type="button" onclick="saveItemStatuses()"
+                    style="border:1px solid #111B4C; background:#111B4C; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Save
                 </button>
             </div>
         @endif
@@ -518,9 +531,9 @@
                     <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
                         ${itemStatusBadge(item.status)}
                         ${canReviewRequest ? `
-                            <select onchange="updateItemStatus(${item.item_id}, this.value)"
+                            <select data-item-status-select data-item-id="${item.item_id}"
                                 style="min-width:100px;padding:4px 8px;font-size:11px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);cursor:pointer;">
-                                <option value="" ${item.status === 'pending' ? 'selected' : ''} disabled>Pilih</option>
+                                <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>Pending</option>
                                 <option value="approved" ${item.status === 'approved' ? 'selected' : ''}>Approve</option>
                                 <option value="rejected" ${item.status === 'rejected' ? 'selected' : ''}>Reject</option>
                             </select>
@@ -554,6 +567,46 @@
             .catch(() => alert('Status item gagal diubah.'));
     }
 
+    window.saveItemStatuses = async function() {
+        if (!currentRequestId) {
+            alert('Buka detail request terlebih dahulu.');
+            return;
+        }
+
+        const selects = document.querySelectorAll('[data-item-status-select]');
+        let latestStatus = null;
+
+        for (const select of selects) {
+            try {
+                const response = await fetch(`/requestlab/item/${select.dataset.itemId}/status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ status: select.value })
+                });
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert(data.message || 'Status item gagal disimpan.');
+                    return;
+                }
+
+                latestStatus = data.request_status;
+            } catch (error) {
+                alert('Status item gagal disimpan.');
+                return;
+            }
+        }
+
+        if (latestStatus) {
+            updateRowBadge(currentRequestId, latestStatus);
+        }
+
+        openRequestModal(currentRequestId);
+    };
+
     function updateRowBadge(requestId, status) {
         const badge = document.querySelector(`[data-request-status="${requestId}"]`);
         if (!badge) return;
@@ -562,6 +615,7 @@
             approved: ['#16a34a', '#fff', 'Approved'],
             rejected: ['#dc2626', '#fff', 'Rejected'],
             partial: ['#2563eb', '#fff', 'Partially Approved'],
+            done: ['#7c3aed', '#fff', 'Done'],
             pending: ['#facc15', '#713f12', 'Pending']
         };
         const [background, color, text] = styles[status] ?? styles.pending;

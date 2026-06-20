@@ -139,7 +139,7 @@ class RequestLabController extends Controller
         abort_unless(auth()->user()->role === 'spv inventory', 403);
 
         $validated = $request->validate([
-            'status' => 'required|in:approved,rejected',
+            'status' => 'required|in:pending,approved,rejected',
         ]);
 
         $item = RequestItem::findOrFail($itemId);
@@ -209,9 +209,8 @@ class RequestLabController extends Controller
         $rejected = $items->where('status', 'rejected')->count();
 
         if ($pending === $total) return 'pending';
-        if ($approved === $total) return 'approved';
-        if ($rejected === $total) return 'rejected';
-        return 'partial';
+        if ($pending > 0) return 'partial';
+        return 'done';
     }
 
     public function destroy($id)
