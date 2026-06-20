@@ -1,6 +1,6 @@
 @extends('panel.content')
 
-@section('title', 'Admin Dashboard')
+@section('title', auth()->user()->role === 'spv inventory' ? 'SPV Dashboard' : 'Staff Dashboard')
 
 @section('content')
     <div class="panel-page-card">
@@ -60,7 +60,7 @@
                     excelUrl="{{ route('users.export', 'excel') }}"
                     csvUrl="{{ route('users.export', 'csv') }}"
                 />
-                
+
                 {{-- Add User --}}
                 <x-button.add type="button" onclick="openPanelModal('create-modal-user')">
                     Add User

@@ -1,5 +1,5 @@
 @extends('panel.content')
-@section('title', 'Admin Dashbard')
+@section('title', auth()->user()->role === 'spv inventory' ? 'SPV Dashboard' : 'Staff Dashboard')
 
 @section('content')
 
@@ -290,8 +290,8 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                         <td style="text-align:center; font-weight:700; font-size:14px; color:var(--text-warning); background:var(--bg-warning); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_loss_lab ?? 0 }}</td>
                         @endif
 
-                        <td style="text-align:center; font-weight:700; font-size:14px; color:#111827;">
-                            {{ $asset->pivot->total_asset_lab }}
+                        <td style="text-align:center; font-weight:700; font-size:14px; color:var(--text-bold);">
+                            {{ $asset->pivot->total_good_lab + $asset->pivot->total_damaged_lab + $asset->pivot->total_loss_lab }}
                         </td>
 
                         @if($canEdit)
@@ -469,7 +469,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
             @endforeach
             @foreach($laboratory->assets as $idx => $ast)
             <input type="hidden" name="lab_assets[ex{{ $idx }}][asset_id]" value="{{ $ast->id }}">
-            <input type="hidden" name="lab_assets[ex{{ $idx }}][quantity]" value="{{ $ast->pivot->total_asset_lab }}">
+            <input type="hidden" name="lab_assets[ex{{ $idx }}][quantity]" value="{{ $ast->pivot->total_good_lab }}">
             @endforeach
 
             <div>

@@ -33,30 +33,31 @@
 >
 
 @if (! $isEdit)
-    <input
-        type="hidden"
-        name="asset_category"
-        id="create-asset-category"
-        value="{{ old('asset_category') }}"
-        data-progress-field
-        required
-    >
-
     <div class="asset-create-heading">
-        <div>
-            <h3 class="asset-create-title" id="create-asset-category-title">
-                Choose Category
-            </h3>
+        <div class="asset-field asset-field-category">
+            <label class="asset-field-label" for="create-asset-category">Category:</label>
+            <select
+                name="asset_category"
+                id="create-asset-category"
+                class="panel-form-input"
+                data-progress-field
+                required
+            >
+                <option value="" disabled {{ old('asset_category') ? '' : 'selected' }}>Choose category...</option>
+                <option value="electronic" {{ old('asset_category') === 'electronic' ? 'selected' : '' }}>Electronic</option>
+                <option value="non-electronic" {{ old('asset_category') === 'non-electronic' ? 'selected' : '' }}>Non-Electronic</option>
+                <option value="component-pc" {{ old('asset_category') === 'component-pc' ? 'selected' : '' }}>PC Component</option>
+            </select>
+
+            @error('asset_category')
+                <p class="panel-form-error">{{ $message }}</p>
+            @enderror
         </div>
 
         <x-button.add type="button" onclick="addAssetItem()">
             Add Item
         </x-button.add>
     </div>
-
-    @error('asset_category')
-        <p class="panel-form-error">{{ $message }}</p>
-    @enderror
 
     <div id="assetItemsWrapper" class="asset-items-wrapper">
         <div class="asset-item-card" data-asset-item>
@@ -376,7 +377,7 @@
             </div>
         </div>
     </template>
-    
+
     @else
         <div class="panel-form-row">
             <label class="panel-form-label">

@@ -124,6 +124,7 @@ class TransferRequestController extends Controller
                         labId:        $validated['from_lab_id'],
                         assetId:      $item['asset_id'],
                         requestedQty: $item['quantity'],
+                        field:        'total_good_lab',
                     );
                 }
 

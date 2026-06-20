@@ -20,21 +20,17 @@ class Asset extends Model
     protected static function booted(): void
     {
         static::saving(function (Asset $asset) {
-            $asset->total_asset = 
-                (int) ($asset->total_good ?? 0) 
-                + (int) ($asset->total_damaged ?? 0) 
+            $asset->total_asset =
+                (int) ($asset->total_good ?? 0)
+                + (int) ($asset->total_damaged ?? 0)
                 + (int) ($asset->total_loss ?? 0);
         });
     }
 
-    public function labs() {
-        return $this->belongsToMany(Laboratory::class, 'asset_labs')
-            ->withPivot([
-                'total_asset_lab',
-                'total_good_lab',
-                'total_damaged_lab',
-                'total_loss_lab',
-            ]);
+    public function labs()
+    {
+        return $this->belongsToMany(Laboratory::class, 'asset_labs', 'asset_id', 'lab_id')
+            ->withPivot(['total_asset_lab', 'total_good_lab', 'total_damaged_lab', 'total_loss_lab']);
     }
 
     public function logs() {

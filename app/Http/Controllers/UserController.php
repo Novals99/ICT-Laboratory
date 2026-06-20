@@ -208,13 +208,6 @@ public function destroy(User $user)
                 'lab_ids' => 'Pilih minimal satu laboratory untuk role ini.',
             ]);
         }
-
-        if (in_array($role, ['admin', 'assistant'], true) && count($labIds) !== 1) {
-            throw ValidationException::withMessages([
-                'lab_ids' => 'Admin dan Assistant hanya boleh terhubung ke satu laboratory.',
-            ]);
-        }
-
         return $labIds;
     }
 }

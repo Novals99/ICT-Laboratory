@@ -120,6 +120,31 @@
             Request Lab
         </a>
 
+        {{-- mutasi antar lab --}}
+        <a href="{{ route('transfer-requests.index') }}"
+            class="sidebar-item {{ request()->routeIs('transfer-requests.*') ? 'sidebar-item-active' : '' }}">
+            <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 3l4 4-4 4" />
+                <path d="M20 7H4" />
+                <path d="M8 21l-4-4 4-4" />
+                <path d="M4 17h16" />
+            </svg>
+            Mutasi Antar Lab
+        </a>
+
+        {{-- retur ke gudang --}}
+        <a href="{{ route('return-requests.index') }}"
+            class="sidebar-item {{ request()->routeIs('return-requests.*') ? 'sidebar-item-active' : '' }}">
+            <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <path d="M12 12v6" />
+                <path d="M9 14l3-3 3 3" />
+            </svg>
+            Retur ke Gudang
+        </a>
+
         @if($isSpv)
             {{-- inventory & stock --}}
             <a href="{{ route('asset.index') }}"

@@ -41,14 +41,13 @@ class StockMutationService
      *
      * @throws \Exception jika stok tidak mencukupi
      */
-    public function validateLabStock(int $labId, int $assetId, int $requestedQty): void
+    public function validateLabStock(int $labId, int $assetId, int $requestedQty, string $field = 'total_asset_lab'): void
     {
         $currentQty = AssetLab::where('lab_id', $labId)
             ->where('asset_id', $assetId)
-            ->value('total_asset_lab') ?? 0;
+            ->value($field) ?? 0;
 
         if ($currentQty < $requestedQty) {
-            // Ambil nama aset untuk pesan error yang informatif
             $assetName = Asset::find($assetId)?->asset_name ?? "Aset #{$assetId}";
 
             throw new \Exception(
@@ -109,11 +108,17 @@ class StockMutationService
                     );
                 }
 
-                // Guard: validasi ulang saat approval (stok bisa berubah)
-                if ($assetLab->total_asset_lab < $qtyApproved) {
+                $conditionField = match ($item->condition) {
+                    ReturnRequestItem::CONDITION_GOOD    => 'total_good_lab',
+                    ReturnRequestItem::CONDITION_DAMAGED => 'total_damaged_lab',
+                    ReturnRequestItem::CONDITION_LOST    => 'total_loss_lab',
+                    default                               => 'total_good_lab',
+                };
+
+                if ($assetLab->$conditionField < $qtyApproved) {
                     throw new \Exception(
-                        "Stok {$asset->asset_name} di lab sudah berubah. " .
-                        "Tersedia: {$assetLab->total_asset_lab}, " .
+                        "Stok {$asset->asset_name} ({$item->condition}) di lab sudah berubah. " .
+                        "Tersedia: {$assetLab->$conditionField}, " .
                         "Disetujui: {$qtyApproved}. Silakan review ulang."
                     );
                 }
@@ -131,7 +136,7 @@ class StockMutationService
                 // Asumsikan: barang yang diretur berasal dari total_good_lab
                 // (jika item sudah rusak di lab, seharusnya sudah dicatat sebelumnya)
                 $assetLab->decrement('total_asset_lab', $qtyApproved);
-                $assetLab->decrement('total_good_lab', $qtyApproved);
+                $assetLab->decrement($conditionField, $qtyApproved);
 
                 // ── Update stok gudang (assets) sesuai kondisi ───────────────
                 if ($item->condition === ReturnRequestItem::CONDITION_GOOD) {
@@ -209,8 +214,8 @@ class StockMutationService
                     ->lockForUpdate()
                     ->first();
 
-                if (!$fromLabStock || $fromLabStock->total_asset_lab < $qtyApproved) {
-                    $available = $fromLabStock?->total_asset_lab ?? 0;
+                if (!$fromLabStock || $fromLabStock->total_good_lab < $qtyApproved) {
+                    $available = $fromLabStock?->total_good_lab ?? 0;
                     throw new \Exception(
                         "Stok {$item->asset->asset_name} di lab asal tidak mencukupi. " .
                         "Tersedia: {$available}, Disetujui: {$qtyApproved}."

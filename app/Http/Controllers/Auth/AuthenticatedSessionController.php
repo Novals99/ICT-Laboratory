@@ -18,8 +18,7 @@ class AuthenticatedSessionController extends Controller
     {
         return view('pages.auth.splash-screen');
     }
-
-    /**
+/**
      * Handle an incoming authentication request.
      */
     public function store(LoginRequest $request): RedirectResponse
@@ -28,7 +27,8 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Diubah dari 'dashboard' menjadi 'laboratory.index' (atau rute lain yang kamu inginkan)
+        return redirect()->intended(route('laboratory.index', absolute: false));
     }
 
     /**

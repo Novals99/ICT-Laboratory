@@ -1,19 +1,19 @@
 @extends('panel.content')
 
-@section('title', 'Admin Dashboard')
+@section('title', auth()->user()->role === 'spv inventory' ? 'SPV Dashboard' : 'Staff Dashboard')
 
 @section('content')
 <div class="panel-page-card">
-    
+
     {{-- ========================================== --}}
     {{-- CARD UTAMA: Activity Log --}}
     {{-- ========================================== --}}
     {{-- <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"> --}}
-        
+
         {{-- Header Card: Title + Search + Filter + Export --}}
         <div class="px-6 py-5 ">
            <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                
+
                 {{-- Title --}}
                 <div>
                     <h2 class="panel-page-title">Activity Log</h2>
@@ -21,22 +21,22 @@
                         Total {{ $logs->total() }} aktivitas tercatat
                     </p> --}}
                 </div>
-                
-                {{-- 
+
+                {{--
                     Toolbar: Search + Filter + Export
                     Pakai form GET supaya filter ke-passing di URL
                 --}}
-               
-                    
+
+
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                      {{-- search --}}
                      <x-button.search.modul-search :action="route('activity-log.index')" name="search"
                             :value="request('search')" placeholder="Search..." />
-                    
+
                     {{-- Filter Button (toggle filter panel) --}}
                     <x-button.filter :action="route('activity-log.index')">
 
-                        
+
                         @if(request('search'))
                             <input type="hidden" name="search" value="{{ request('search') }}">
                         @endif
@@ -45,7 +45,7 @@
                         <div class="filter-section">
                             <div class="filter-section-title">Role</div>
 
-                            @foreach (['Admin', 'Assistant', 'SPV'] as $roleOption)
+                            @foreach (['Staff', 'SPV'] as $roleOption)
                                 <label class="filter-checkbox-row">
                                     <input
                                         type="checkbox"
@@ -87,7 +87,7 @@
                         </div>
 
                     </x-button.filter>
-                    
+
                     {{-- Export Button --}}
                    <x-button.export
     href="{{ route('activity-log.export', request()->query()) }}">
@@ -95,43 +95,41 @@
                     </x-button.export>
                 </form>
             </div>
-            
+
 
             <div id="filterPanel" class="{{ $startDate || $endDate || $role ? '' : 'hidden' }} mt-4 pt-4 border-t border-slate-100">
                 <form method="GET" action="{{ route('activity-log.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    
+
                     {{-- Preserve search saat filter di-apply --}}
                     <input type="hidden" name="search" value="{{ $search }}">
-                    
+
                     <div>
                         <label class="text-xs text-slate-500 font-medium mb-1 block">Dari Tanggal</label>
                         <input type="date" name="start_date" value="{{ $startDate }}"
                                class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E2A5E]/20 focus:border-[#1E2A5E]">
                     </div>
-                    
+
                     <div>
                         <label class="text-xs text-slate-500 font-medium mb-1 block">Sampai Tanggal</label>
                         <input type="date" name="end_date" value="{{ $endDate }}"
                                class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E2A5E]/20 focus:border-[#1E2A5E]">
                     </div>
-                    
+
                     <div>
                         <label class="text-xs text-slate-500 font-medium mb-1 block">Role</label>
-                        <select name="role" 
+                        <select name="role"
                                 class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E2A5E]/20 focus:border-[#1E2A5E] bg-white">
-                            <option value="">Semua Role</option>
-                            <option value="Admin" {{ $role === 'Admin' ? 'selected' : '' }}>Admin</option>
-                            <option value="Assistant" {{ $role === 'Assistant' ? 'selected' : '' }}>Assistant</option>
-                            <option value="SPV" {{ $role === 'SPV' ? 'selected' : '' }}>SPV Inventory</option>
+                        <option value="Staff" {{ $role === 'Staff' ? 'selected' : '' }}>Staff</option>
+                        <option value="SPV" {{ $role === 'SPV' ? 'selected' : '' }}>SPV Inventory</option>
                         </select>
                     </div>
-                    
+
                     <div class="flex items-end gap-2">
-                        <button type="submit" 
+                        <button type="submit"
                                 class="flex-1 px-4 py-2 text-sm bg-[#1E2A5E] text-white rounded-lg hover:bg-[#2D3A6F] transition font-medium">
                             Terapkan
                         </button>
-                        <a href="{{ route('activity-log.index') }}" 
+                        <a href="{{ route('activity-log.index') }}"
                            class="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition text-slate-600">
                             Reset
                         </a>
@@ -139,7 +137,7 @@
                 </form>
             </div>
         </div>
-        
+
         {{-- ========================================== --}}
         {{-- TABEL LOG AKTIVITAS --}}
         {{-- ========================================== --}}
@@ -154,14 +152,14 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-700/30">
-                    
+
                     @forelse ($logs as $index => $log)
                         <tr class="hover:bg-slate-50/50 transition">
-                            
+
                             <x-table.td>
                                 {{ $logs->firstItem() + $index }}
                             </x-table.td>
-                            
+
                             {{-- Tanggal dengan format yang readable --}}
                             <x-table.td>
                                 <div class="text-slate-700 font-medium">
@@ -171,7 +169,7 @@
                                     {{ $log->created_at->format('H:i') }} WIB
                                 </div>
                             </x-table.td>
-                            
+
                             <x-table.td>
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600">
@@ -188,39 +186,27 @@
                                     </div>
                                 </div>
                             </x-table.td>
-                            
+
                             {{-- Badge Role dengan warna sesuai role --}}
                             <x-table.td>
                                 @php
-                                    $roleClasses = match(strtolower($log->user?->role ?? '')) {
-                                    'admin' =>
-                                    'bg-rose-100 text-rose-700 border-rose-300
-                                    dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-900',
-
-                                    'assistant' =>
-                                    'bg-emerald-100 text-emerald-700 border-emerald-300
-                                    dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900',
-
-                                    'spv' =>
-                                    'bg-blue-100 text-blue-700 border-blue-300
-                                    dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900',
-
-                                    'calas' =>
-                                    'bg-amber-100 text-amber-700 border-amber-300
-                                    dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900',
+                                $roleClasses = match(strtolower($log->user?->role ?? '')) {
+                                    'staff' => 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900',
+                                    'spv inventory' => 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900',
+                                    default => 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
                                 };
                                 @endphp
                                 <span class="inline-flex items-center px-3 py-1 rounded-full border text-xs font-semibold {{ $roleClasses }}">
                                     {{ $log->user?->role ?? '-' }}
                                 </span>
                             </x-table.td>
-                            
+
                             {{-- Keterangan --}}
                             <td class="px-6 py-4 text-sm text-slate-700">
                                 {{ $log->activity }}
                             </td>
                         </tr>
-                    
+
                     @empty
                         {{-- Empty state: kalau gak ada log sama sekali --}}
                         <tr>
@@ -247,7 +233,7 @@
                 </tbody>
             </table>
         </x-table.index>
-        
+
         {{-- ========================================== --}}
         {{-- PAGINATION --}}
         {{-- ========================================== --}}
@@ -256,15 +242,15 @@
 
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
                     <p class="text-slate-500">
-                        Menampilkan 
+                        Menampilkan
                         <span class="font-medium text-slate-700">{{ $logs->firstItem() }}</span>
-                        sampai 
+                        sampai
                         <span class="font-medium text-slate-700">{{ $logs->lastItem() }}</span>
-                        dari 
+                        dari
                         <span class="font-medium text-slate-700">{{ $logs->total() }}</span>
                         log
                     </p>
-                    
+
                     {{-- Custom pagination buttons --}}
                     <div class="flex items-center gap-1">
                         {{-- Previous --}}
@@ -273,12 +259,12 @@
                                 <i data-lucide="chevron-left" class="w-4 h-4"></i>
                             </span>
                         @else
-                            <a href="{{ $logs->previousPageUrl() }}" 
+                            <a href="{{ $logs->previousPageUrl() }}"
                                class="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded-md transition">
                                 <i data-lucide="chevron-left" class="w-4 h-4"></i>
                             </a>
                         @endif
-                        
+
                         {{-- Page numbers --}}
                         @foreach ($logs->getUrlRange(max(1, $logs->currentPage() - 2), min($logs->lastPage(), $logs->currentPage() + 2)) as $page => $url)
                             @if ($page == $logs->currentPage())
@@ -286,16 +272,16 @@
                                     {{ $page }}
                                 </span>
                             @else
-                                <a href="{{ $url }}" 
+                                <a href="{{ $url }}"
                                    class="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded-md transition min-w-[36px] text-center">
                                     {{ $page }}
                                 </a>
                             @endif
                         @endforeach
-                        
+
                         {{-- Next --}}
                         @if ($logs->hasMorePages())
-                            <a href="{{ $logs->nextPageUrl() }}" 
+                            <a href="{{ $logs->nextPageUrl() }}"
                                class="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded-md transition">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </a>
@@ -315,7 +301,7 @@
 <script>
     // Re-render icons setelah content berubah (misal setelah filter)
     lucide.createIcons();
-    
+
     // Auto-submit form saat user mengetik di search (debounced)
     const searchInput = document.querySelector('input[name="search"]');
     let debounceTimer;

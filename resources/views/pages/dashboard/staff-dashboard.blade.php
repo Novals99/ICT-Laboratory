@@ -80,7 +80,7 @@
                         <tr>
                             <td>{{ $staff->name }}</td>
                             <td style="font-family:monospace; font-size:13px;">{{ $staff->nim }}</td>
-                            <td>{{ ucfirst(str_replace(['spv inventory','pic','admin','assistant'], ['SPV Inventory','PIC','Admin','Assistant'], $staff->role)) }}</td>
+                            <td>{{ ucfirst(str_replace(['spv inventory','staff'], ['SPV Inventory','Staff'], $staff->role)) }}</td>
                         </tr>
                         @empty
                         <tr>

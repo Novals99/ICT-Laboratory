@@ -35,7 +35,7 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'nim' => ['required', 'string', 'max:10', 'unique:users,nim'],
             'username' => ['required', 'string', 'max:100', 'unique:users,username'],
-            'role' => ['required', Rule::in(['spv inventory', 'pic', 'admin', 'assistant'])],
+            'role' => ['required', Rule::in(['spv inventory', 'staff'])],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);

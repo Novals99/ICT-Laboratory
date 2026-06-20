@@ -7,6 +7,7 @@ use App\Models\Laboratory;
 use App\Models\AssetLab;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 use App\Exports\LabExport;
 
@@ -291,55 +292,12 @@ class LaboratoryController extends Controller
 
     public function destroy(Laboratory $laboratory)
     {
-        // 1. Kembalikan component PC ke stok asset_lab
-        foreach ($laboratory->pcs as $pc) {
-            $components = array_filter([
-                $pc->processor,
-                $pc->ram,
-                $pc->ssd,
-                $pc->motherboard,
-                $pc->vga,
-                $pc->cpu_fan,
-                $pc->powersupply
-            ]);
-            foreach ($components as $name) {
-                $al = AssetLab::where('lab_id', $laboratory->id)
-                    ->whereHas('asset', function ($q) use ($name) {
-                        $q->where('asset_category', 'component-pc')
-                            ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)]);
-                    })
-                    ->first();
-                if ($al) {
-                    $al->increment('total_good_lab');
-                    $al->update([
-                        'total_asset_lab' => $al->total_good_lab + $al->total_damaged_lab + $al->total_loss_lab
-                    ]);
-                }
-            }
-        }
-
-        // 2. Kembalikan asset lab ke SPV sesuai kondisi (good/damaged/loss)
-        foreach ($laboratory->assets as $asset) {
-            $pivot = $asset->pivot;
-            if ($pivot->total_good_lab > 0) {
-                $asset->increment('total_good', $pivot->total_good_lab);
-            }
-            if ($pivot->total_damaged_lab > 0) {
-                $asset->increment('total_damaged', $pivot->total_damaged_lab);
-            }
-            if ($pivot->total_loss_lab > 0) {
-                $asset->increment('total_loss', $pivot->total_loss_lab);
-            }
-            $asset->refresh();
-            $asset->update([
-                'total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss
-            ]);
-        }
-
+        // Soft delete — stok TIDAK disentuh di sini.
+        // Pengembalian stok hanya terjadi saat forceDestroy() (hapus permanen).
         $laboratory->delete();
 
         return redirect()->route('laboratory.index')
-            ->with('success', "Lab {$laboratory->lab_name} berhasil dihapus.");
+            ->with('success', "Lab {$laboratory->lab_name} dipindahkan ke Recycle Bin.");
     }
 
     public function export(string $format)
@@ -356,8 +314,97 @@ class LaboratoryController extends Controller
 
     public function recycleBin()
     {
-        // TODO: Implement soft delete functionality for laboratories
-        // For now, show a placeholder view
-        return view('pages.laboratory.recycle-bin');
+        $trashedLabs = Laboratory::onlyTrashed()
+            ->orderByDesc('deleted_at')
+            ->paginate(10);
+
+        return view('pages.laboratory.recycle-bin', compact('trashedLabs'));
+    }
+
+    public function restore($id)
+{
+    $laboratory = Laboratory::onlyTrashed()->findOrFail($id);
+    $laboratory->restore();
+
+    return redirect()->route('laboratory.recycle-bin')
+        ->with('success', "Lab {$laboratory->lab_name} berhasil dipulihkan.");
+}
+
+    public function forceDestroy($id)
+    {
+        $laboratory = Laboratory::onlyTrashed()
+            ->with(['pcs', 'assets'])
+            ->findOrFail($id);
+
+        $labName = $laboratory->lab_name;
+
+        try {
+            DB::transaction(function () use ($laboratory) {
+                // 1. Kembalikan component PC ke stok asset_lab
+                foreach ($laboratory->pcs as $pc) {
+                    $components = array_filter([
+                        $pc->processor, $pc->ram, $pc->ssd, $pc->motherboard,
+                        $pc->vga, $pc->cpu_fan, $pc->powersupply,
+                    ]);
+
+                    foreach ($components as $name) {
+                        $al = AssetLab::where('lab_id', $laboratory->id)
+                            ->whereHas('asset', function ($q) use ($name) {
+                                $q->where('asset_category', 'component-pc')
+                                    ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)]);
+                            })
+                            ->first();
+
+                        if ($al) {
+                            $al->increment('total_good_lab');
+                            $al->update([
+                                'total_asset_lab' => $al->total_good_lab + $al->total_damaged_lab + $al->total_loss_lab,
+                            ]);
+                        }
+                    }
+                }
+
+                // 2. Kembalikan asset lab ke gudang (SPV) sesuai kondisi
+                foreach ($laboratory->assets as $asset) {
+                    $pivot = $asset->pivot;
+
+                    if ($pivot->total_good_lab > 0) {
+                        $asset->increment('total_good', $pivot->total_good_lab);
+                    }
+                    if ($pivot->total_damaged_lab > 0) {
+                        $asset->increment('total_damaged', $pivot->total_damaged_lab);
+                    }
+                    if ($pivot->total_loss_lab > 0) {
+                        $asset->increment('total_loss', $pivot->total_loss_lab);
+                    }
+
+                    $asset->refresh();
+                    $asset->update([
+                        'total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss,
+                    ]);
+                }
+
+                // pcs, asset_labs, staff_labs, request_labs ikut terhapus otomatis
+                // lewat cascadeOnDelete() di masing-masing migration tabel itu.
+                $laboratory->forceDelete();
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            return back()->with('error', "Lab {$labName} tidak bisa dihapus permanen karena masih ada riwayat transfer/retur request yang terkait.");
+        }
+
+        return redirect()->route('laboratory.recycle-bin')
+            ->with('success', "Lab {$labName} dihapus permanen. Stok sudah dikembalikan ke inventory.");
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        $labs = Laboratory::whereIn('id', $request->input('ids', []))->get();
+
+        foreach ($labs as $laboratory) {
+            $laboratory->delete(); // soft delete, sama seperti destroy()
+        }
+
+        return redirect()->route('laboratory.index')
+            ->with('success', count($labs) . ' lab dipindahkan ke Recycle Bin.');
     }
 }

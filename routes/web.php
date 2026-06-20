@@ -13,30 +13,35 @@ use App\Http\Controllers\AssetLogController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ReturnRequestController;
 use App\Http\Controllers\TransferRequestController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     return redirect()->route('login');
 });
-
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
-});
-
+Route::get('/dashboard', [LaboratoryController::class, 'index'])->middleware('auth')->name('dashboard');
 Route::middleware('auth')->group(function () {
     Route::resource('users', UserController::class);
     Route::get('/users/export/{format}', [UserController::class, 'export'])->name('users.export');
+Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+Route::middleware(\App\Http\Middleware\EnsureSpv::class)->group(function () {
+    Route::get('/laboratory/recycle-bin', [LaboratoryController::class, 'recycleBin'])->name('laboratory.recycle-bin');
+    Route::post('/laboratory/{id}/restore', [LaboratoryController::class, 'restore'])->name('laboratory.restore');
+    Route::delete('/laboratory/{id}/force-delete', [LaboratoryController::class, 'forceDestroy'])->name('laboratory.forceDestroy');
+});
+    Route::delete('/laboratory/bulk-destroy', [LaboratoryController::class, 'bulkDestroy'])->name('laboratory.bulkDestroy');
 
     Route::resource('laboratory', LaboratoryController::class);
     Route::get('/laboratory/export/{format}', [LaboratoryController::class, 'export'])->name('laboratory.export');
-    Route::get('/laboratory/recycle-bin', [LaboratoryController::class, 'recycleBin'])->name('laboratory.recycle-bin');
-
 
     Route::post('/laboratory/{laboratory}/pc', [PcController::class, 'store'])->name('pc.store');
     Route::put('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'update'])->name('pc.update');
     Route::delete('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'destroy'])->name('pc.destroy');
-
     Route::resource('asset', AssetController::class);
     Route::get('/asset/export/{format}', [AssetController::class, 'export'])->name('asset.export');
 
@@ -60,8 +65,6 @@ Route::middleware('auth')->group(function () {
         ->name('requestlab.destroy');
     Route::get('/requestlab/export/{format}', [RequestLabController::class, 'export'])
         ->name('requestlab.export');
-    Route::delete('/laboratory/bulk-destroy', [LaboratoryController::class, 'bulkDestroy'])
-        ->name('laboratory.bulkDestroy');
 
     Route::resource('stafflab', StaffLabController::class);
     Route::resource('assetlab', AssetLabController::class);
@@ -132,6 +135,5 @@ Route::middleware('auth')->group(function () {
         Route::post('/{transferRequest}/reject',   [TransferRequestController::class, 'reject'])
             ->middleware(\App\Http\Middleware\EnsureSpv::class)
             ->name('reject');
-    });
     });
 require __DIR__ . '/auth.php';

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\RequestLabExport;
 use App\Models\Asset;
 use App\Models\AssetLab;
+use App\Models\AssetLog;
 use App\Models\Laboratory;
 use App\Models\RequestItem;
 use App\Models\RequestLab;
@@ -82,7 +83,7 @@ class RequestLabController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless(in_array(auth()->user()->role, ['admin', 'pic', 'assistant'], true), 403);
+        abort_unless(auth()->user()->role === 'staff', 403);
 
         $validated = $request->validate([
             'lab_id' => ['required', 'exists:laboratories,id'],
@@ -138,7 +139,7 @@ class RequestLabController extends Controller
         abort_unless(auth()->user()->role === 'spv inventory', 403);
 
         $validated = $request->validate([
-            'status' => 'required|in:approved,rejected',
+            'status' => 'required|in:pending,approved,rejected',
         ]);
 
         $item = RequestItem::findOrFail($itemId);
@@ -208,9 +209,8 @@ class RequestLabController extends Controller
         $rejected = $items->where('status', 'rejected')->count();
 
         if ($pending === $total) return 'pending';
-        if ($approved === $total) return 'approved';
-        if ($rejected === $total) return 'rejected';
-        return 'partial';
+        if ($pending > 0) return 'partial';
+        return 'done';
     }
 
     public function destroy($id)
@@ -280,18 +280,47 @@ class RequestLabController extends Controller
         }
 
         if ($oldStatus === 'approved') {
-            $asset = Asset::findOrFail($item->asset_id);
-            $asset->total_good += $qty;
-            $asset->save();
-
             $assetLab = AssetLab::where('lab_id', $labRequest->lab_id)
                 ->where('asset_id', $item->asset_id)
                 ->first();
 
-            if ($assetLab) {
-                $assetLab->total_good_lab = max(0, (int) $assetLab->total_good_lab - $qty);
-                $assetLab->save();
+            $availableInLab = $assetLab->total_good_lab ?? 0;
+            if (!$assetLab || $availableInLab < $qty) {
+                $assetName = Asset::find($item->asset_id)?->asset_name ?? "Asset #{$item->asset_id}";
+                throw new \Exception(
+                    "Tidak bisa membatalkan approval {$assetName}: stok di lab sudah berubah (tersedia {$availableInLab}, butuh {$qty}). Kemungkinan stok sudah terpakai."
+                );
             }
+
+            $asset = Asset::findOrFail($item->asset_id);
+            $beforeTotalAsset = $asset->total_asset;
+            $beforeGood = $asset->total_good;
+
+            $asset->total_good += $qty;
+            $asset->total_asset = $asset->total_good + $asset->total_damaged + $asset->total_loss;
+            $asset->save();
+
+            $assetLab->total_good_lab -= $qty;
+            $assetLab->total_asset_lab = $assetLab->total_good_lab + $assetLab->total_damaged_lab + $assetLab->total_loss_lab;
+            $assetLab->save();
+
+            AssetLog::create([
+                'asset_id' => $asset->id,
+                'user_id' => auth()->id(),
+                'type' => 'distribution',
+                'quantity' => $qty,
+                'to_lab_id' => $labRequest->lab_id,
+                'before_total_asset' => $beforeTotalAsset,
+                'after_total_asset' => $asset->total_asset,
+                'before_total_good' => $beforeGood,
+                'after_total_good' => $asset->total_good,
+                'before_total_damaged' => $asset->total_damaged,
+                'after_total_damaged' => $asset->total_damaged,
+                'before_total_loss' => $asset->total_loss,
+                'after_total_loss' => $asset->total_loss,
+                'source' => 'requestlab:REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
+                'notes' => 'Pembatalan approval request — stok ditarik balik dari lab ke gudang.',
+            ]);
         }
 
         if ($newStatus === 'approved') {
@@ -301,15 +330,38 @@ class RequestLabController extends Controller
                 throw new \Exception("Stok {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good}).");
             }
 
+            $beforeTotalAsset = $asset->total_asset;
+            $beforeGood = $asset->total_good;
+
             $asset->total_good -= $qty;
+            $asset->total_asset = $asset->total_good + $asset->total_damaged + $asset->total_loss;
             $asset->save();
 
             $assetLab = AssetLab::firstOrCreate(
                 ['lab_id' => $labRequest->lab_id, 'asset_id' => $item->asset_id],
-                ['total_good_lab' => 0, 'total_damaged_lab' => 0, 'total_loss_lab' => 0]
+                ['total_good_lab' => 0, 'total_damaged_lab' => 0, 'total_loss_lab' => 0, 'total_asset_lab' => 0]
             );
             $assetLab->total_good_lab += $qty;
+            $assetLab->total_asset_lab = $assetLab->total_good_lab + $assetLab->total_damaged_lab + $assetLab->total_loss_lab;
             $assetLab->save();
+
+            AssetLog::create([
+                'asset_id' => $asset->id,
+                'user_id' => auth()->id(),
+                'type' => 'distribution',
+                'quantity' => $qty,
+                'to_lab_id' => $labRequest->lab_id,
+                'before_total_asset' => $beforeTotalAsset,
+                'after_total_asset' => $asset->total_asset,
+                'before_total_good' => $beforeGood,
+                'after_total_good' => $asset->total_good,
+                'before_total_damaged' => $asset->total_damaged,
+                'after_total_damaged' => $asset->total_damaged,
+                'before_total_loss' => $asset->total_loss,
+                'after_total_loss' => $asset->total_loss,
+                'source' => 'requestlab:REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
+                'notes' => 'Distribusi stok ke lab via approval Request Lab.',
+            ]);
         }
 
         $item->update(['status' => $newStatus]);
