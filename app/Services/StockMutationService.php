@@ -78,7 +78,101 @@ class StockMutationService
     public function approveReturnRequest(ReturnRequest $returnRequest): void
     {
         DB::transaction(function () use ($returnRequest) {
+            // Handle PC return if pc_id is present
+            if ($returnRequest->pc_id) {
+                $pc = $returnRequest->pc;
+                if (!$pc) {
+                    throw new \Exception("PC not found for this return request.");
+                }
 
+                // Return all components of the PC to lab stock first
+                $components = array_filter([
+                    $pc->processor, $pc->ram, $pc->ssd, $pc->motherboard,
+                    $pc->vga, $pc->cpu_fan, $pc->powersupply
+                ]);
+                foreach ($components as $name) {
+                    $al = AssetLab::where('lab_id', $returnRequest->lab_id)
+                        ->whereHas('asset', function ($q) use ($name) {
+                            $q->where('asset_category', 'component-pc')
+                              ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)]);
+                        })
+                        ->lockForUpdate()
+                        ->first();
+                    if ($al) {
+                        $al->increment('total_good_lab');
+                        $al->update([
+                            'total_asset_lab' => $al->total_good_lab + $al->total_damaged_lab + $al->total_loss_lab
+                        ]);
+                    }
+                }
+
+                // Now, return those components from lab stock to warehouse
+                foreach ($components as $name) {
+                    $asset = Asset::where('asset_category', 'component-pc')
+                        ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)])
+                        ->lockForUpdate()
+                        ->first();
+                    $al = AssetLab::where('lab_id', $returnRequest->lab_id)
+                        ->whereHas('asset', function ($q) use ($name) {
+                            $q->where('asset_category', 'component-pc')
+                              ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)]);
+                        })
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($asset && $al && $al->total_good_lab > 0) {
+                        $snap = [
+                            'before_from_lab'     => $al->total_asset_lab,
+                            'before_total_asset'  => $asset->total_asset,
+                            'before_total_good'   => $asset->total_good,
+                            'before_total_damaged'=> $asset->total_damaged,
+                            'before_total_loss'   => $asset->total_loss,
+                        ];
+
+                        // Decrement lab stock
+                        $al->decrement('total_asset_lab', 1);
+                        $al->decrement('total_good_lab', 1);
+
+                        // Increment warehouse stock
+                        $asset->increment('total_asset', 1);
+                        $asset->increment('total_good', 1);
+
+                        $al->refresh();
+                        $asset->refresh();
+
+                        $this->writeAssetLog(
+                            assetId:      $asset->id,
+                            type:         'return',
+                            quantity:     1,
+                            fromLabId:    $returnRequest->lab_id,
+                            toLabId:      null,
+                            snapBefore:   $snap,
+                            asset:        $asset,
+                            assetLab:     $al,
+                            source:       "return_request:{$returnRequest->request_code}",
+                            notes:        "Retur komponen dari PC",
+                        );
+                    }
+                }
+
+                // Return PC asset to warehouse (if pc has asset_id)
+                if ($pc->asset_id) {
+                    $pcAsset = Asset::where('id', $pc->asset_id)->lockForUpdate()->first();
+                    if ($pcAsset) {
+                        $pcAsset->increment('total_asset', 1);
+                        $pcAsset->increment('total_good', 1);
+                        $pcAsset->refresh();
+                    }
+                }
+
+                // Delete the PC from lab
+                $pc->delete();
+
+                // Update lab capacity
+                $returnRequest->laboratory->update(['capacity' => $returnRequest->laboratory->pcs()->count()]);
+            }
+
+            // Handle regular items (assets)
             foreach ($returnRequest->items as $item) {
                 // Qty yang disetujui SPV. Jika tidak diisi, gunakan qty request.
                 $qtyApproved = $item->quantity_approved ?? $item->quantity_requested;

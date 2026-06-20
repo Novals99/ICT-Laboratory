@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
-class StoreReturnRequestRequest extends FormRequest
+class StoreReturnRequest extends FormRequest
 {
     /**
      * Hanya user yang sudah login yang boleh submit.

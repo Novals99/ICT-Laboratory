@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Auth;
 Route::get('/', function () {
     return redirect()->route('login');
 });
-Route::get('/dashboard', [LaboratoryController::class, 'index'])->middleware('auth')->name('dashboard');
+Route::get('/dashboard', DashboardController::class)->middleware('auth')->name('dashboard');
 Route::middleware('auth')->group(function () {
     Route::resource('users', UserController::class);
     Route::get('/users/export/{format}', [UserController::class, 'export'])->name('users.export');
@@ -103,6 +103,15 @@ Route::middleware(\App\Http\Middleware\EnsureSpv::class)->group(function () {
         Route::get('/',       [ReturnRequestController::class, 'index'])->name('index');
         Route::get('/create', [ReturnRequestController::class, 'create'])->name('create');
         Route::post('/',      [ReturnRequestController::class, 'store'])->name('store');
+        Route::post('/quick', [ReturnRequestController::class, 'storeQuick'])->name('store-quick');
+
+        Route::get('/{id}/detail', [ReturnRequestController::class, 'getDetail'])->name('detail');
+        Route::post('/{id}/approve', [ReturnRequestController::class, 'approveViaModal'])
+            ->middleware(\App\Http\Middleware\EnsureSpv::class)
+            ->name('approve');
+        Route::post('/{id}/reject',  [ReturnRequestController::class, 'rejectViaModal'])
+            ->middleware(\App\Http\Middleware\EnsureSpv::class)
+            ->name('reject');
 
         Route::get('/{returnRequest}',         [ReturnRequestController::class, 'show'])->name('show');
         Route::post('/{returnRequest}/approve', [ReturnRequestController::class, 'approve'])
@@ -128,12 +137,14 @@ Route::middleware(\App\Http\Middleware\EnsureSpv::class)->group(function () {
         Route::get('/create', [TransferRequestController::class, 'create'])->name('create');
         Route::post('/',      [TransferRequestController::class, 'store'])->name('store');
 
-        Route::get('/{transferRequest}',          [TransferRequestController::class, 'show'])->name('show');
-        Route::post('/{transferRequest}/approve',  [TransferRequestController::class, 'approve'])
+        Route::get('/{id}/detail', [TransferRequestController::class, 'getDetail'])->name('detail');
+        Route::post('/{id}/approve', [TransferRequestController::class, 'approveViaModal'])
             ->middleware(\App\Http\Middleware\EnsureSpv::class)
             ->name('approve');
-        Route::post('/{transferRequest}/reject',   [TransferRequestController::class, 'reject'])
+        Route::post('/{id}/reject',   [TransferRequestController::class, 'rejectViaModal'])
             ->middleware(\App\Http\Middleware\EnsureSpv::class)
             ->name('reject');
+
+        Route::get('/{transferRequest}',          [TransferRequestController::class, 'show'])->name('show');
     });
 require __DIR__ . '/auth.php';

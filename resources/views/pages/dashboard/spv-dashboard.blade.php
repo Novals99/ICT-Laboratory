@@ -6,14 +6,11 @@
 
     <div class="db-wrap">
 
-        {{-- 3 card + card stok --}}
         <div class="db-top-row">
 
-            {{-- stat card --}}
             <div class="db-stats-col">
                 <div class="db-cards-row">
 
-                    {{-- user --}}
                     <div class="db-stat-card">
                         <div class="stat-info">
                             <span class="stat-label">Users</span>
@@ -30,7 +27,6 @@
                         </div>
                     </div>
 
-                    {{-- lab --}}
                     <div class="db-stat-card">
                         <div class="stat-info">
                             <span class="stat-label">Laboratory</span>
@@ -45,7 +41,6 @@
                         </div>
                     </div>
 
-                    {{-- lab request --}}
                     <div class="db-stat-card">
                         <div class="stat-info">
                             <span class="stat-label">Lab Request</span>
@@ -62,9 +57,35 @@
                         </div>
                     </div>
 
+                    <div class="db-stat-card">
+                        <div class="stat-info">
+                            <span class="stat-label">Return Request</span>
+                            <span class="stat-value">{{ number_format($totalReturnRequests) }}</span>
+                        </div>
+                        <div class="stat-icon" style="color: #dc2626;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 18V6L2 12l7 6z" />
+                                <path d="M22 18V6l-7 6 7 6z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="db-stat-card">
+                        <div class="stat-info">
+                            <span class="stat-label">Transfer Request</span>
+                            <span class="stat-value">{{ number_format($totalTransferRequests) }}</span>
+                        </div>
+                        <div class="stat-icon" style="color: #059669;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                        </div>
+                    </div>
+
                 </div>
 
-                {{-- bar chart: active & inactve pc per lab --}}
                 <div class="db-card db-chart-card">
                     <h2 class="db-card-title">Laboratory Conditions</h2>
                     <div class="chart-container">
@@ -77,7 +98,6 @@
                 </div>
             </div>
 
-            {{-- low stok card --}}
             <div class="db-card db-lowstock-card">
                 <h2 class="db-card-title">Low Stock Items</h2>
 
@@ -108,8 +128,8 @@
             </div>
         </div>
 
-        {{-- tabel recent lab request --}}
-        <div class="db-card db-table-card">
+        <div class="db-card db-table-card" style="margin-bottom: 24px;">
+            <h2 class="db-card-title" style="margin: 16px 20px 16px 20px;">Recent Lab Requests</h2>
             <div class="table-wrap">
                 <table class="db-table">
                     <thead>
@@ -186,6 +206,280 @@
             </div>
         </div>
 
+        <div class="db-card db-table-card" style="margin-bottom: 24px;">
+            <h2 class="db-card-title" style="margin: 16px 20px 16px 20px;">Recent Return Requests</h2>
+            <div class="table-wrap">
+                <table class="db-table">
+                    <thead>
+                        <tr>
+                            <th>ID Request</th>
+                            <th>Laboratory</th>
+                            <th>Requested By</th>
+                            <th>Item Count</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($recentReturnRequests as $req)
+                            <tr>
+                                <td class="td-mono">{{ $req->request_code }}</td>
+                                <td>{{ $req->laboratory->lab_name ?? '-' }}</td>
+                                <td>{{ $req->requestedBy->name ?? '-' }}</td>
+                                <td>
+                                    @if($req->pc_id)
+                                        PC
+                                    @else
+                                        {{ $req->items->count() }}
+                                    @endif
+                                </td>
+                                <td>{{ $req->created_at->format('d-m-y') }}</td>
+                                <td>
+                                    @php
+                                        [$label, $color] = $req->getStatusBadge();
+                                    @endphp
+                                    <span class="status-badge {{ $color }}">
+                                        {{ $label }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button type="button" onclick="openReturnDetailModal({{ $req->id }})" class="action-btn" title="Detail">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="empty-state" style="text-align:center; padding:32px">
+                                    Belum ada return request
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="db-card db-table-card">
+            <h2 class="db-card-title" style="margin: 16px 20px 16px 20px;">Recent Transfer Requests</h2>
+            <div class="table-wrap">
+                <table class="db-table">
+                    <thead>
+                        <tr>
+                            <th>ID Request</th>
+                            <th>From Lab</th>
+                            <th>To Lab</th>
+                            <th>Requested By</th>
+                            <th>Item Count</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($recentTransferRequests as $req)
+                            <tr>
+                                <td class="td-mono">{{ $req->request_code }}</td>
+                                <td>{{ $req->fromLab->lab_name ?? '-' }}</td>
+                                <td>{{ $req->toLab->lab_name ?? '-' }}</td>
+                                <td>{{ $req->requestedBy->name ?? '-' }}</td>
+                                <td>{{ $req->items->count() }}</td>
+                                <td>{{ $req->created_at->format('d-m-y') }}</td>
+                                <td>
+                                    @php
+                                        [$label, $color] = $req->getStatusBadge();
+                                    @endphp
+                                    <span class="status-badge {{ $color }}">
+                                        {{ $label }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button type="button" onclick="openTransferDetailModal({{ $req->id }})" class="action-btn" title="Detail">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="empty-state" style="text-align:center; padding:32px">
+                                    Belum ada transfer request
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="returnDetailModal"
+        style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+        <div
+            style="background:var(--bg-modal); border-radius:16px; width:100%; max-width:760px; margin:0 16px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.15); border:1px solid var(--border-color);">
+            <div
+                style="display:flex; align-items:center; padding:24px 32px 12px 32px; gap:16px; border-bottom:1px solid var(--border-color);">
+                <h3 style="font-size:18px; font-weight:700; color:var(--text-primary); flex-shrink:0; margin:0;">
+                    Return Request Information
+                </h3>
+                <div style="flex:1;">
+                    <div style="height:6px; background:var(--border-color); border-radius:99px; overflow:hidden;">
+                        <div id="returnModalProgress"
+                            style="height:6px; background:#93c5fd; border-radius:99px; width:0%; transition:width 0.5s;">
+                        </div>
+                    </div>
+                </div>
+                <button onclick="closeReturnDetailModal()"
+                    style="color:var(--text-muted); background:none; border:none; cursor:pointer; padding:4px; line-height:1;">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div style="padding:16px 32px 24px 32px;">
+                <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:28px;">
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Kode Request:</label>
+                        <input id="return_modal_request_code" type="text" readonly
+                            style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Lab:</label>
+                        <input id="return_modal_lab" type="text" readonly
+                            style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Diajukan oleh:</label>
+                        <input id="return_modal_requested_by" type="text" readonly
+                            style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    </div>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Barang yang Diretur</p>
+                    <table id="return_modal_items" style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
+                        <thead>
+                            <tr style="background:var(--bg-table-header);">
+                                <th style="padding:8px 14px; text-align:left;">Asset Name</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty</th>
+                                <th style="padding:8px 14px; text-align:center;">Kondisi</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty Disetujui</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 32px 24px 32px;">
+                <button type="button" onclick="rejectAllReturn()"
+                    style="border:1px solid #dc2626; background:#dc2626; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Tolak Semua
+                </button>
+                <button type="button" onclick="approveAllReturn()"
+                    style="border:1px solid #16a34a; background:#16a34a; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Setujui Semua
+                </button>
+                <button type="button" onclick="saveReturnStatuses()"
+                    style="border:1px solid #111B4C; background:#111B4C; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="transferDetailModal"
+        style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+        <div
+            style="background:var(--bg-modal); border-radius:16px; width:100%; max-width:760px; margin:0 16px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.15); border:1px solid var(--border-color);">
+            <div
+                style="display:flex; align-items:center; padding:24px 32px 12px 32px; gap:16px; border-bottom:1px solid var(--border-color);">
+                <h3 style="font-size:18px; font-weight:700; color:var(--text-primary); flex-shrink:0; margin:0;">
+                    Transfer Request Information
+                </h3>
+                <div style="flex:1;">
+                    <div style="height:6px; background:var(--border-color); border-radius:99px; overflow:hidden;">
+                        <div id="transferModalProgress"
+                            style="height:6px; background:#93c5fd; border-radius:99px; width:0%; transition:width 0.5s;">
+                        </div>
+                    </div>
+                </div>
+                <button onclick="closeTransferDetailModal()"
+                    style="color:var(--text-muted); background:none; border:none; cursor:pointer; padding:4px; line-height:1;">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div style="padding:16px 32px 24px 32px;">
+                <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:28px;">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Kode Request</label>
+                            <input id="transfer_modal_request_code" type="text" readonly
+                                style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                        </div>
+                        <div>
+                            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">From Lab</label>
+                            <input id="transfer_modal_from_lab" type="text" readonly
+                                style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                        </div>
+                        <div>
+                            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">To Lab</label>
+                            <input id="transfer_modal_to_lab" type="text" readonly
+                                style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Diajukan oleh:</label>
+                        <input id="transfer_modal_requested_by" type="text" readonly
+                            style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    </div>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Barang yang Ditransfer</p>
+                    <table id="transfer_modal_items" style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
+                        <thead>
+                            <tr style="background:var(--bg-table-header);">
+                                <th style="padding:8px 14px; text-align:left;">Asset Name</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty Disetujui</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 32px 24px 32px;">
+                <button type="button" onclick="rejectAllTransfer()"
+                    style="border:1px solid #dc2626; background:#dc2626; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Tolak Semua
+                </button>
+                <button type="button" onclick="approveAllTransfer()"
+                    style="border:1px solid #16a34a; background:#16a34a; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Setujui Semua
+                </button>
+                <button type="button" onclick="saveTransferStatuses()"
+                    style="border:1px solid #111B4C; background:#111B4C; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Simpan
+                </button>
+            </div>
+        </div>
     </div>
 
 @endsection
@@ -195,73 +489,317 @@
 @endpush
 
 @push('scripts')
-    {{-- Chart.js CDN --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
-        // ── Data dari PHP ──────────────────────────────────────────
         const chartData = @json($chartData);
-
         const labels = chartData.map(d => d.label);
         const active = chartData.map(d => d.active);
         const inactive = chartData.map(d => d.inactive);
 
-        // ── Render chart ───────────────────────────────────────────
         const ctx = document.getElementById('labConditionsChart').getContext('2d');
         new Chart(ctx, {
             type: 'bar',
             data: {
                 labels,
                 datasets: [
-                    {
-                        label: 'Active',
-                        data: active,
-                        backgroundColor: '#111B4C',
-                        borderRadius: 4,
-                        borderSkipped: false,
-                    },
-                    {
-                        label: 'Inactive',
-                        data: inactive,
-                        backgroundColor: '#98083D',
-                        borderRadius: 4,
-                        borderSkipped: false,
-                    },
+                    { label: 'Active', data: active, backgroundColor: '#111B4C', borderRadius: 4, borderSkipped: false },
+                    { label: 'Inactive', data: inactive, backgroundColor: '#98083D', borderRadius: 4, borderSkipped: false },
                 ],
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}`
-                        }
-                    }
-                },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}` } } },
                 scales: {
-                    x: {
-                        grid: { display: false },
-                        ticks: { font: { size: 11 }, color: '#9ca3af' },
-                        border: { display: false },
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: '#f3f4f6' },
-                        ticks: {
-                            font: { size: 11 }, color: '#9ca3af',
-                            stepSize: 8,
-                        },
-                        border: { display: false },
-                    },
+                    x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#9ca3af' }, border: { display: false } },
+                    y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 }, color: '#9ca3af', stepSize: 8 }, border: { display: false } },
                 },
             },
         });
 
-        // ── Select all checkbox ────────────────────────────────────
         function toggleAll(master) {
-            document.querySelectorAll('.row-check')
-                .forEach(cb => cb.checked = master.checked);
+            document.querySelectorAll('.row-check').forEach(cb => cb.checked = master.checked);
         }
+
+        let currentReturnRequestId = null;
+        let currentTransferRequestId = null;
+
+        function openReturnDetailModal(requestId) {
+            currentReturnRequestId = requestId;
+            const modal = document.getElementById('returnDetailModal');
+            modal.style.display = 'flex';
+            document.getElementById('returnModalProgress').style.width = '30%';
+            const loadingRow = '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
+            document.querySelector('#return_modal_items tbody').innerHTML = loadingRow;
+
+            fetch(`/return-requests/${requestId}/detail`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('returnModalProgress').style.width = '100%';
+                    document.getElementById('return_modal_request_code').value = data.request_code;
+                    document.getElementById('return_modal_lab').value = data.lab_name;
+                    document.getElementById('return_modal_requested_by').value = data.requested_by;
+                    document.querySelector('#return_modal_items tbody').innerHTML = data.items.map(item => `
+                        <tr style="border-top:1px solid var(--border-color);">
+                            <td style="padding:8px 14px;color:var(--text-primary);">${item.asset_name}</td>
+                            <td style="padding:8px 14px;text-align:center;color:var(--text-primary);">${item.quantity}</td>
+                            <td style="padding:8px 14px;text-align:center;color:var(--text-primary);">${item.condition}</td>
+                            <td style="padding:8px 14px;text-align:center;">
+                                <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
+                                    ${getReturnStatusBadge(item)}
+                                    <input type="number" data-return-item-id="${item.id}"
+                                        value="${item.quantity_approved ?? item.quantity}" min="0" max="${item.quantity}"
+                                        style="min-width:80px;padding:4px 8px;font-size:12px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);text-align:center;">
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada barang</td></tr>';
+                })
+                .catch(() => {
+                    document.getElementById('returnModalProgress').style.width = '100%';
+                    const error = '<tr><td colspan="4" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Gagal memuat data</td></tr>';
+                    document.querySelector('#return_modal_items tbody').innerHTML = error;
+                });
+        }
+
+        function getReturnStatusBadge(item) {
+            if (!item.status) {
+                if (item.quantity_approved == 0) {
+                    return '<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Rejected</span>';
+                } else if (item.quantity_approved < item.quantity) {
+                    return '<span style="background:#2563eb;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Partial</span>';
+                } else if (item.quantity_approved == item.quantity) {
+                    return '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Approved</span>';
+                }
+                return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+            }
+            return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+        }
+
+        function closeReturnDetailModal() {
+            currentReturnRequestId = null;
+            document.getElementById('returnDetailModal').style.display = 'none';
+            document.getElementById('returnModalProgress').style.width = '0%';
+        }
+
+        window.saveReturnStatuses = async function() {
+            if (!currentReturnRequestId) {
+                alert('Buka detail request terlebih dahulu.');
+                return;
+            }
+
+            const items = [];
+            document.querySelectorAll('[data-return-item-id]').forEach(input => {
+                items.push({
+                    id: input.dataset.returnItemId,
+                    quantity_approved: parseInt(input.value) || 0
+                });
+            });
+
+            try {
+                const response = await fetch(`/return-requests/${currentReturnRequestId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ items })
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    alert(data.message || 'Gagal menyimpan status.');
+                    return;
+                }
+                alert('Status berhasil disimpan!');
+                closeReturnDetailModal();
+                window.location.reload();
+            } catch (e) {
+                alert('Gagal menyimpan status.');
+            }
+        }
+
+        window.approveAllReturn = function() {
+            if (!currentReturnRequestId) {
+                alert('Buka detail request terlebih dahulu.');
+                return;
+            }
+            document.querySelectorAll('[data-return-item-id]').forEach(input => {
+                input.value = input.getAttribute('max');
+            });
+        }
+
+        window.rejectAllReturn = function() {
+            if (!currentReturnRequestId) {
+                alert('Buka detail request terlebih dahulu.');
+                return;
+            }
+            if (confirm('Apakah Anda yakin ingin menolak seluruh request ini?')) {
+                fetch(`/return-requests/${currentReturnRequestId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ rejection_reason: 'Ditolak seluruhnya oleh SPV' })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert(data.message || 'Gagal menolak request.');
+                        return;
+                    }
+                    alert('Request berhasil ditolak!');
+                    closeReturnDetailModal();
+                    window.location.reload();
+                })
+                .catch(() => alert('Gagal menolak request.'));
+            }
+        }
+
+        function openTransferDetailModal(requestId) {
+            currentTransferRequestId = requestId;
+            const modal = document.getElementById('transferDetailModal');
+            modal.style.display = 'flex';
+            document.getElementById('transferModalProgress').style.width = '30%';
+            const loadingRow = '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
+            document.querySelector('#transfer_modal_items tbody').innerHTML = loadingRow;
+
+            fetch(`/transfer-requests/${requestId}/detail`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('transferModalProgress').style.width = '100%';
+                    document.getElementById('transfer_modal_request_code').value = data.request_code;
+                    document.getElementById('transfer_modal_from_lab').value = data.from_lab;
+                    document.getElementById('transfer_modal_to_lab').value = data.to_lab;
+                    document.getElementById('transfer_modal_requested_by').value = data.requested_by;
+                    document.querySelector('#transfer_modal_items tbody').innerHTML = data.items.map(item => `
+                        <tr style="border-top:1px solid var(--border-color);">
+                            <td style="padding:8px 14px;color:var(--text-primary);">${item.asset_name}</td>
+                            <td style="padding:8px 14px;text-align:center;color:var(--text-primary);">${item.quantity}</td>
+                            <td style="padding:8px 14px;text-align:center;">
+                                <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
+                                    ${getTransferStatusBadge(item)}
+                                    <input type="number" data-tr-item-id="${item.id}"
+                                        value="${item.quantity_approved ?? item.quantity}" min="0" max="${item.quantity}"
+                                        style="min-width:80px;padding:4px 8px;font-size:12px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);text-align:center;">
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada barang</td></tr>';
+                })
+                .catch(() => {
+                    document.getElementById('transferModalProgress').style.width = '100%';
+                    const error = '<tr><td colspan="3" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Gagal memuat data</td></tr>';
+                    document.querySelector('#transfer_modal_items tbody').innerHTML = error;
+                });
+        }
+
+        function getTransferStatusBadge(item) {
+            if (!item.status) {
+                if (item.quantity_approved == 0) {
+                    return '<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Rejected</span>';
+                } else if (item.quantity_approved < item.quantity) {
+                    return '<span style="background:#2563eb;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Partial</span>';
+                } else if (item.quantity_approved == item.quantity) {
+                    return '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Approved</span>';
+                }
+                return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+            }
+            return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+        }
+
+        function closeTransferDetailModal() {
+            currentTransferRequestId = null;
+            document.getElementById('transferDetailModal').style.display = 'none';
+            document.getElementById('transferModalProgress').style.width = '0%';
+        }
+
+        window.saveTransferStatuses = async function() {
+            if (!currentTransferRequestId) {
+                alert('Buka detail request terlebih dahulu.');
+                return;
+            }
+
+            const items = [];
+            document.querySelectorAll('[data-tr-item-id]').forEach(input => {
+                items.push({
+                    id: input.dataset.trItemId,
+                    quantity_approved: parseInt(input.value) || 0
+                });
+            });
+
+            try {
+                const response = await fetch(`/transfer-requests/${currentTransferRequestId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ items })
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    alert(data.message || 'Gagal menyimpan status.');
+                    return;
+                }
+                alert('Status berhasil disimpan!');
+                closeTransferDetailModal();
+                window.location.reload();
+            } catch (e) {
+                alert('Gagal menyimpan status.');
+            }
+        }
+
+        window.approveAllTransfer = function() {
+            if (!currentTransferRequestId) {
+                alert('Buka detail request terlebih dahulu.');
+                return;
+            }
+            document.querySelectorAll('[data-tr-item-id]').forEach(input => {
+                input.value = input.getAttribute('max');
+            });
+        }
+
+        window.rejectAllTransfer = function() {
+            if (!currentTransferRequestId) {
+                alert('Buka detail request terlebih dahulu.');
+                return;
+            }
+            if (confirm('Apakah Anda yakin ingin menolak seluruh request ini?')) {
+                fetch(`/transfer-requests/${currentTransferRequestId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ rejection_reason: 'Ditolak seluruhnya oleh SPV' })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert(data.message || 'Gagal menolak request.');
+                        return;
+                    }
+                    alert('Request berhasil ditolak!');
+                    closeTransferDetailModal();
+                    window.location.reload();
+                })
+                .catch(() => alert('Gagal menolak request.'));
+            }
+        }
+
+        document.getElementById('returnDetailModal').addEventListener('click', function(event) {
+            if (event.target === this) closeReturnDetailModal();
+        });
+        document.getElementById('transferDetailModal').addEventListener('click', function(event) {
+            if (event.target === this) closeTransferDetailModal();
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeReturnDetailModal();
+                closeTransferDetailModal();
+            }
+        });
     </script>
 @endpush

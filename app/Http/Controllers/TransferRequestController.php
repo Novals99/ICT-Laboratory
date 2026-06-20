@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ApproveTransferRequestRequest;
-use App\Http\Requests\StoreTransferRequestRequest;
+use App\Http\Requests\ApproveTransferRequest;
+use App\Http\Requests\StoreTransferRequest;
 use App\Models\AssetLab;
 use App\Models\Laboratory;
 use App\Models\TransferRequest;
@@ -33,7 +33,7 @@ class TransferRequestController extends Controller
 
         // Staff lihat semua transfer yang melibatkan lab mereka (asal ATAU tujuan)
         if (!$this->isSPV()) {
-            $userLabIds = Auth::user()->labs()->pluck('id');
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
             $query->where(function ($q) use ($userLabIds) {
                 $q->whereIn('from_lab_id', $userLabIds)
                   ->orWhereIn('to_lab_id', $userLabIds);
@@ -49,17 +49,27 @@ class TransferRequestController extends Controller
         $labs = $this->isSPV()
             ? Laboratory::all()
             : Laboratory::whereIn('id',
-                Auth::user()->labs()->pluck('id')
+                Auth::user()->labs()->pluck('laboratories.id')
               )->get();
 
-        return view('transfer-requests.index', compact('transferRequests', 'labs'));
+        // User's labs and target labs for modal
+        if (!$this->isSPV()) {
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
+            $userLabs = Laboratory::whereIn('id', $userLabIds)->get();
+            $targetLabs = Laboratory::whereNotIn('id', $userLabIds)->get();
+        } else {
+            $userLabs = collect();
+            $targetLabs = collect();
+        }
+
+        return view('transfer-requests.index', compact('transferRequests', 'labs', 'userLabs', 'targetLabs'));
     }
 
     // ── CREATE ────────────────────────────────────────────────────────────────
 
     public function create()
     {
-        $userLabIds = Auth::user()->labs()->pluck('id');
+        $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
         $userLabs   = Laboratory::whereIn('id', $userLabIds)->get();
 
         if ($userLabs->isEmpty()) {
@@ -79,7 +89,7 @@ class TransferRequestController extends Controller
     public function getLabAssets(int $labId)
     {
         if (!$this->isSPV()) {
-            $userLabIds = Auth::user()->labs()->pluck('id');
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
             if (!$userLabIds->contains($labId)) {
                 return response()->json(['error' => 'Akses ditolak.'], 403);
             }
@@ -101,13 +111,13 @@ class TransferRequestController extends Controller
 
     // ── STORE ─────────────────────────────────────────────────────────────────
 
-    public function store(StoreTransferRequestRequest $request)
+    public function store(StoreTransferRequest $request)
     {
         $validated = $request->validated();
 
         // Security: from_lab harus lab milik user
         if (!$this->isSPV()) {
-            $userLabIds = Auth::user()->labs()->pluck('id');
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
             if (!$userLabIds->contains($validated['from_lab_id'])) {
                 abort(403, 'Anda hanya bisa transfer dari lab yang ditugaskan ke Anda.');
             }
@@ -161,7 +171,7 @@ class TransferRequestController extends Controller
     public function show(TransferRequest $transferRequest)
     {
         if (!$this->isSPV()) {
-            $userLabIds = Auth::user()->labs()->pluck('id');
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
             $isInvolved = $userLabIds->contains($transferRequest->from_lab_id)
                        || $userLabIds->contains($transferRequest->to_lab_id);
             if (!$isInvolved) {
@@ -229,5 +239,82 @@ class TransferRequestController extends Controller
         return redirect()
             ->route('transfer-requests.show', $transferRequest)
             ->with('success', 'Transfer request telah ditolak.');
+    }
+
+    public function getDetail($id)
+    {
+        $transferRequest = TransferRequest::with([
+            'fromLab',
+            'toLab',
+            'requestedBy',
+            'items.asset'
+        ])->findOrFail($id);
+
+        return response()->json([
+            'request_code' => $transferRequest->request_code,
+            'from_lab' => $transferRequest->fromLab?->lab_name ?? '-',
+            'to_lab' => $transferRequest->toLab?->lab_name ?? '-',
+            'requested_by' => $transferRequest->requestedBy?->name ?? '-',
+            'items' => $transferRequest->items->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'asset_id' => $item->asset_id,
+                    'asset_name' => $item->asset?->asset_name ?? '-',
+                    'quantity' => $item->quantity_requested,
+                    'quantity_approved' => $item->quantity_approved,
+                    'status' => $item->status ?? null
+                ];
+            })
+        ]);
+    }
+
+    public function approveViaModal(Request $request, $id)
+    {
+        abort_unless($this->isSPV(), 403);
+        $transferRequest = TransferRequest::findOrFail($id);
+        abort_unless($transferRequest->isPending(), 400, 'Request sudah diproses');
+
+        $validated = $request->validate([
+            'items' => 'nullable|array',
+            'items.*.id' => 'required|exists:transfer_request_items,id',
+            'items.*.quantity_approved' => 'required|integer|min:0',
+        ]);
+
+        try {
+            DB::transaction(function () use ($validated, $transferRequest) {
+                foreach ($validated['items'] as $itemData) {
+                    $item = TransferRequestItem::where('id', $itemData['id'])
+                        ->where('transfer_request_id', $transferRequest->id)
+                        ->first();
+                    if ($item) {
+                        $item->update(['quantity_approved' => $itemData['quantity_approved']]);
+                    }
+                }
+                $transferRequest->load('items.asset', 'fromLab', 'toLab');
+                $this->mutationService->approveTransferRequest($transferRequest);
+            });
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    public function rejectViaModal(Request $request, $id)
+    {
+        abort_unless($this->isSPV(), 403);
+        $transferRequest = TransferRequest::findOrFail($id);
+        abort_unless($transferRequest->isPending(), 400, 'Request sudah diproses');
+        $validated = $request->validate(['rejection_reason' => 'required|string|min:1']);
+        $transferRequest->update([
+            'status' => TransferRequest::STATUS_REJECTED,
+            'approved_by' => Auth::id(),
+            'approved_at' => now(),
+            'rejection_reason' => $validated['rejection_reason']
+        ]);
+        return response()->json(['success' => true]);
     }
 }

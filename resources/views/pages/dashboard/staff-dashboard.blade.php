@@ -6,7 +6,7 @@
     <div class="db-wrap">
 
     {{-- ── STAT CARDS ── --}}
-    <div class="db-cards-row" style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+    <div class="db-cards-row" style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
 
         {{-- Users --}}
         <div class="db-stat-card">
@@ -52,6 +52,37 @@
                     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
                     <rect x="8" y="2" width="8" height="4" rx="1"/>
                     <circle cx="12" cy="14" r="2"/>
+                </svg>
+            </div>
+        </div>
+
+        {{-- Return Request --}}
+        <div class="db-stat-card">
+            <div class="stat-info">
+                <span class="stat-label">Return Request</span>
+                <span class="stat-value">{{ number_format($totalReturnRequests) }}</span>
+            </div>
+            <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 10v-4h4"/>
+                    <path d="M12 6a7 7 0 0 1 7 7"/>
+                    <path d="M12 6a7 7 0 0 0-7 7"/>
+                </svg>
+            </div>
+        </div>
+
+        {{-- Transfer Request --}}
+        <div class="db-stat-card">
+            <div class="stat-info">
+                <span class="stat-label">Transfer Request</span>
+                <span class="stat-value">{{ number_format($totalTransferRequests) }}</span>
+            </div>
+            <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 7h12l-4-4m4 4l-4 4"/>
+                    <path d="M16 17H4l4 4M4 17l4-4"/>
                 </svg>
             </div>
         </div>
@@ -171,6 +202,132 @@
                     <tr>
                         <td colspan="6" style="text-align:center; padding:32px; color:#9ca3af; font-size:13px;">
                             Belum ada lab request
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{-- ── RETURN REQUEST TABLE ── --}}
+    <div class="db-card db-table-card" style="padding:0; overflow:hidden;">
+        <div style="padding:18px 20px 14px;">
+            <h2 class="db-card-title" style="margin:0;">Return Request</h2>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="db-table">
+                <thead>
+                    <tr>
+                        <th>ID Request</th>
+                        <th>Lab</th>
+                        <th>Name</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($recentReturnRequests as $req)
+                    <tr>
+                        <td style="font-family:monospace; font-size:13px;">{{ $req->request_code }}</td>
+                        <td>{{ $req->laboratory?->lab_name ?? '-' }}</td>
+                        <td>{{ $req->requestedBy?->name ?? '-' }}</td>
+                        <td>{{ \Carbon\Carbon::parse($req->created_at)->format('d-m-y') }}</td>
+                        <td>
+                            @php
+                                $status = strtolower($req->status ?? 'pending');
+                                $badgeClass = match($status) {
+                                    'completed' => 'badge-approved',
+                                    'rejected' => 'badge-rejected',
+                                    'partial'  => 'badge-partial',
+                                    default    => 'badge-pending',
+                                };
+                            @endphp
+                            <span class="status-badge {{ $badgeClass }}">
+                                {{ ucfirst($req->status ?? 'Pending') }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-btns">
+                                <a href="{{ route('return-requests.index') }}" class="action-btn" title="View" style="color:#6b7280;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding:32px; color:#9ca3af; font-size:13px;">
+                            Belum ada return request
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{-- ── TRANSFER REQUEST TABLE ── --}}
+    <div class="db-card db-table-card" style="padding:0; overflow:hidden;">
+        <div style="padding:18px 20px 14px;">
+            <h2 class="db-card-title" style="margin:0;">Transfer Request</h2>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="db-table">
+                <thead>
+                    <tr>
+                        <th>ID Request</th>
+                        <th>From Lab</th>
+                        <th>To Lab</th>
+                        <th>Name</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($recentTransferRequests as $req)
+                    <tr>
+                        <td style="font-family:monospace; font-size:13px;">{{ $req->request_code }}</td>
+                        <td>{{ $req->fromLab?->lab_name ?? '-' }}</td>
+                        <td>{{ $req->toLab?->lab_name ?? '-' }}</td>
+                        <td>{{ $req->requestedBy?->name ?? '-' }}</td>
+                        <td>{{ \Carbon\Carbon::parse($req->created_at)->format('d-m-y') }}</td>
+                        <td>
+                            @php
+                                $status = strtolower($req->status ?? 'pending');
+                                $badgeClass = match($status) {
+                                    'completed' => 'badge-approved',
+                                    'rejected' => 'badge-rejected',
+                                    'partial'  => 'badge-partial',
+                                    default    => 'badge-pending',
+                                };
+                            @endphp
+                            <span class="status-badge {{ $badgeClass }}">
+                                {{ ucfirst($req->status ?? 'Pending') }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-btns">
+                                <a href="{{ route('transfer-requests.index') }}" class="action-btn" title="View" style="color:#6b7280;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="7" style="text-align:center; padding:32px; color:#9ca3af; font-size:13px;">
+                            Belum ada transfer request
                         </td>
                     </tr>
                     @endforelse
@@ -320,16 +477,16 @@
         border-bottom-color: #2d3148;
     }
 
-        .db-table td {
-            padding: 13px 16px;
-            color: #374151;
-            border-bottom: 1px solid #f3f4f6;
-        }
+    .db-table td {
+        padding: 13px 16px;
+        color: #374151;
+        border-bottom: 1px solid #f3f4f6;
+    }
 
-        .dark .db-table td {
-            color: #cbd5e1;
-            border-bottom-color: #2d3148;
-        }
+    .dark .db-table td {
+        color: #cbd5e1;
+        border-bottom-color: #2d3148;
+    }
 
     .status-badge {
         display: inline-flex;
@@ -340,42 +497,42 @@
         font-weight: 700;
     }
 
-        .badge-pending {
-            background: #f59e0b;
-            color: #ffffff;
+    .badge-pending {
+        background: #f59e0b;
+        color: #ffffff;
+    }
+
+    .badge-approved {
+        background: #16a34a;
+        color: #ffffff;
+    }
+
+    .badge-rejected {
+        background: #dc2626;
+        color: #ffffff;
+    }
+
+    .empty-state {
+        color: #9ca3af;
+        font-size: 13px;
+        font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+        .db-cards-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 640px) {
+        .db-cards-row {
+            grid-template-columns: 1fr;
         }
 
-        .badge-approved {
-            background: #16a34a;
-            color: #ffffff;
+        .stat-value {
+            font-size: 26px;
         }
-
-        .badge-rejected {
-            background: #dc2626;
-            color: #ffffff;
-        }
-
-        .empty-state {
-            color: #9ca3af;
-            font-size: 13px;
-            font-style: italic;
-        }
-
-        @media (max-width: 1024px) {
-            .db-cards-row {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 640px) {
-            .db-cards-row {
-                grid-template-columns: 1fr;
-            }
-
-            .stat-value {
-                font-size: 26px;
-            }
-        }
+    }
     </style>
 @endpush
 

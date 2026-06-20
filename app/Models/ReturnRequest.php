@@ -59,6 +59,11 @@ class ReturnRequest extends Model
         return $this->hasMany(ReturnRequestItem::class);
     }
 
+    public function pc(): BelongsTo
+    {
+        return $this->belongsTo(Pc::class);
+    }
+
     // ── Helper ────────────────────────────────────────────────────────────────
 
     public function isPending(): bool   { return $this->status === self::STATUS_PENDING; }

@@ -5,6 +5,7 @@
 
 @php
 $isSPV = auth()->user()->role === 'spv inventory';
+$isStaffLab = !$isSPV && in_array($laboratory->id, $myLabIds);
 $electronicAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'electronic')->values();
 $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'electronic')->values();
 $existingElectric    = $laboratory->assets->filter(fn($a) => $a->asset_category === 'electronic')->values();
@@ -109,18 +110,18 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                     </svg>
                                 </button>
-                                <form method="POST" action="{{ route('pc.destroy', [$laboratory->id, $pc->id]) }}"
-                                      onsubmit="return confirm('Hapus PC ini?')" style="display:inline">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="action-btn action-delete" title="Hapus">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
-                                            <polyline points="3 6 5 6 21 6"/>
-                                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                                            <path d="M10 11v6M14 11v6"/>
-                                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                                        </svg>
-                                    </button>
-                                </form>
+                                @if($isStaffLab)
+                                <button type="button"
+                                        onclick='openReturnModal("pc", {{ $pc->id }}, null, "PC-{{ str_pad($loop->index, 2, '0', STR_PAD_LEFT) }}")'
+                                        class="action-btn action-delete" title="Retur PC">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                        <path d="M10 11v6M14 11v6"/>
+                                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                    </svg>
+                                </button>
+                                @endif
                             </div>
                         </td>
                         @endif
@@ -296,18 +297,18 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 
                         @if($canEdit)
                         <td style="text-align:center;">
-                            <form method="POST" action="{{ route('lab.assetlab.remove', [$laboratory->id, $asset->id]) }}"
-                                  onsubmit="return confirm('Hapus aset ini dari lab?')" style="display:inline">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="action-btn action-delete" title="Hapus">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
-                                        <polyline points="3 6 5 6 21 6"/>
-                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                                        <path d="M10 11v6M14 11v6"/>
-                                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                                    </svg>
-                                </button>
-                            </form>
+                            @if($isStaffLab)
+                            <button type="button"
+                                    onclick='openReturnModal("asset", null, {{ $asset->id }}, "{{ addslashes($asset->asset_name) }}")'
+                                    class="action-btn action-delete" title="Retur Aset">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                    <path d="M10 11v6M14 11v6"/>
+                                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                </svg>
+                            </button>
+                            @endif
                         </td>
                         @endif
                     </tr>
@@ -496,6 +497,56 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
         </form>
     </div>
 </div>
+
+{{-- ══ MODAL RETURN CONFIRMATION ══ --}}
+<div id="modal-return" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:500px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border-light);">
+            <h3 style="font-size:16px; font-weight:700; color:var(--text-bold); margin:0;">Konfirmasi Retur</h3>
+            <button onclick="closeReturnModal()" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:22px;">&times;</button>
+        </div>
+        <form method="POST" action="{{ route('return-requests.store-quick') }}" style="padding:24px; display:flex; flex-direction:column; gap:14px;">
+            @csrf
+            <input type="hidden" name="lab_id" value="{{ $laboratory->id }}">
+            <input type="hidden" id="return-pc-id" name="pc_id">
+            <input type="hidden" id="return-asset-id" name="asset_id">
+
+            <p style="font-size:14px; color:var(--text-normal); margin:0;">
+                Yakin untuk menghapus/retur <strong id="return-item-name"></strong> ke gudang?
+            </p>
+
+            <div id="return-asset-fields" style="display:none;">
+                <div>
+                    <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Kuantitas:</label>
+                    <input type="number" name="quantity" id="return-quantity" value="1" min="1"
+                           style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Kondisi:</label>
+                    <select name="condition" id="return-condition"
+                            style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
+                        <option value="good">Baik</option>
+                        <option value="damaged">Rusak</option>
+                        <option value="lost">Hilang</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Catatan (opsional):</label>
+                <textarea name="notes" id="return-notes" rows="3"
+                          style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box; resize:vertical;"></textarea>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" onclick="closeReturnModal()"
+                        style="border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
+                <button type="submit"
+                        style="background:var(--bg-primary); color:var(--text-primary); border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Kirim Pengajuan Retur</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endif
 
 @endsection
@@ -613,6 +664,29 @@ function openEditPcModal(pcId, index, type, status, processor, ram, ssd, motherb
 function closeEditPcModal() { document.getElementById('modal-edit-pc').style.display = 'none'; }
 document.getElementById('modal-edit-pc').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeEditPcModal();
+});
+
+// ── Return Modal ──
+function openReturnModal(type, pcId, assetId, itemName) {
+    document.getElementById('return-item-name').textContent = itemName;
+    document.getElementById('return-pc-id').value = pcId || '';
+    document.getElementById('return-asset-id').value = assetId || '';
+    document.getElementById('return-quantity').value = 1;
+    document.getElementById('return-condition').value = 'good';
+    document.getElementById('return-notes').value = '';
+
+    const assetFields = document.getElementById('return-asset-fields');
+    if (type === 'asset') {
+        assetFields.style.display = 'block';
+    } else {
+        assetFields.style.display = 'none';
+    }
+
+    document.getElementById('modal-return').style.display = 'flex';
+}
+function closeReturnModal() { document.getElementById('modal-return').style.display = 'none'; }
+document.getElementById('modal-return').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeReturnModal();
 });
 
 // ── Searchable dropdown for PC components ──

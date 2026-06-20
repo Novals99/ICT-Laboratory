@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ApproveReturnRequestRequest;
-use App\Http\Requests\StoreReturnRequestRequest;
+use App\Http\Requests\ApproveReturnRequest;
+use App\Http\Requests\StoreReturnRequest;
 use App\Models\AssetLab;
 use App\Models\ReturnRequest;
 use App\Models\ReturnRequestItem;
@@ -42,7 +42,7 @@ class ReturnRequestController extends Controller
 
         // SPV lihat semua, staff hanya lihat lab mereka
         if (!$this->isSPV()) {
-            $userLabIds = Auth::user()->labs()->pluck('id');
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
             $query->whereIn('lab_id', $userLabIds);
         }
 
@@ -61,7 +61,12 @@ class ReturnRequestController extends Controller
             ? \App\Models\Laboratory::all()
             : Auth::user()->labs()->orderBy('lab_name')->get();
 
-        return view('return-requests.index', compact('returnRequests', 'labs'));
+        // User's labs for modal
+        $userLabs = $this->isSPV()
+            ? collect()
+            : Auth::user()->labs()->orderBy('lab_name')->get();
+
+        return view('return-requests.index', compact('returnRequests', 'labs', 'userLabs'));
     }
 
     // ── CREATE ────────────────────────────────────────────────────────────────
@@ -70,7 +75,7 @@ class ReturnRequestController extends Controller
     {
         // Ambil lab yang di-assign ke user via relation `labs()`
         $userLabs = \App\Models\Laboratory::whereIn('id',
-            Auth::user()->labs()->pluck('id')
+            Auth::user()->labs()->pluck('laboratories.id')
         )->get();
 
         if ($userLabs->isEmpty()) {
@@ -94,7 +99,7 @@ class ReturnRequestController extends Controller
     {
         // Security: cek akses user ke lab ini
         if (!$this->isSPV()) {
-            $userLabIds = Auth::user()->labs()->pluck('id');
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
             if (!$userLabIds->contains($labId)) {
                 return response()->json(['error' => 'Akses ditolak.'], 403);
             }
@@ -119,13 +124,13 @@ class ReturnRequestController extends Controller
 
     // ── STORE ─────────────────────────────────────────────────────────────────
 
-    public function store(StoreReturnRequestRequest $request)
+    public function store(StoreReturnRequest $request)
     {
         $validated = $request->validated();
 
         // Security: pastikan lab_id adalah lab milik user ini
         if (!$this->isSPV()) {
-            $userLabIds = Auth::user()->labs()->pluck('id');
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
             if (!$userLabIds->contains($validated['lab_id'])) {
                 abort(403, 'Anda tidak memiliki akses ke laboratorium ini.');
             }
@@ -186,7 +191,7 @@ class ReturnRequestController extends Controller
     {
         // Staff hanya bisa lihat request dari lab mereka
         if (!$this->isSPV()) {
-            $userLabIds = Auth::user()->labs()->pluck('id');
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
             if (!$userLabIds->contains($returnRequest->lab_id)) {
                 abort(403);
             }
@@ -257,5 +262,141 @@ class ReturnRequestController extends Controller
         return redirect()
             ->route('return-requests.show', $returnRequest)
             ->with('success', 'Return request telah ditolak.');
+    }
+
+    /**
+     * Create a quick return request for PC or single asset from lab page
+     */
+    public function storeQuick(Request $request)
+    {
+        $validated = $request->validate([
+            'lab_id' => 'required|exists:laboratories,id',
+            'pc_id' => 'nullable|exists:pcs,id',
+            'asset_id' => 'nullable|exists:assets,id',
+            'quantity' => 'nullable|integer|min:1',
+            'condition' => 'nullable|in:good,damaged,lost',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        // Security: user must be staff assigned to lab
+        if (!$this->isSPV()) {
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
+            if (!$userLabIds->contains($validated['lab_id'])) {
+                abort(403, 'Anda tidak memiliki akses ke laboratorium ini.');
+            }
+        }
+
+        try {
+            DB::transaction(function () use ($validated) {
+                $returnRequest = ReturnRequest::create([
+                    'request_code' => ReturnRequest::generateCode(),
+                    'lab_id' => $validated['lab_id'],
+                    'pc_id' => $validated['pc_id'] ?? null,
+                    'requested_by' => Auth::id(),
+                    'status' => ReturnRequest::STATUS_PENDING,
+                    'notes' => $validated['notes'] ?? 'Pengajuan retur dari halaman lab',
+                ]);
+
+                // If it's an asset return (not PC), create the item
+                if (isset($validated['asset_id']) && !isset($validated['pc_id'])) {
+                    $condition = $validated['condition'] ?? 'good';
+                    $quantity = $validated['quantity'] ?? 1;
+
+                    $this->mutationService->validateLabStock(
+                        labId: $validated['lab_id'],
+                        assetId: $validated['asset_id'],
+                        requestedQty: $quantity,
+                        field: $condition === 'good' ? 'total_good_lab' : ($condition === 'damaged' ? 'total_damaged_lab' : 'total_loss_lab')
+                    );
+
+                    ReturnRequestItem::create([
+                        'return_request_id' => $returnRequest->id,
+                        'asset_id' => $validated['asset_id'],
+                        'quantity_requested' => $quantity,
+                        'condition' => $condition,
+                        'reason' => $validated['notes'] ?? null,
+                    ]);
+                }
+            });
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pengajuan retur berhasil dikirim, menunggu persetujuan SPV!');
+    }
+
+    public function getDetail($id)
+    {
+        $returnRequest = ReturnRequest::with([
+            'laboratory',
+            'requestedBy',
+            'items.asset'
+        ])->findOrFail($id);
+
+        return response()->json([
+            'request_code' => $returnRequest->request_code,
+            'lab_name' => $returnRequest->laboratory?->lab_name ?? '-',
+            'requested_by' => $returnRequest->requestedBy?->name ?? '-',
+            'items' => $returnRequest->items->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'asset_id' => $item->asset_id,
+                    'asset_name' => $item->asset?->asset_name ?? '-',
+                    'quantity' => $item->quantity_requested,
+                    'condition' => ucfirst($item->condition),
+                    'quantity_approved' => $item->quantity_approved,
+                    'status' => $item->status ?? null
+                ];
+            })
+        ]);
+    }
+
+    public function approveViaModal(Request $request, $id)
+    {
+        abort_unless($this->isSPV(), 403);
+        $returnRequest = ReturnRequest::findOrFail($id);
+        abort_unless($returnRequest->isPending(), 400, 'Request sudah diproses');
+
+        $validated = $request->validate([
+            'items' => 'nullable|array',
+            'items.*.id' => 'required|exists:return_request_items,id',
+            'items.*.quantity_approved' => 'required|integer|min:0',
+        ]);
+
+        try {
+            DB::transaction(function () use ($validated, $returnRequest) {
+                foreach ($validated['items'] as $itemData) {
+                    $item = ReturnRequestItem::where('id', $itemData['id'])
+                        ->where('return_request_id', $returnRequest->id)
+                        ->first();
+                    if ($item) {
+                        $item->update(['quantity_approved' => $itemData['quantity_approved']]);
+                    }
+                }
+                $this->mutationService->approveReturnRequest($returnRequest);
+            });
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    public function rejectViaModal(Request $request, $id)
+    {
+        abort_unless($this->isSPV(), 403);
+        $returnRequest = ReturnRequest::findOrFail($id);
+        abort_unless($returnRequest->isPending(), 400, 'Request sudah diproses');
+        $validated = $request->validate(['rejection_reason' => 'required|string|min:1']);
+        $returnRequest->update([
+            'status' => ReturnRequest::STATUS_REJECTED,
+            'approved_by' => Auth::id(),
+            'approved_at' => now(),
+            'rejection_reason' => $validated['rejection_reason']
+        ]);
+        return response()->json(['success' => true]);
     }
 }

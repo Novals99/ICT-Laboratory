@@ -62,7 +62,7 @@ $componentPcAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'com
 
                     <x-table.th>Name</x-table.th>
                     <x-table.th>PC Capacity</x-table.th>
-                    <x-table.th>Admin</x-table.th>
+                    <x-table.th>Staff</x-table.th>
                     <x-table.th>Active</x-table.th>
                     <x-table.th>Inactive</x-table.th>
                     <x-table.th align="center">Action</x-table.th>
@@ -71,10 +71,10 @@ $componentPcAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'com
 
             <tbody>
                 @forelse($laboratories as $lab)
-                    @php
-                        $isMyLab   = in_array($lab->id, $myLabIds);
-                        $adminUser = $lab->users->firstWhere('role', 'admin');
-                    @endphp
+                @php
+                    $isMyLab    = in_array($lab->id, $myLabIds);
+                    $staffUsers = $lab->users->where('role', 'staff')->values();
+                @endphp
 
                     <tr class="panel-table-row">
                         <x-table.td>
@@ -92,7 +92,13 @@ $componentPcAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'com
                         </x-table.td>
 
                         <x-table.td>
-                            {{ $adminUser?->name ?? '-' }}
+                            @forelse($staffUsers as $s)
+                                <span class="m-0.5 inline-block rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                                    {{ $s->name }}
+                                </span>
+                            @empty
+                                <span class="text-gray-400">—</span>
+                            @endforelse
                         </x-table.td>
 
                         <x-table.td>

@@ -1,254 +1,219 @@
-{{-- resources/views/transfer-requests/show.blade.php --}}
+@extends('panel.content')
 
-<x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <a href="{{ route('transfer-requests.index') }}" class="text-gray-400 hover:text-gray-600 transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                    </svg>
-                </a>
-                <div>
-                    <h2 class="text-xl font-bold text-gray-800 font-mono">{{ $transferRequest->request_code }}</h2>
-                    <div class="flex items-center gap-2 mt-1 text-sm">
-                        <span class="text-xs bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 rounded-full">
-                            {{ $transferRequest->fromLab->lab_name }}
-                        </span>
-                        <span class="text-gray-300">→</span>
-                        <span class="text-xs bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 rounded-full">
-                            {{ $transferRequest->toLab->lab_name }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-            @php [$label, $color] = $transferRequest->getStatusBadge(); @endphp
-            <span class="inline-flex px-3 py-1.5 text-sm font-semibold rounded-full {{ $color }}">
-                {{ $label }}
-            </span>
-        </div>
-    </x-slot>
+@section('title', $transferRequest->request_code . ' — Detail Transfer Request')
 
-    <div class="py-6 px-4 sm:px-6 lg:px-8">
-
-        @if(session('success'))
-        <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+@section('content')
+<div style="background:var(--bg-card); border:1px solid var(--border-color);" class="rounded-2xl p-6 shadow-sm">
+    @if(session('success'))
+        <div class="mb-4 rounded-lg bg-green-50 border border-green-200 text-green-700 px-4 py-3 text-sm">
             {{ session('success') }}
         </div>
-        @endif
-        @if(session('error'))
-        <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+    @endif
+    @if(session('error'))
+        <div class="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
             {{ session('error') }}
         </div>
-        @endif
-
-        @if($transferRequest->status === 'rejected')
-        <div class="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+    @endif
+    @if($transferRequest->status === 'rejected')
+        <div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4">
             <p class="text-red-700 font-semibold text-sm mb-1">Transfer Ditolak</p>
             <p class="text-red-600 text-sm">{{ $transferRequest->rejection_reason }}</p>
             <p class="text-red-400 text-xs mt-2">
-                Ditolak oleh {{ $transferRequest->approvedBy?->name }} •
+                Ditolak oleh {{ $transferRequest->approvedBy?->name ?? '-' }} •
                 {{ $transferRequest->approved_at?->format('d M Y H:i') }}
             </p>
         </div>
-        @endif
-
-        @if($transferRequest->isCompleted())
-        <div class="mb-4 bg-green-50 border border-green-200 rounded-lg p-4">
+    @endif
+    @if($transferRequest->isCompleted())
+        <div class="mb-4 rounded-lg bg-green-50 border border-green-200 p-4">
             <p class="text-green-700 font-semibold text-sm mb-1">Transfer Selesai</p>
             <p class="text-green-600 text-sm">
                 Barang berhasil dipindahkan dari <strong>{{ $transferRequest->fromLab->lab_name }}</strong>
                 ke <strong>{{ $transferRequest->toLab->lab_name }}</strong>. Stok kedua lab sudah diperbarui.
             </p>
             <p class="text-green-400 text-xs mt-2">
-                Disetujui oleh {{ $transferRequest->approvedBy?->name }} •
+                Disetujui oleh {{ $transferRequest->approvedBy?->name ?? '-' }} •
                 {{ $transferRequest->approved_at?->format('d M Y H:i') }}
             </p>
         </div>
-        @endif
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            {{-- ── Kolom Kiri ────────────────────────────────────────────── --}}
-            <div class="lg:col-span-1">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                    <h3 class="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-3">
-                        Informasi Transfer
-                    </h3>
-                    <dl class="space-y-2.5 text-sm">
+    @endif
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1">
+            <div style="background:var(--bg-card); border:1px solid var(--border-color);" class="rounded-xl p-5">
+                <h3 class="font-semibold text-sm uppercase tracking-wide mb-3" style="color:var(--text-secondary);">
+                    Informasi Transfer
+                </h3>
+                <dl class="space-y-2.5 text-sm">
+                    <div class="flex justify-between">
+                        <dt style="color:var(--text-muted);">Lab Asal</dt>
+                        <dd class="font-medium" style="color:var(--text-primary);">{{ $transferRequest->fromLab->lab_name ?? '-' }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt style="color:var(--text-muted);">Lab Tujuan</dt>
+                        <dd class="font-medium" style="color:var(--text-primary);">{{ $transferRequest->toLab->lab_name ?? '-' }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt style="color:var(--text-muted);">Diajukan oleh</dt>
+                        <dd style="color:var(--text-secondary);">{{ $transferRequest->requestedBy?->name ?? '-' }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt style="color:var(--text-muted);">Tanggal Ajuan</dt>
+                        <dd style="color:var(--text-secondary);">{{ $transferRequest->created_at->format('d M Y H:i') }}</dd>
+                    </div>
+                    @if($transferRequest->approved_at)
                         <div class="flex justify-between">
-                            <dt class="text-gray-500">Lab Asal</dt>
-                            <dd class="font-medium text-gray-800">{{ $transferRequest->fromLab->lab_name }}</dd>
-                        </div>
-                        <div class="flex justify-between">
-                            <dt class="text-gray-500">Lab Tujuan</dt>
-                            <dd class="font-medium text-gray-800">{{ $transferRequest->toLab->lab_name }}</dd>
-                        </div>
-                        <div class="flex justify-between">
-                            <dt class="text-gray-500">Diajukan oleh</dt>
-                            <dd class="text-gray-700">{{ $transferRequest->requestedBy->name }}</dd>
-                        </div>
-                        <div class="flex justify-between">
-                            <dt class="text-gray-500">Tanggal Ajuan</dt>
-                            <dd class="text-gray-700">{{ $transferRequest->created_at->format('d M Y H:i') }}</dd>
-                        </div>
-                        @if($transferRequest->approved_at)
-                        <div class="flex justify-between">
-                            <dt class="text-gray-500">Diproses oleh</dt>
-                            <dd class="text-gray-700">{{ $transferRequest->approvedBy?->name ?? '-' }}</dd>
+                            <dt style="color:var(--text-muted);">Diproses oleh</dt>
+                            <dd style="color:var(--text-secondary);">{{ $transferRequest->approvedBy?->name ?? '-' }}</dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-gray-500">Tanggal Proses</dt>
-                            <dd class="text-gray-700">{{ $transferRequest->approved_at->format('d M Y H:i') }}</dd>
+                            <dt style="color:var(--text-muted);">Tanggal Proses</dt>
+                            <dd style="color:var(--text-secondary);">{{ $transferRequest->approved_at->format('d M Y H:i') }}</dd>
                         </div>
-                        @endif
-                        @if($transferRequest->notes)
-                        <div class="pt-2 border-t border-gray-100">
-                            <dt class="text-gray-500 mb-1">Catatan</dt>
-                            <dd class="text-gray-700">{{ $transferRequest->notes }}</dd>
+                    @endif
+                    @if($transferRequest->notes)
+                        <div class="pt-2 border-t" style="border-color:var(--border-color);">
+                            <dt style="color:var(--text-muted);" class="mb-1">Catatan</dt>
+                            <dd style="color:var(--text-secondary);">{{ $transferRequest->notes }}</dd>
                         </div>
-                        @endif
-                    </dl>
-                </div>
+                    @endif
+                </dl>
             </div>
-
-            {{-- ── Kolom Kanan ───────────────────────────────────────────── --}}
-            <div class="lg:col-span-2">
-
-                @if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
-                <div class="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        </div>
+        <div class="lg:col-span-2">
+            @if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
+                <div class="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-4">
                     <p class="text-yellow-800 font-semibold text-sm mb-1">Menunggu Persetujuan Anda</p>
                     <p class="text-yellow-700 text-xs">
                         Pastikan stok di <strong>{{ $transferRequest->fromLab->lab_name }}</strong> mencukupi.
                         Isi 0 pada qty untuk menolak item tertentu.
                     </p>
                 </div>
-
-                <form action="{{ route('transfer-requests.approve', $transferRequest) }}" method="POST" id="approveForm">
+                <form action="{{ route('transfer-requests.approve', $transferRequest) }}" method="POST">
                     @csrf
-                @endif
-
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                        <h3 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Daftar Barang</h3>
-                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                            {{ $transferRequest->items->count() }} item
-                        </span>
-                    </div>
-
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Barang</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500">Qty Diajukan</th>
-                                    @if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500">Qty Disetujui</th>
-                                    @elseif($transferRequest->approved_at)
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500">Qty Disetujui</th>
-                                    @endif
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Catatan</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                @foreach($transferRequest->items as $item)
-                                <tr>
+            @endif
+            <div style="background:var(--bg-card); border:1px solid var(--border-color);" class="rounded-xl overflow-hidden">
+                <div class="flex items-center justify-between px-5 py-4 border-b" style="border-color:var(--border-color);">
+                    <h3 class="font-semibold text-sm uppercase tracking-wide" style="color:var(--text-secondary);">
+                        Daftar Barang
+                    </h3>
+                    <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--bg-table-header); color:var(--text-secondary);">
+                        {{ $transferRequest->items->count() }} item
+                    </span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead style="background:var(--bg-table-header);">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium" style="color:var(--text-secondary);">Barang</th>
+                                <th class="px-4 py-3 text-center font-medium" style="color:var(--text-secondary);">Qty Diajukan</th>
+                                @if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
+                                    <th class="px-4 py-3 text-center font-medium" style="color:var(--text-secondary);">Qty Disetujui</th>
+                                @elseif($transferRequest->approved_at)
+                                    <th class="px-4 py-3 text-center font-medium" style="color:var(--text-secondary);">Qty Disetujui</th>
+                                @endif
+                                <th class="px-4 py-3 text-left font-medium" style="color:var(--text-secondary);">Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($transferRequest->items as $item)
+                                <tr style="border-bottom:1px solid var(--border-color);">
                                     <td class="px-4 py-3">
-                                        <div class="font-medium text-gray-800 text-sm">{{ $item->asset->asset_name }}</div>
-                                        <div class="text-xs text-gray-400">{{ $item->asset->asset_category }}</div>
+                                        <div class="font-medium text-sm" style="color:var(--text-primary);">{{ $item->asset->asset_name }}</div>
+                                        <div class="text-xs" style="color:var(--text-muted);">{{ $item->asset->asset_category }}</div>
                                     </td>
                                     <td class="px-4 py-3 text-center">
-                                        <span class="text-xs bg-gray-100 text-gray-600 font-medium px-2 py-0.5 rounded-full">
+                                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background:var(--bg-table-header); color:var(--text-secondary);">
                                             {{ $item->quantity_requested }}
                                         </span>
                                     </td>
-
                                     @if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
-                                    <td class="px-4 py-3 text-center">
-                                        <input type="hidden" name="items[{{ $loop->index }}][id]" value="{{ $item->id }}">
-                                        <input type="number"
-                                               name="items[{{ $loop->index }}][quantity_approved]"
-                                               class="w-20 text-sm text-center border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 mx-auto"
-                                               value="{{ $item->quantity_requested }}"
-                                               min="0" max="{{ $item->quantity_requested }}" required>
-                                    </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <input type="hidden" name="items[{{ $loop->index }}][id]" value="{{ $item->id }}">
+                                            <input type="number"
+                                                   name="items[{{ $loop->index }}][quantity_approved]"
+                                                   style="background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary);"
+                                                   class="w-20 text-sm text-center rounded-lg py-2 px-3 focus:outline-none focus:ring-1 focus:ring-gray-400 mx-auto"
+                                                   value="{{ $item->quantity_requested }}"
+                                                   min="0" max="{{ $item->quantity_requested }}" required>
+                                        </td>
                                     @elseif($transferRequest->approved_at)
-                                    <td class="px-4 py-3 text-center">
-                                        @if($item->quantity_approved !== null)
-                                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ $item->quantity_approved > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
-                                            {{ $item->quantity_approved }}
-                                        </span>
-                                        @if($item->quantity_approved < $item->quantity_requested)
-                                        <span class="block text-xs text-gray-400 mt-0.5">(partial)</span>
-                                        @endif
-                                        @else
-                                        <span class="text-gray-400">-</span>
-                                        @endif
-                                    </td>
+                                        <td class="px-4 py-3 text-center">
+                                            @if($item->quantity_approved !== null)
+                                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ $item->quantity_approved > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                                    {{ $item->quantity_approved }}
+                                                </span>
+                                                @if($item->quantity_approved < $item->quantity_requested)
+                                                    <span class="block text-xs text-gray-400 mt-0.5">(partial)</span>
+                                                @endif
+                                            @else
+                                                <span style="color:var(--text-muted);">-</span>
+                                            @endif
+                                        </td>
                                     @endif
-
-                                    <td class="px-4 py-3 text-sm text-gray-500">{{ $item->notes ?? '-' }}</td>
+                                    <td class="px-4 py-3 text-sm" style="color:var(--text-muted);">{{ $item->notes ?? '-' }}</td>
                                 </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-
-                    @if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
-                    <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
-                        <p class="text-xs text-gray-400">Isi 0 untuk menolak item tertentu.</p>
-                        <div class="flex gap-2">
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
+                    <div class="px-5 py-4 border-t flex items-center justify-between" style="border-color:var(--border-color);">
+                        <p class="text-xs" style="color:var(--text-muted);">Isi 0 untuk menolak item tertentu.</p>
+                        <div class="flex gap-3">
                             <button type="button"
                                     onclick="document.getElementById('rejectModal').classList.remove('hidden')"
-                                    class="text-sm border border-red-200 text-red-600 hover:bg-red-50 font-medium px-4 py-2 rounded-lg transition">
+                                    class="text-sm border px-4 py-2 rounded-lg transition hover:opacity-80"
+                                    style="border-color:var(--border-color); color:#dc2626;">
                                 Tolak
                             </button>
                             <button type="submit"
-                                    class="text-sm bg-green-600 hover:bg-green-700 text-white font-medium px-5 py-2 rounded-lg transition">
+                                    class="text-sm text-white font-medium px-5 py-2 rounded-lg transition hover:opacity-80"
+                                    style="background:#10b981;">
                                 Setujui Transfer
                             </button>
                         </div>
                     </div>
-                    @endif
-                </div>
-
-                @if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
-                </form>
                 @endif
             </div>
+            @if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
+                </form>
+            @endif
         </div>
     </div>
-
-    {{-- ── Modal Tolak ─────────────────────────────────────────────────────── --}}
-    @if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
+</div>
+@if(Auth::user()->role === 'spv inventory' && $transferRequest->isPending())
     <div id="rejectModal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-        <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+        <div style="background:var(--bg-modal); border:1px solid var(--border-color);" class="rounded-xl shadow-lg max-w-md w-full p-6">
             <form action="{{ route('transfer-requests.reject', $transferRequest) }}" method="POST">
                 @csrf
-                <h3 class="text-lg font-semibold text-red-600 mb-2">Tolak Transfer Request</h3>
-                <p class="text-sm text-gray-500 mb-4">
+                <h3 class="text-lg font-semibold mb-2" style="color:#dc2626;">Tolak Transfer Request</h3>
+                <p class="text-sm mb-4" style="color:var(--text-muted);">
                     Transfer <strong>{{ $transferRequest->request_code }}</strong>
                     ({{ $transferRequest->fromLab->lab_name }} → {{ $transferRequest->toLab->lab_name }})
                     akan ditolak. Tidak ada perubahan stok.
                 </p>
-                <label class="block text-sm font-medium text-gray-700 mb-1">
+                <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary);">
                     Alasan Penolakan <span class="text-red-500">*</span>
                 </label>
                 <textarea name="rejection_reason" rows="3" required minlength="10"
-                          class="w-full text-sm border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
+                          style="background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary);"
+                          class="w-full text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-1 focus:ring-gray-400"
                           placeholder="Tuliskan alasan (min. 10 karakter)..."></textarea>
-                <div class="flex justify-end gap-2 mt-5">
+                <div class="flex justify-end gap-3 mt-5">
                     <button type="button"
                             onclick="document.getElementById('rejectModal').classList.add('hidden')"
-                            class="text-sm text-gray-500 hover:text-gray-700 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50">
+                            class="text-sm px-4 py-2 rounded-lg border transition hover:opacity-80"
+                            style="border-color:var(--border-color); color:var(--text-secondary);">
                         Batal
                     </button>
-                    <button type="submit" class="text-sm bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg">
+                    <button type="submit"
+                            class="text-sm text-white font-medium px-4 py-2 rounded-lg transition hover:opacity-80"
+                            style="background:#dc2626;">
                         Konfirmasi Tolak
                     </button>
                 </div>
             </form>
         </div>
     </div>
-    @endif
-</x-app-layout>
+@endif
+@endsection

@@ -17,7 +17,7 @@ class DashboardController extends Controller
         if ($user->role === 'spv inventory') {
             return $this->spvDashboard();
         }
-        
+
 
         return $this->staffDashboard($user);
     }
@@ -29,6 +29,8 @@ class DashboardController extends Controller
         $totalLaboratory = Laboratory::count();
 
         $totalRequestLab = RequestLab::count();
+        $totalReturnRequests = \App\Models\ReturnRequest::count();
+        $totalTransferRequests = \App\Models\TransferRequest::count();
 
         $laboratories = Laboratory::with('pcs')
             ->orderBy('lab_name')
@@ -42,7 +44,7 @@ class DashboardController extends Controller
             ];
         })->values();
 
-        $lowStockItems = Asset::where('total_good', '<=', 10)
+        $lowStockItems = \App\Models\Asset::where('total_good', '<=', 10)
             ->orderBy('total_good')
             ->limit(6)
             ->get([
@@ -57,13 +59,27 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
+        $recentReturnRequests = \App\Models\ReturnRequest::with(['laboratory', 'requestedBy'])
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        $recentTransferRequests = \App\Models\TransferRequest::with(['fromLab', 'toLab', 'requestedBy'])
+            ->latest()
+            ->limit(10)
+            ->get();
+
         return view('pages.dashboard.spv-dashboard', compact(
             'totalUsers',
             'totalLaboratory',
             'totalRequestLab',
+            'totalReturnRequests',
+            'totalTransferRequests',
             'chartData',
             'lowStockItems',
             'recentRequests',
+            'recentReturnRequests',
+            'recentTransferRequests'
         ));
     }
 
@@ -80,9 +96,12 @@ class DashboardController extends Controller
         $totalPcActive    = $laboratories->flatMap(fn($lab) => $lab->pcs)->where('status_pc', 'active')->count();
         $totalPcInactive  = $laboratories->flatMap(fn($lab) => $lab->pcs)->where('status_pc', 'inactive')->count();
         $totalPc          = $totalPcActive + $totalPcInactive;
-        $totalPc = $totalPcActive + $totalPcInactive;
 
         $totalRequestLab  = RequestLab::whereIn('lab_id', $labIds)->count();
+        $totalReturnRequests = \App\Models\ReturnRequest::whereIn('lab_id', $labIds)->count();
+        $totalTransferRequests = \App\Models\TransferRequest::whereIn('from_lab_id', $labIds)
+            ->orWhereIn('to_lab_id', $labIds)
+            ->count();
 
         // staff di lab yang sama
         $labStaff = User::whereHas('labs', fn($q) => $q->whereIn('laboratories.id', $labIds))
@@ -110,6 +129,21 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
+        $recentReturnRequests = \App\Models\ReturnRequest::with(['laboratory', 'requestedBy'])
+            ->whereIn('lab_id', $labIds)
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        $recentTransferRequests = \App\Models\TransferRequest::with(['fromLab', 'toLab', 'requestedBy'])
+            ->where(function ($q) use ($labIds) {
+                $q->whereIn('from_lab_id', $labIds)
+                  ->orWhereIn('to_lab_id', $labIds);
+            })
+            ->latest()
+            ->limit(10)
+            ->get();
+
         return view('pages.dashboard.staff-dashboard', compact(
             'user',
             'laboratories',
@@ -117,14 +151,16 @@ class DashboardController extends Controller
             'totalPcActive',
             'totalPcInactive',
             'totalPc',
-            'totalPc',
             'totalRequestLab',
+            'totalReturnRequests',
+            'totalTransferRequests',
             'totalUsers',
             'labStaff',
             'chartData',
-            'totalUsers',
             'labUsers',
             'recentRequests',
+            'recentReturnRequests',
+            'recentTransferRequests'
         ));
     }
 }
