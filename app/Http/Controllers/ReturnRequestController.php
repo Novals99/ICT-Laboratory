@@ -7,6 +7,7 @@ use App\Http\Requests\StoreReturnRequest;
 use App\Models\AssetLab;
 use App\Models\ReturnRequest;
 use App\Models\ReturnRequestItem;
+use App\Models\ActivityLog;
 use App\Services\StockMutationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -174,6 +175,11 @@ class ReturnRequestController extends Controller
                         'reason'             => $item['reason'] ?? null,
                     ]);
                 }
+
+                ActivityLog::create([
+                'user_id' => auth()->id(),
+                'activity' => 'Created return request: ' . $returnRequest->request_code,
+            ]);
             });
 
         } catch (\Exception $e) {
@@ -226,6 +232,16 @@ class ReturnRequestController extends Controller
 
                 // Eksekusi mutasi stok via service
                 $this->mutationService->approveReturnRequest($returnRequest);
+                $returnRequest->load('laboratory');
+
+                ActivityLog::create([
+                    'user_id' => auth()->id(),
+                    'activity' => 'Approved return request ' .
+                        $returnRequest->request_code .
+                        ' (' .
+                        $returnRequest->laboratory->lab_name .
+                        ' → Warehouse)',
+                ]);
             });
 
         } catch (\Exception $e) {
@@ -257,6 +273,17 @@ class ReturnRequestController extends Controller
             'approved_by'      => Auth::id(),
             'approved_at'      => now(),
             'rejection_reason' => $request->rejection_reason,
+        ]);
+
+        $returnRequest->load('laboratory');
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Rejected return request ' .
+                $returnRequest->request_code .
+                ' (' .
+                $returnRequest->laboratory->lab_name .
+                ' → Warehouse)',
         ]);
 
         return redirect()
@@ -295,6 +322,11 @@ class ReturnRequestController extends Controller
                     'requested_by' => Auth::id(),
                     'status' => ReturnRequest::STATUS_PENDING,
                     'notes' => $validated['notes'] ?? 'Pengajuan retur dari halaman lab',
+                ]);
+
+                ActivityLog::create([
+                    'user_id' => auth()->id(),
+                    'activity' => 'Created quick return request: ' . $returnRequest->request_code,
                 ]);
 
                 // If it's an asset return (not PC), create the item
@@ -374,6 +406,16 @@ class ReturnRequestController extends Controller
                     }
                 }
                 $this->mutationService->approveReturnRequest($returnRequest);
+                $returnRequest->load('laboratory');
+
+                ActivityLog::create([
+                    'user_id' => auth()->id(),
+                    'activity' => 'Approved return request ' .
+                        $returnRequest->request_code .
+                        ' (' .
+                        $returnRequest->laboratory->lab_name .
+                        ' → Warehouse)',
+                ]);
             });
         } catch (\Exception $e) {
             return response()->json([
@@ -396,6 +438,16 @@ class ReturnRequestController extends Controller
             'approved_by' => Auth::id(),
             'approved_at' => now(),
             'rejection_reason' => $validated['rejection_reason']
+        ]);
+        $returnRequest->load('laboratory');
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Rejected return request ' .
+                $returnRequest->request_code .
+                ' (' .
+                $returnRequest->laboratory->lab_name .
+                ' → Warehouse)',
         ]);
         return response()->json(['success' => true]);
     }

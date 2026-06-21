@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Laboratory;
 use App\Models\User;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -85,6 +86,11 @@ class UserController extends Controller
 
         $user->labs()->sync($labIds);
 
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Created user: ' . $user->name,
+        ]);
+
         return redirect()
             ->route('users.index')
             ->with('success', 'User berhasil ditambahkan.');
@@ -160,6 +166,11 @@ class UserController extends Controller
 
         $user->labs()->sync($labIds);
 
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Updated user: ' . $user->name,
+        ]);
+
         return redirect()
             ->route('users.index')
             ->with('success', 'User berhasil diperbarui.');
@@ -172,6 +183,11 @@ public function destroy(User $user)
 {
     try {
         $user->delete();
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Deleted user: ' . $user->name,
+        ]);
 
         return redirect()
             ->route('users.index')
@@ -211,3 +227,4 @@ public function destroy(User $user)
         return $labIds;
     }
 }
+

@@ -8,6 +8,7 @@ use App\Models\AssetLab;
 use App\Models\Laboratory;
 use App\Models\TransferRequest;
 use App\Models\TransferRequestItem;
+use App\Models\ActivityLog;
 use App\Services\StockMutationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -155,6 +156,11 @@ class TransferRequestController extends Controller
                         'notes'               => $item['notes'] ?? null,
                     ]);
                 }
+
+                ActivityLog::create([
+                    'user_id' => auth()->id(),
+                    'activity' => 'Created transfer request: ' . $transferRequest->request_code,
+                ]);
             });
 
         } catch (\Exception $e) {
@@ -204,6 +210,11 @@ class TransferRequestController extends Controller
 
                 $transferRequest->load('items.asset', 'fromLab', 'toLab');
                 $this->mutationService->approveTransferRequest($transferRequest);
+
+                ActivityLog::create([
+                    'user_id' => auth()->id(),
+                    'activity' => 'Approved transfer request: ' . $transferRequest->request_code,
+                ]);
             });
 
         } catch (\Exception $e) {
@@ -234,6 +245,11 @@ class TransferRequestController extends Controller
             'approved_by'      => Auth::id(),
             'approved_at'      => now(),
             'rejection_reason' => $request->rejection_reason,
+        ]);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Rejected transfer request: ' . $transferRequest->request_code,
         ]);
 
         return redirect()
@@ -292,6 +308,11 @@ class TransferRequestController extends Controller
                 }
                 $transferRequest->load('items.asset', 'fromLab', 'toLab');
                 $this->mutationService->approveTransferRequest($transferRequest);
+
+                ActivityLog::create([
+                    'user_id' => auth()->id(),
+                    'activity' => 'Approved transfer request: ' . $transferRequest->request_code,
+                ]);
             });
         } catch (\Exception $e) {
             return response()->json([
@@ -313,7 +334,11 @@ class TransferRequestController extends Controller
             'status' => TransferRequest::STATUS_REJECTED,
             'approved_by' => Auth::id(),
             'approved_at' => now(),
-            'rejection_reason' => $validated['rejection_reason']
+            'rejection_reason' => $validated['rejection_reason']    
+        ]);
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Rejected transfer request: ' . $transferRequest->request_code,
         ]);
         return response()->json(['success' => true]);
     }

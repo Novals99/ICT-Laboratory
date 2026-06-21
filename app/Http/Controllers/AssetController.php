@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Asset;
 use App\Models\AssetLog;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -110,6 +111,11 @@ class AssetController extends Controller
                 'source' => $item['source'] ?? null,
                 'notes' => $item['notes'] ?? 'Initial asset stock.',
             ]);
+
+            ActivityLog::create([
+                'user_id' => auth()->id(),
+                'activity' => 'Created asset: ' . $asset->asset_name,
+            ]);
         }
 
         return redirect()
@@ -206,6 +212,11 @@ class AssetController extends Controller
             ]);
         }
 
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Updated asset: ' . $asset->asset_name,
+        ]);
+
         return redirect()
             ->route('asset.index')
             ->with('success', 'Asset berhasil diperbarui.');
@@ -216,6 +227,11 @@ class AssetController extends Controller
      */
     public function destroy(Asset $asset)
     {
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Deleted asset: ' . $asset->asset_name,
+        ]);
+        
         $asset->delete();
 
         return redirect()

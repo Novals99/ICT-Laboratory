@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\ActivityLogExport;
 
 class ActivityLogController extends Controller
 {
@@ -41,21 +42,19 @@ class ActivityLogController extends Controller
         'search' => $search,
         'startDate' => '',
         'endDate' => '',
-        'role' => ''
+        'role' => $role,
     ]);
     }
 
-    public function export()
+    public function export(string $format)
     {
-    $logs = ActivityLog::with('user')
-        ->latest()
-        ->get();
+    $export = new ActivityLogExport();
 
-    $pdf = Pdf::loadView(
-        'pages.activity-log.pdf',
-        compact('logs')
-    );
-
-    return $pdf->download('activity-log.pdf');
+    return match ($format) {
+        'pdf'   => $export->downloadPdf(),
+        'excel' => $export->downloadExcel(),
+        'csv'   => $export->downloadCsv(),
+        default => abort(404),
+    };
     }
-}
+}    

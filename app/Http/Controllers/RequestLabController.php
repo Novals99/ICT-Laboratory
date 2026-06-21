@@ -9,6 +9,7 @@ use App\Models\AssetLog;
 use App\Models\Laboratory;
 use App\Models\RequestItem;
 use App\Models\RequestLab;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -128,6 +129,13 @@ class RequestLabController extends Controller
                     'status' => 'pending',
                 ]);
             }
+
+            ActivityLog::create([
+                'user_id' => auth()->id(),
+                'activity' => 'Created laboratory request: REQ-' .
+                    str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
+            ]);
+            
         });
 
         return redirect()->route('requestlab.index')
@@ -153,6 +161,14 @@ class RequestLabController extends Controller
                 // Recalculate status request
                 $requestStatus = $this->resolveRequestStatus($labRequest->fresh()->request_items);
                 $labRequest->update(['request_status' => $requestStatus]);
+                $assetName = $item->asset->asset_name ?? 'Unknown Asset';
+
+                ActivityLog::create([
+                    'user_id' => auth()->id(),
+                    'activity' => ucfirst($validated['status']) .
+                        ' requested asset: ' . $assetName .
+                        ' (REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT) . ')',
+                ]);
             });
         } catch (\Throwable $e) {
             return response()->json([
@@ -185,6 +201,14 @@ class RequestLabController extends Controller
 
                 $requestStatus = $this->resolveRequestStatus($labRequest->fresh()->request_items);
                 $labRequest->update(['request_status' => $requestStatus]);
+
+                ActivityLog::create([
+                    'user_id' => auth()->id(),
+                    'activity' => ucfirst($validated['status']) .
+                        ' laboratory request: REQ-' .
+                        str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
+                ]);
+
             });
         } catch (\Throwable $e) {
             return response()->json([
@@ -216,6 +240,14 @@ class RequestLabController extends Controller
     public function destroy($id)
     {
         abort_unless(auth()->user()->role === 'spv inventory', 403);
+
+        $requestLab = RequestLab::findOrFail($id);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Deleted laboratory request: REQ-' .
+                str_pad($requestLab->id, 3, '0', STR_PAD_LEFT),
+        ]);
 
         DB::transaction(function () use ($id) {
             RequestLab::findOrFail($id)->delete();

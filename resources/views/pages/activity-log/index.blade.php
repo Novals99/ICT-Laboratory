@@ -89,18 +89,20 @@
                     </x-button.filter>
 
                     {{-- Export Button --}}
-                   <x-button.export
-    href="{{ route('activity-log.export', request()->query()) }}">
-                  Export
-                    </x-button.export>
+                   <x-button.export.export
+    menuId="activityLogExportMenu"
+    pdfUrl="{{ route('activity-log.export', 'pdf') }}"
+    excelUrl="{{ route('activity-log.export', 'excel') }}"
+    csvUrl="{{ route('activity-log.export', 'csv') }}"
+/>
                 </form>
             </div>
 
 
-            <div id="filterPanel" class="{{ $startDate || $endDate || $role ? '' : 'hidden' }} mt-4 pt-4 border-t border-slate-100">
+           {{--   <div id="filterPanel" class="{{ $startDate || $endDate || $role ? '' : 'hidden' }} mt-4 pt-4 border-t border-slate-100">
                 <form method="GET" action="{{ route('activity-log.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-3">
 
-                    {{-- Preserve search saat filter di-apply --}}
+                    {{-- Preserve search saat filter di-apply 
                     <input type="hidden" name="search" value="{{ $search }}">
 
                     <div>
@@ -135,7 +137,7 @@
                         </a>
                     </div>
                 </form>
-            </div>
+            </div> --}}
         </div>
 
         {{-- ========================================== --}}
@@ -217,14 +219,22 @@
                                     </div>
                                     <div>
                                         <p class="text-sm font-medium text-slate-600">No activity logs available</p>
-                                        <p class="text-xs text-slate-400 mt-1">
-                                            @if($search || $startDate || $endDate || $role)
+                                        @if($search || $startDate || $endDate || $role)
+                                        <div class="mt-1 flex flex-col items-center gap-3">
+                                            <p class="text-xs text-slate-400">
                                                 No logs match the selected filters.
-                                                <a href="{{ route('activity-log.index') }}" class="text-[#1E2A5E] hover:underline">Reset filters</a>
-                                            @else
-                                                Activity logs will appear when users perform actions in the system.
-                                            @endif
+                                            </p>
+
+                                            <a href="{{ route('activity-log.index') }}"
+                                                class="panel-btn-secondary">
+                                                Clear Filters
+                                            </a>
+                                        </div>
+                                        @else
+                                        <p class="text-xs text-slate-400 mt-1">
+                                            Activity logs will appear when users perform actions in the system.
                                         </p>
+                                        @endif
                                     </div>
                                 </div>
                             </td>

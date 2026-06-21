@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AssetLab;
 use App\Models\Laboratory;
 use App\Models\Pc;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 
 class PcController extends Controller
@@ -40,6 +41,11 @@ class PcController extends Controller
         $this->deductLabStock($laboratory, $components);
 
         $laboratory->update(['capacity' => $laboratory->pcs()->count()]);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Created PC in laboratory: ' . $laboratory->lab_name,
+        ]);
 
         return redirect()->route('laboratory.show', $laboratory)
             ->with('success', 'PC berhasil ditambahkan.')
@@ -82,6 +88,12 @@ class PcController extends Controller
 
         $pc->update($validated);
 
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Updated PC #' . $pc->id .
+                ' in laboratory: ' . $laboratory->lab_name,
+        ]);
+
         return redirect()->route('laboratory.show', $laboratory)
             ->with('success', 'Data PC berhasil diperbarui.')
             ->with('section', 'pc');
@@ -97,6 +109,11 @@ class PcController extends Controller
         $this->returnLabStock($laboratory, $components);
 
         $pc->delete();
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Deleted PC #' . $pc->id .
+                ' from laboratory: ' . $laboratory->lab_name,
+        ]);
         $laboratory->update(['capacity' => $laboratory->pcs()->count()]);
 
         return redirect()->route('laboratory.show', $laboratory)
@@ -107,6 +124,11 @@ class PcController extends Controller
     {
         $request->validate(['status_pc' => 'required|in:active,inactive']);
         $pc->update(['status_pc' => $request->status_pc]);
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Changed PC #' . $pc->id .
+                ' status to ' . ucfirst($request->status_pc),
+        ]);
         return redirect()->back()
             ->with('success', 'Status PC berhasil diubah menjadi ' . $request->status_pc)
             ->with('section', 'pc');

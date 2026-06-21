@@ -89,9 +89,10 @@ Route::middleware('auth')->group(function () {
 
     // System Activity Logs
     Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
-    Route::get('/activity-log/export', function () {
-        return 'Export belum dibuat';
-    })->name('activity-log.export');
+    Route::get(
+    '/activity-log/export/{format}',
+    [ActivityLogController::class, 'export']
+    )->name('activity-log.export');
 
     // Return Requests (Retur Lab ke Gudang)
     Route::prefix('return-requests')->name('return-requests.')->group(function () {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\Laboratory;
 use App\Models\AssetLab;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -164,6 +165,11 @@ class LaboratoryController extends Controller
             }
         }
 
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Created laboratory: ' . $lab->lab_name,
+        ]);
+
         return redirect()->route('laboratory.index')
             ->with('success', "Lab {$lab->lab_name} berhasil ditambahkan.");
     }
@@ -286,6 +292,11 @@ class LaboratoryController extends Controller
             $laboratory->assets()->sync($sync);
         }
 
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Updated laboratory: ' . $laboratory->lab_name,
+        ]);
+
         return redirect()->route('laboratory.show', $laboratory)
             ->with('success', 'Lab berhasil diperbarui.');
     }
@@ -294,7 +305,12 @@ class LaboratoryController extends Controller
     {
         // Soft delete — stok TIDAK disentuh di sini.
         // Pengembalian stok hanya terjadi saat forceDestroy() (hapus permanen).
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Moved laboratory to recycle bin: ' . $laboratory->lab_name,
+        ]);
         $laboratory->delete();
+
 
         return redirect()->route('laboratory.index')
             ->with('success', "Lab {$laboratory->lab_name} dipindahkan ke Recycle Bin.");
@@ -325,6 +341,10 @@ class LaboratoryController extends Controller
 {
     $laboratory = Laboratory::onlyTrashed()->findOrFail($id);
     $laboratory->restore();
+    ActivityLog::create([
+        'user_id' => auth()->id(),
+        'activity' => 'Restored laboratory: ' . $laboratory->lab_name,
+    ]);
 
     return redirect()->route('laboratory.recycle-bin')
         ->with('success', "Lab {$laboratory->lab_name} berhasil dipulihkan.");
@@ -392,6 +412,11 @@ class LaboratoryController extends Controller
             return back()->with('error', "Lab {$labName} tidak bisa dihapus permanen karena masih ada riwayat transfer/retur request yang terkait.");
         }
 
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Permanently deleted laboratory: ' . $labName,
+        ]);
+
         return redirect()->route('laboratory.recycle-bin')
             ->with('success', "Lab {$labName} dihapus permanen. Stok sudah dikembalikan ke inventory.");
     }
@@ -403,6 +428,11 @@ class LaboratoryController extends Controller
         foreach ($labs as $laboratory) {
             $laboratory->delete(); // soft delete, sama seperti destroy()
         }
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Bulk moved laboratories to recycle bin: ' . implode(', ', $labs->pluck('lab_name')->toArray()),
+        ]);
 
         return redirect()->route('laboratory.index')
             ->with('success', count($labs) . ' lab dipindahkan ke Recycle Bin.');
