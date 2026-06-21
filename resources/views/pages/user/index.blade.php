@@ -22,12 +22,12 @@
                     <div class="filter-section">
                         <div class="filter-section-title">Role</div>
 
-                        @foreach (['admin', 'assistant'] as $role)
+                        @foreach (['spv inventory' => 'SPV Inventory', 'pic' => 'PIC', 'staff' => 'Staff'] as $roleValue => $roleLabel)
                             <label class="filter-checkbox-row">
-                                <input type="checkbox" name="role[]" value="{{ $role }}"
-                                    {{ in_array($role, (array) request('role', [])) ? 'checked' : '' }}
+                                <input type="checkbox" name="role[]" value="{{ $roleValue }}"
+                                    {{ in_array($roleValue, (array) request('role', [])) ? 'checked' : '' }}
                                     style="accent-color: #111B4C;">
-                                <span>{{ ucwords($role) }}</span>
+                                <span>{{ $roleLabel }}</span>
                             </label>
                         @endforeach
                     </div>
@@ -81,7 +81,6 @@
                     <x-table.th>Role</x-table.th>
                     <x-table.th>Lab</x-table.th>
                     <x-table.th>Username</x-table.th>
-                    <x-table.th>Password</x-table.th>
                     <x-table.th>Status</x-table.th>
                     <x-table.th align="center">Action</x-table.th>
                 </tr>
@@ -112,10 +111,6 @@
 
                         <x-table.td>
                             {{ $user->username }}
-                        </x-table.td>
-
-                        <x-table.td>
-                            ********
                         </x-table.td>
 
                         <x-table.td>

@@ -44,7 +44,7 @@ class Laboratory extends Model
             'asset_id'
         )->withPivot(['total_asset_lab', 'total_good_lab', 'total_damaged_lab', 'total_loss_lab']);
     }
-    
+
     public function pcs()
     {
         return $this->hasMany(

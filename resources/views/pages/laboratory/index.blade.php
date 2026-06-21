@@ -129,7 +129,8 @@ $componentPcAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'com
                                         </svg>
                                     </x-table.action>
 
-                                    {{-- Delete --}}
+                                    {{-- Delete (#11: hanya SPV) --}}
+                                    @if($isSPV)
                                     <form
                                         method="POST"
                                         action="{{ route('laboratory.destroy', $lab->id) }}"
@@ -152,6 +153,7 @@ $componentPcAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'com
                                             </svg>
                                         </x-table.action>
                                     </form>
+                                    @endif
                                 @else
                                     {{-- View --}}
                                     <x-table.action
@@ -223,8 +225,13 @@ $componentPcAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'com
                 </div>
                 <div style="margin-bottom:16px;">
                     <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">PC Capacity:</label>
+                    @php $pcStock = \App\Models\Asset::where('asset_category','pc')->sum('total_good'); @endphp
                     <input type="number" name="capacity" id="clab_capacity" placeholder="Enter here..." min="1"
+                           @if($pcStock > 0) max="{{ $pcStock }}" @endif
                            style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:14px; outline:none; box-sizing:border-box;" required>
+                    @if($pcStock > 0)
+                    <small style="display:block; margin-top:6px; color:#6b7280;">Maksimal {{ $pcStock }} unit (stok PC di Inventory &amp; Stock).</small>
+                    @endif
                 </div>
                 <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:24px;">
                     <button type="button" onclick="closeCreateModal()"

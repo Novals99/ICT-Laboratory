@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Asset extends Model
 {
@@ -71,5 +72,28 @@ class Asset extends Model
     public function logs()
     {
         return $this->hasMany(AssetLog::class);
+    }
+
+    /* ─────────────────────────────────────────────
+       SERIAL NUMBER
+       ───────────────────────────────────────────── */
+    public function serialNumbers(): HasMany
+    {
+        return $this->hasMany(AssetSerialNumber::class);
+    }
+
+    /** S/N yang masih bebas dipakai (belum terpasang di PC). */
+    public function availableSerials(): HasMany
+    {
+        return $this->serialNumbers()->where('status', 'available');
+    }
+
+    /**
+     * Apakah kategori ini memang memakai serial number?
+     * Hanya electronic & component-pc (& pc) yang punya unit fisik ber-S/N.
+     */
+    public function usesSerial(): bool
+    {
+        return in_array($this->asset_category, ['electronic', 'component-pc', 'pc'], true);
     }
 }

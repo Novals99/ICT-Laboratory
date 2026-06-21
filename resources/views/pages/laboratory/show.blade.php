@@ -344,43 +344,16 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
         </div>
         <form method="POST" action="{{ route('pc.store', $laboratory->id) }}" style="overflow-y:auto; flex:1; padding:24px; display:flex; flex-direction:column; gap:14px;">
             @csrf
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div>
-                    <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Type</label>
-                    <select name="type_pc" style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
-                        <option value="mahasiswa">Mahasiswa</option>
-                        <option value="dosen">Dosen</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Processor</label>
-                    <input type="hidden" name="processor" id="apc_processor_val">
-                    <input type="text" id="apc_processor_search"
-                           placeholder="Search component or type manually..."
-                           autocomplete="off"
-                           oninput="filterAddDropdown('processor')"
-                           onfocus="showAddDropdown('processor')"
-                           style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
-                    <div id="apc_processor_dropdown"
-                         style="display:none; position:relative; z-index:200; background:var(--bg-main); border:1px solid var(--border-main); border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); margin-top:2px;">
-                    </div>
-                </div>
+            <div>
+                <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Type</label>
+                <select name="type_pc" style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
+                    <option value="mahasiswa">Mahasiswa</option>
+                    <option value="dosen">Dosen</option>
+                </select>
             </div>
-            @foreach(['ram'=>'RAM','ssd'=>'SSD','motherboard'=>'Motherboard','vga'=>'VGA','cpu_fan'=>'CPU Fan','powersupply'=>'Power Supply'] as $f => $l)
-            <div style="position:relative;">
-                <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">{{ $l }}</label>
-                <input type="hidden" name="{{ $f }}" id="apc_{{ $f }}_val">
-                <input type="text" id="apc_{{ $f }}_search"
-                       placeholder="Search component or type manually..."
-                       autocomplete="off"
-                       oninput="filterAddDropdown('{{ $f }}')"
-                       onfocus="showAddDropdown('{{ $f }}')"
-                       style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
-                <div id="apc_{{ $f }}_dropdown"
-                     style="display:none; position:relative; z-index:200; background:var(--bg-main); border:1px solid var(--border-main); border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); margin-top:2px;">
-                </div>
-            </div>
-            @endforeach
+
+            {{-- (#8) Pemilih komponen + serial number per slot (termasuk RAM 2 opsional) --}}
+            <x-partials.pc-component-picker :laboratory="$laboratory" />
             <div style="display:flex; justify-content:flex-end; gap:8px; padding-top:4px;">
                 <button type="button" onclick="closeAddPcModal()"
                         style="border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
@@ -638,7 +611,11 @@ document.addEventListener('click', e => {
 });
 
 // ── Add PC ──
-function openAddPcModal()  { document.getElementById('modal-add-pc').style.display = 'flex'; }
+function openAddPcModal()  {
+    const m = document.getElementById('modal-add-pc');
+    m.style.display = 'flex';
+    if (window.initPcComponentPickers) window.initPcComponentPickers(m);
+}
 function closeAddPcModal() { document.getElementById('modal-add-pc').style.display = 'none'; }
 document.getElementById('modal-add-pc').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAddPcModal();

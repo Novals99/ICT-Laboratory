@@ -89,6 +89,34 @@
 
     </div>
 
+    {{-- ── (#3) LOW STOCK ITEMS (ambil dari Asset Lab, stok < 3) ── --}}
+    <div class="db-card" style="padding:18px 20px;">
+        <h2 class="db-card-title" style="margin:0 0 14px;">Low Stock Items</h2>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            @forelse($labLowStockItems as $item)
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fef2f2; border:1px solid #fee2e2; border-radius:10px; padding:10px 14px;">
+                    <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0;">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        <span style="font-size:13px; font-weight:600; color:#991b1b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            {{ $item['asset_name'] }}
+                            <span style="font-weight:400; color:#b91c1c;">· {{ $item['lab_name'] }}</span>
+                        </span>
+                    </div>
+                    <span style="font-size:12.5px; font-weight:600; color:#b91c1c; white-space:nowrap;">
+                        In stock: {{ $item['in_stock'] }}
+                    </span>
+                </div>
+            @empty
+                <p style="color:#9ca3af; font-size:13px; font-style:italic; margin:0;">Semua stok lab aman</p>
+            @endforelse
+        </div>
+    </div>
+
     {{-- ── MIDDLE: Staff Table + Chart ── --}}
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
 
@@ -179,22 +207,15 @@
                         </td>
                         <td>
                             <div class="action-btns">
-                                {{-- view --}}
-                                <a href="#" class="action-btn" title="View" style="color:#6b7280;">
+                                {{-- view only (staff tidak boleh edit) --}}
+                                <button type="button" onclick="openStaffLabRequestModal({{ $req->id }})"
+                                        class="action-btn" title="View" style="color:#6b7280; background:none; border:none; cursor:pointer;">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                         <circle cx="12" cy="12" r="3"/>
                                     </svg>
-                                </a>
-                                {{-- edit --}}
-                                <a href="#" class="action-btn action-edit" title="Edit">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                    </svg>
-                                </a>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -250,13 +271,13 @@
                         </td>
                         <td>
                             <div class="action-btns">
-                                <a href="{{ route('return-requests.index') }}" class="action-btn" title="View" style="color:#6b7280;">
+                                <button type="button" onclick="openStaffReturnModal({{ $req->id }})" class="action-btn" title="View" style="color:#6b7280; background:none; border:none; cursor:pointer;">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                         <circle cx="12" cy="12" r="3"/>
                                     </svg>
-                                </a>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -314,13 +335,13 @@
                         </td>
                         <td>
                             <div class="action-btns">
-                                <a href="{{ route('transfer-requests.index') }}" class="action-btn" title="View" style="color:#6b7280;">
+                                <button type="button" onclick="openStaffTransferModal({{ $req->id }})" class="action-btn" title="View" style="color:#6b7280; background:none; border:none; cursor:pointer;">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                         <circle cx="12" cy="12" r="3"/>
                                     </svg>
-                                </a>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -336,6 +357,88 @@
         </div>
     </div>
 
+    </div>
+
+    {{-- ============ (#3) MODAL VIEW-ONLY UNTUK STAFF ============ --}}
+
+    {{-- Lab Request (read-only) --}}
+    <div id="staffLabModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:16px; width:100%; max-width:780px; margin:0 16px; max-height:90vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:22px 28px 14px; border-bottom:1px solid #e5e7eb;">
+                <h3 style="font-size:18px; font-weight:700; color:#111827; margin:0;">Request Information</h3>
+                <button onclick="closeStaffModal('staffLabModal')" style="background:none; border:none; cursor:pointer; color:#6b7280;">
+                    <svg style="width:20px;height:20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div style="padding:18px 28px;">
+                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
+                    <div style="display:flex; gap:12px; align-items:center;"><label style="width:100px; text-align:right; font-size:13px; color:#6b7280;">ID Request:</label><input id="staff_lab_id" readonly style="width:220px; padding:7px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#f9fafb;"></div>
+                    <div style="display:flex; gap:12px; align-items:center;"><label style="width:100px; text-align:right; font-size:13px; color:#6b7280;">Name:</label><input id="staff_lab_name" readonly style="width:220px; padding:7px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#f9fafb;"></div>
+                    <div style="display:flex; gap:12px; align-items:center;"><label style="width:100px; text-align:right; font-size:13px; color:#6b7280;">Total:</label><input id="staff_lab_total" readonly style="width:220px; padding:7px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#f9fafb;"></div>
+                </div>
+                @foreach (['electronic' => 'Electronic Category', 'non_electronic' => 'Non-Electronic Category', 'component_pc' => 'PC Component Category'] as $k => $label)
+                    <p style="font-size:13px; color:#6b7280; margin:12px 0 6px;">{{ $label }}</p>
+                    <table style="width:100%; font-size:13px; border:1px solid #e5e7eb; border-radius:8px; border-collapse:separate; border-spacing:0; overflow:hidden; margin-bottom:6px;">
+                        <thead><tr style="background:#f3f4f6;"><th style="padding:8px 14px; text-align:left;">Asset Name</th><th style="padding:8px 14px; text-align:center;">Qty</th><th style="padding:8px 14px; text-align:center;">Status</th></tr></thead>
+                        <tbody id="staff_lab_{{ $k }}"></tbody>
+                    </table>
+                @endforeach
+            </div>
+            <div style="display:flex; justify-content:flex-end; padding:0 28px 22px;">
+                <button onclick="closeStaffModal('staffLabModal')" style="border:1px solid #d1d5db; background:#fff; color:#374151; border-radius:8px; padding:8px 18px; font-size:13px; font-weight:600; cursor:pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Return Request (read-only) --}}
+    <div id="staffReturnModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:16px; width:100%; max-width:720px; margin:0 16px; max-height:90vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:22px 28px 14px; border-bottom:1px solid #e5e7eb;">
+                <h3 style="font-size:18px; font-weight:700; color:#111827; margin:0;">Return Request Information</h3>
+                <button onclick="closeStaffModal('staffReturnModal')" style="background:none; border:none; cursor:pointer; color:#6b7280;"><svg style="width:20px;height:20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div style="padding:18px 28px;">
+                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
+                    <div style="display:flex; gap:12px; align-items:center;"><label style="width:120px; text-align:right; font-size:13px; color:#6b7280;">Kode Request:</label><input id="staff_ret_code" readonly style="width:230px; padding:7px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#f9fafb;"></div>
+                    <div style="display:flex; gap:12px; align-items:center;"><label style="width:120px; text-align:right; font-size:13px; color:#6b7280;">Lab:</label><input id="staff_ret_lab" readonly style="width:230px; padding:7px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#f9fafb;"></div>
+                    <div style="display:flex; gap:12px; align-items:center;"><label style="width:120px; text-align:right; font-size:13px; color:#6b7280;">Diajukan oleh:</label><input id="staff_ret_by" readonly style="width:230px; padding:7px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#f9fafb;"></div>
+                </div>
+                <p style="font-size:13px; color:#6b7280; margin:0 0 6px;">Barang yang Diretur</p>
+                <table style="width:100%; font-size:13px; border:1px solid #e5e7eb; border-radius:8px; border-collapse:separate; border-spacing:0; overflow:hidden;">
+                    <thead><tr style="background:#f3f4f6;"><th style="padding:8px 14px; text-align:left;">Asset Name</th><th style="padding:8px 14px; text-align:center;">Qty</th><th style="padding:8px 14px; text-align:center;">Qty Disetujui</th></tr></thead>
+                    <tbody id="staff_ret_items"></tbody>
+                </table>
+            </div>
+            <div style="display:flex; justify-content:flex-end; padding:0 28px 22px;">
+                <button onclick="closeStaffModal('staffReturnModal')" style="border:1px solid #d1d5db; background:#fff; color:#374151; border-radius:8px; padding:8px 18px; font-size:13px; font-weight:600; cursor:pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Transfer Request (read-only) --}}
+    <div id="staffTransferModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:16px; width:100%; max-width:720px; margin:0 16px; max-height:90vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:22px 28px 14px; border-bottom:1px solid #e5e7eb;">
+                <h3 style="font-size:18px; font-weight:700; color:#111827; margin:0;">Transfer Request Information</h3>
+                <button onclick="closeStaffModal('staffTransferModal')" style="background:none; border:none; cursor:pointer; color:#6b7280;"><svg style="width:20px;height:20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div style="padding:18px 28px;">
+                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
+                    <div style="display:flex; gap:12px; align-items:center;"><label style="width:120px; text-align:right; font-size:13px; color:#6b7280;">Kode Request:</label><input id="staff_trf_code" readonly style="width:230px; padding:7px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#f9fafb;"></div>
+                    <div style="display:flex; gap:12px; align-items:center;"><label style="width:120px; text-align:right; font-size:13px; color:#6b7280;">From Lab:</label><input id="staff_trf_from" readonly style="width:230px; padding:7px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#f9fafb;"></div>
+                    <div style="display:flex; gap:12px; align-items:center;"><label style="width:120px; text-align:right; font-size:13px; color:#6b7280;">To Lab:</label><input id="staff_trf_to" readonly style="width:230px; padding:7px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#f9fafb;"></div>
+                    <div style="display:flex; gap:12px; align-items:center;"><label style="width:120px; text-align:right; font-size:13px; color:#6b7280;">Diajukan oleh:</label><input id="staff_trf_by" readonly style="width:230px; padding:7px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#f9fafb;"></div>
+                </div>
+                <p style="font-size:13px; color:#6b7280; margin:0 0 6px;">Barang yang Ditransfer</p>
+                <table style="width:100%; font-size:13px; border:1px solid #e5e7eb; border-radius:8px; border-collapse:separate; border-spacing:0; overflow:hidden;">
+                    <thead><tr style="background:#f3f4f6;"><th style="padding:8px 14px; text-align:left;">Asset Name</th><th style="padding:8px 14px; text-align:center;">Qty</th><th style="padding:8px 14px; text-align:center;">Qty Disetujui</th></tr></thead>
+                    <tbody id="staff_trf_items"></tbody>
+                </table>
+            </div>
+            <div style="display:flex; justify-content:flex-end; padding:0 28px 22px;">
+                <button onclick="closeStaffModal('staffTransferModal')" style="border:1px solid #d1d5db; background:#fff; color:#374151; border-radius:8px; padding:8px 18px; font-size:13px; font-weight:600; cursor:pointer;">Close</button>
+            </div>
+        </div>
     </div>
 
 @endsection
@@ -607,6 +710,87 @@
                     },
                 },
             },
+        });
+
+        /* ============ (#3) MODAL VIEW-ONLY STAFF ============ */
+        function closeStaffModal(id) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        }
+
+        function staffBadge(status) {
+            const s = (status || 'pending').toString().toLowerCase();
+            if (['approved', 'completed', 'done'].includes(s)) return '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">' + (s === 'approved' ? 'Approved' : 'Completed') + '</span>';
+            if (s === 'rejected') return '<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Rejected</span>';
+            if (s === 'partial') return '<span style="background:#2563eb;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Partial</span>';
+            return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+        }
+
+        const STAFF_LAB_KEYS = ['electronic', 'non_electronic', 'component_pc'];
+
+        function openStaffLabRequestModal(id) {
+            document.getElementById('staffLabModal').style.display = 'flex';
+            STAFF_LAB_KEYS.forEach(k => document.getElementById('staff_lab_' + k).innerHTML =
+                '<tr><td colspan="3" style="padding:10px;text-align:center;color:#9ca3af;font-size:12px;">Memuat...</td></tr>');
+
+            fetch(`/requestlab/${id}/detail`)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('staff_lab_id').value = d.request_id;
+                    document.getElementById('staff_lab_name').value = d.user_name;
+                    document.getElementById('staff_lab_total').value = d.total_request;
+                    STAFF_LAB_KEYS.forEach(k => {
+                        const items = d[k] || [];
+                        document.getElementById('staff_lab_' + k).innerHTML = items.length
+                            ? items.map(it => `<tr style="border-top:1px solid #e5e7eb;"><td style="padding:8px 14px;">${it.asset_name}</td><td style="padding:8px 14px;text-align:center;">${it.quantity}</td><td style="padding:8px 14px;text-align:center;">${staffBadge(it.status)}</td></tr>`).join('')
+                            : '<tr><td colspan="3" style="padding:10px;text-align:center;color:#9ca3af;font-size:12px;">Tidak ada data</td></tr>';
+                    });
+                })
+                .catch(() => STAFF_LAB_KEYS.forEach(k => document.getElementById('staff_lab_' + k).innerHTML =
+                    '<tr><td colspan="3" style="padding:10px;text-align:center;color:#f87171;font-size:12px;">Gagal memuat data</td></tr>'));
+        }
+
+        function openStaffReturnModal(id) {
+            document.getElementById('staffReturnModal').style.display = 'flex';
+            document.getElementById('staff_ret_items').innerHTML = '<tr><td colspan="3" style="padding:10px;text-align:center;color:#9ca3af;font-size:12px;">Memuat...</td></tr>';
+            fetch(`/return-requests/${id}/detail`)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('staff_ret_code').value = d.request_code ?? '-';
+                    document.getElementById('staff_ret_lab').value = d.lab ?? '-';
+                    document.getElementById('staff_ret_by').value = d.requested_by ?? '-';
+                    const items = d.items || [];
+                    document.getElementById('staff_ret_items').innerHTML = items.length
+                        ? items.map(it => `<tr style="border-top:1px solid #e5e7eb;"><td style="padding:8px 14px;">${it.asset_name}</td><td style="padding:8px 14px;text-align:center;">${it.quantity}</td><td style="padding:8px 14px;text-align:center;">${it.quantity_approved ?? it.quantity}</td></tr>`).join('')
+                        : '<tr><td colspan="3" style="padding:10px;text-align:center;color:#9ca3af;font-size:12px;">Tidak ada barang</td></tr>';
+                })
+                .catch(() => document.getElementById('staff_ret_items').innerHTML = '<tr><td colspan="3" style="padding:10px;text-align:center;color:#f87171;font-size:12px;">Gagal memuat data</td></tr>');
+        }
+
+        function openStaffTransferModal(id) {
+            document.getElementById('staffTransferModal').style.display = 'flex';
+            document.getElementById('staff_trf_items').innerHTML = '<tr><td colspan="3" style="padding:10px;text-align:center;color:#9ca3af;font-size:12px;">Memuat...</td></tr>';
+            fetch(`/transfer-requests/${id}/detail`)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('staff_trf_code').value = d.request_code ?? '-';
+                    document.getElementById('staff_trf_from').value = d.from_lab ?? '-';
+                    document.getElementById('staff_trf_to').value = d.to_lab ?? '-';
+                    document.getElementById('staff_trf_by').value = d.requested_by ?? '-';
+                    const items = d.items || [];
+                    document.getElementById('staff_trf_items').innerHTML = items.length
+                        ? items.map(it => `<tr style="border-top:1px solid #e5e7eb;"><td style="padding:8px 14px;">${it.asset_name}</td><td style="padding:8px 14px;text-align:center;">${it.quantity}</td><td style="padding:8px 14px;text-align:center;">${it.quantity_approved ?? it.quantity}</td></tr>`).join('')
+                        : '<tr><td colspan="3" style="padding:10px;text-align:center;color:#9ca3af;font-size:12px;">Tidak ada barang</td></tr>';
+                })
+                .catch(() => document.getElementById('staff_trf_items').innerHTML = '<tr><td colspan="3" style="padding:10px;text-align:center;color:#f87171;font-size:12px;">Gagal memuat data</td></tr>');
+        }
+
+        ['staffLabModal', 'staffReturnModal', 'staffTransferModal'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('click', e => { if (e.target === el) el.style.display = 'none'; });
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') ['staffLabModal', 'staffReturnModal', 'staffTransferModal'].forEach(closeStaffModal);
         });
     </script>
 @endpush

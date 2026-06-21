@@ -8,6 +8,7 @@ use App\Http\Controllers\RequestLabController;
 use App\Http\Controllers\StaffLabController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\SerialNumberController;
 use App\Http\Controllers\AssetLabController;
 use App\Http\Controllers\AssetLogController;
 use App\Http\Controllers\ActivityLogController;
@@ -144,6 +145,10 @@ Route::middleware('auth')->group(function () {
 
     // AJAX API Endpoints
     Route::get('/api/labs/{labId}/assets', [ReturnRequestController::class, 'getLabAssets'])->name('api.labs.assets');
+
+    // Serial Number JSON feeds (dropdown S/N: Edit Asset, Asset Lab, Add/Edit PC, Create Lab)
+    Route::get('/api/assets/{asset}/serials', [SerialNumberController::class, 'byAsset'])->name('api.assets.serials');
+    Route::get('/api/laboratory/{laboratory}/pc-components', [SerialNumberController::class, 'pcComponents'])->name('api.lab.pc-components');
 
     // ── SUPERVISOR ONLY (Laboratory Recycle Bin) ────────────────────────────────
     Route::middleware(\App\Http\Middleware\EnsureSpv::class)->group(function () {

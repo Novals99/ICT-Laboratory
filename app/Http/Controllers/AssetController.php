@@ -4,17 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\Asset;
 use App\Models\AssetLog;
+use App\Models\AssetSerialNumber;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 use App\Exports\AssetExport;
 
 class AssetController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    /** Kategori yang memakai serial number per unit. */
+    private const SERIAL_CATEGORIES = ['electronic', 'component-pc', 'pc'];
+
+    /** Sub-tipe komponen yang valid (untuk PC Component). */
+    private const COMPONENT_TYPES = ['processor', 'ram', 'ssd', 'motherboard', 'vga', 'cpu_fan', 'powersupply'];
+
     public function index()
     {
         $assets = Asset::query()
@@ -22,221 +27,177 @@ class AssetController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('asset_name', 'like', "%{$search}%")
                         ->orWhere('asset_category', 'like', "%{$search}%")
-                        ->orWhere('total_asset', 'like', "%{$search}%")
-                        ->orWhere('total_good', 'like', "%{$search}%")
-                        ->orWhere('total_damaged', 'like', "%{$search}%")
-                        ->orWhere('total_loss', 'like', "%{$search}%");
+                        ->orWhere('component_type', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%");
                 });
             })
             ->when(request('category'), function ($query, $categories) {
                 $query->whereIn('asset_category', (array) $categories);
             })
+            ->withCount('serialNumbers')
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
         return view('pages.asset.index', compact('assets'));
     }
-    
-    /**
-     * Show the form for creating a new resource.
-     */
+
     public function create()
     {
         return redirect()->route('asset.index');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
+        // (#17) Category kini bisa per-item (dropdown di dalam Asset Information).
+        // Tetap menerima asset_category top-level agar form lama tidak rusak.
         $validated = $request->validate([
-            'asset_category' => [
-                'required',
-                Rule::in(['electronic', 'non-electronic', 'component-pc']),
-            ],
+            'asset_category' => ['nullable', Rule::in(['electronic', 'non-electronic', 'component-pc'])],
 
             'items' => ['required', 'array', 'min:1'],
 
-            'items.*.asset_name' => ['required', 'string', 'max:255'],
-            'items.*.total_asset' => ['required', 'integer', 'min:0'],
-            'items.*.total_good' => ['required', 'integer', 'min:0'],
-            'items.*.total_damaged' => ['required', 'integer', 'min:0'],
-            'items.*.total_loss' => ['required', 'integer', 'min:0'],
-            'items.*.source' => ['nullable', 'string', 'max:255'],
-            'items.*.notes' => ['nullable', 'string'],
+            'items.*.asset_name'     => ['required', 'string', 'max:255'],
+            'items.*.asset_category' => ['nullable', Rule::in(['electronic', 'non-electronic', 'component-pc'])],
+            'items.*.component_type' => ['nullable', Rule::in(self::COMPONENT_TYPES)],
+            'items.*.total_asset'    => ['required', 'integer', 'min:0'],
+            'items.*.total_good'     => ['required', 'integer', 'min:0'],
+            // (#17) damaged & loss tidak lagi diinput → default 0.
+            'items.*.total_damaged'  => ['nullable', 'integer', 'min:0'],
+            'items.*.total_loss'     => ['nullable', 'integer', 'min:0'],
+            'items.*.source'         => ['nullable', 'string', 'max:255'],
+            'items.*.notes'          => ['nullable', 'string'],
+            // (#17) serial number opsional (array string) untuk kategori ber-S/N.
+            'items.*.serials'        => ['nullable', 'array'],
+            'items.*.serials.*'      => ['nullable', 'string', 'max:100'],
         ]);
 
-        foreach ($validated['items'] as $index => $item) {
-            $totalPhysicalStock = $item['total_good'] + $item['total_damaged'];
+        DB::transaction(function () use ($validated, $request) {
+            foreach ($validated['items'] as $item) {
+                $category = $item['asset_category'] ?? $validated['asset_category'] ?? 'electronic';
+                $good     = (int) $item['total_good'];
+                $damaged  = (int) ($item['total_damaged'] ?? 0);
+                $loss     = (int) ($item['total_loss'] ?? 0);
 
-            if ($totalPhysicalStock !== (int) $item['total_asset']) {
-                return back()
-                    ->withInput()
-                    ->withErrors([
-                        "items.{$index}.total_asset" => 'Total good + damaged tidak boleh lebih besar dari total asset.',
-                    ]);
+                $asset = Asset::create([
+                    'asset_name'     => $item['asset_name'],
+                    'asset_category' => $category,
+                    'component_type' => $category === 'component-pc' ? ($item['component_type'] ?? null) : null,
+                    'total_good'     => $good,
+                    'total_damaged'  => $damaged,
+                    'total_loss'     => $loss,
+                ]);
+
+                // (#16/#17) Buat unit serial number untuk kategori ber-S/N.
+                $this->generateSerials($asset, $good, $item['serials'] ?? []);
+
+                AssetLog::create([
+                    'asset_id' => $asset->id,
+                    'user_id'  => auth()->id(),
+                    'type'     => 'stock_in',
+                    'quantity' => $asset->total_asset,
+                    'before_total_asset' => 0, 'after_total_asset' => $asset->total_asset,
+                    'before_total_good' => 0, 'after_total_good' => $good,
+                    'before_total_damaged' => 0, 'after_total_damaged' => $damaged,
+                    'before_total_loss' => 0, 'after_total_loss' => $loss,
+                    'source' => $item['source'] ?? null,
+                    'notes'  => $item['notes'] ?? 'Initial asset stock.',
+                ]);
+
+                ActivityLog::create([
+                    'user_id'  => auth()->id(),
+                    'activity' => 'Created asset: ' . $asset->asset_name,
+                ]);
             }
-        }
+        });
 
-        foreach ($validated['items'] as $item) {
-            $asset = Asset::create([
-                'asset_name' => $item['asset_name'],
-                'asset_category' => $validated['asset_category'],
-                'total_asset' => $item['total_asset'],
-                'total_good' => $item['total_good'],
-                'total_damaged' => $item['total_damaged'],
-                'total_loss' => $item['total_loss'],
-            ]);
-
-            AssetLog::create([
-                'asset_id' => $asset->id,
-                'user_id' => auth()->id(),
-                'type' => 'stock_in',
-                'quantity' => $item['total_asset'],
-
-                'before_total_asset' => 0,
-                'after_total_asset' => (int) $item['total_asset'],
-
-                'before_total_good' => 0,
-                'after_total_good' => (int) $item['total_good'],
-
-                'before_total_damaged' => 0,
-                'after_total_damaged' => (int) $item['total_damaged'],
-
-                'before_total_loss' => 0,
-                'after_total_loss' => (int) $item['total_loss'],
-
-                'source' => $item['source'] ?? null,
-                'notes' => $item['notes'] ?? 'Initial asset stock.',
-            ]);
-
-            ActivityLog::create([
-                'user_id' => auth()->id(),
-                'activity' => 'Created asset: ' . $asset->asset_name,
-            ]);
-        }
-
-        return redirect()
-            ->route('asset.index')
-            ->with('success', 'Asset berhasil ditambahkan.');
+        return redirect()->route('asset.index')->with('success', 'Asset berhasil ditambahkan.');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Asset $asset)
     {
         return redirect()->route('asset.index');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Asset $asset)
     {
         return redirect()->route('asset.index');
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Asset $asset)
     {
         $validated = $request->validate([
-            'asset_name' => ['required', 'string', 'max:255'],
-            'asset_category' => [
-                'required',
-                Rule::in(['electronic', 'non-electronic', 'component-pc']),
-            ],
-            'total_asset' => ['required', 'integer', 'min:0'],
-            'total_good' => ['required', 'integer', 'min:0'],
-            'total_damaged' => ['required', 'integer', 'min:0'],
-            'total_loss' => ['required', 'integer', 'min:0'],
-            'source' => ['nullable', 'string', 'max:255'],
-            'notes' => ['nullable', 'string'],
+            'asset_name'     => ['required', 'string', 'max:255'],
+            'asset_category' => ['required', Rule::in(['electronic', 'non-electronic', 'component-pc'])],
+            'component_type' => ['nullable', Rule::in(self::COMPONENT_TYPES)],
+            'total_asset'    => ['required', 'integer', 'min:0'],
+            'total_good'     => ['required', 'integer', 'min:0'],
+            'total_damaged'  => ['required', 'integer', 'min:0'],
+            'total_loss'     => ['required', 'integer', 'min:0'],
+            'source'         => ['nullable', 'string', 'max:255'],
+            'notes'          => ['nullable', 'string'],
+            'serials'        => ['nullable', 'array'],
+            'serials.*'      => ['nullable', 'string', 'max:100'],
         ]);
 
-        $totalPhysicalStock = $validated['total_good'] + $validated['total_damaged'];
-
-        if ($totalPhysicalStock > $validated['total_asset']) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'total_asset' => 'Total good + damaged tidak boleh lebih besar dari total asset.',
-                ]);
-        }
-
-        $oldTotalAsset = $asset->total_asset;
-        $oldGood = $asset->total_good;
-        $oldDamaged = $asset->total_damaged;
-        $oldLoss = $asset->total_loss;
-
-        $asset->update([
-            'asset_name' => $validated['asset_name'],
-            'asset_category' => $validated['asset_category'],
-            'total_asset' => $validated['total_asset'],
-            'total_good' => $validated['total_good'],
-            'total_damaged' => $validated['total_damaged'],
-            'total_loss' => $validated['total_loss'],
-        ]);
-
-        $stockChanged =
-            $oldTotalAsset !== (int) $validated['total_asset'] ||
-            $oldGood !== (int) $validated['total_good'] ||
-            $oldDamaged !== (int) $validated['total_damaged'] ||
-            $oldLoss !== (int) $validated['total_loss'];
-
-        if ($stockChanged) {
-            AssetLog::create([
-                'asset_id' => $asset->id,
-                'user_id' => auth()->id(),
-                'type' => 'adjustment',
-                'quantity' => $validated['total_asset'] - $oldTotalAsset,
-
-                'before_total_asset' => $oldTotalAsset,
-                'after_total_asset' => (int) $validated['total_asset'],
-
-                'before_total_good' => $oldGood,
-                'after_total_good' => (int) $validated['total_good'],
-
-                'before_total_damaged' => $oldDamaged,
-                'after_total_damaged' => (int) $validated['total_damaged'],
-
-                'before_total_loss' => $oldLoss,
-                'after_total_loss' => (int) $validated['total_loss'],
-
-                'source' => $validated['source'] ?? null,
-                'notes' => $validated['notes'] ?? 'Asset stock updated.',
+        if ($validated['total_good'] + $validated['total_damaged'] > $validated['total_asset']) {
+            return back()->withInput()->withErrors([
+                'total_asset' => 'Total good + damaged tidak boleh lebih besar dari total asset.',
             ]);
         }
 
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'activity' => 'Updated asset: ' . $asset->asset_name,
-        ]);
+        DB::transaction(function () use ($asset, $validated) {
+            $old = $asset->only(['total_asset', 'total_good', 'total_damaged', 'total_loss']);
 
-        return redirect()
-            ->route('asset.index')
-            ->with('success', 'Asset berhasil diperbarui.');
+            $asset->update([
+                'asset_name'     => $validated['asset_name'],
+                'asset_category' => $validated['asset_category'],
+                'component_type' => $validated['asset_category'] === 'component-pc' ? ($validated['component_type'] ?? null) : null,
+                'total_good'     => $validated['total_good'],
+                'total_damaged'  => $validated['total_damaged'],
+                'total_loss'     => $validated['total_loss'],
+            ]);
+
+            // (#16) Rekonsiliasi serial: hormati daftar S/N yang dikirim dari form Edit.
+            //  - serial in_use (terpasang di PC) wajib dipertahankan
+            //  - serial available yang tidak ada di daftar → dihapus
+            //  - serial baru di daftar → dibuat
+            //  - bila daftar kosong, samakan jumlah dgn total_good (auto-generate)
+            $this->reconcileSerials($asset, $validated['serials'] ?? null, (int) $validated['total_good']);
+
+            if ($old !== $asset->only(['total_asset', 'total_good', 'total_damaged', 'total_loss'])) {
+                AssetLog::create([
+                    'asset_id' => $asset->id,
+                    'user_id'  => auth()->id(),
+                    'type'     => 'adjustment',
+                    'quantity' => $asset->total_asset - $old['total_asset'],
+                    'before_total_asset' => $old['total_asset'], 'after_total_asset' => $asset->total_asset,
+                    'before_total_good' => $old['total_good'], 'after_total_good' => $asset->total_good,
+                    'before_total_damaged' => $old['total_damaged'], 'after_total_damaged' => $asset->total_damaged,
+                    'before_total_loss' => $old['total_loss'], 'after_total_loss' => $asset->total_loss,
+                    'source' => $validated['source'] ?? null,
+                    'notes'  => $validated['notes'] ?? 'Asset stock updated.',
+                ]);
+            }
+
+            ActivityLog::create([
+                'user_id'  => auth()->id(),
+                'activity' => 'Updated asset: ' . $asset->asset_name,
+            ]);
+        });
+
+        return redirect()->route('asset.index')->with('success', 'Asset berhasil diperbarui.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Asset $asset)
     {
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id'  => auth()->id(),
             'activity' => 'Deleted asset: ' . $asset->asset_name,
         ]);
-        
+
         $asset->delete();
 
-        return redirect()
-            ->route('asset.index')
-            ->with('success', 'Asset berhasil dihapus.');
+        return redirect()->route('asset.index')->with('success', 'Asset berhasil dihapus.');
     }
 
     public function export(string $format)
@@ -249,5 +210,74 @@ class AssetController extends Controller
             'csv'   => $export->downloadCsv(),
             default => abort(404),
         };
+    }
+
+    /* ─────────────────────────── serial helpers ─────────────────────────── */
+
+    /** Buat $count unit serial number. Pakai S/N manual bila ada, sisanya auto. */
+    private function generateSerials(Asset $asset, int $count, array $manual = []): void
+    {
+        if (! in_array($asset->asset_category, self::SERIAL_CATEGORIES, true) || $count <= 0) {
+            return;
+        }
+
+        $manual = array_values(array_filter(array_map('trim', $manual)));
+
+        for ($i = 0; $i < $count; $i++) {
+            $serial = $manual[$i] ?? ($asset->sku . '-' . str_pad($i + 1, 3, '0', STR_PAD_LEFT));
+
+            AssetSerialNumber::firstOrCreate(
+                ['asset_id' => $asset->id, 'serial_number' => $serial],
+                ['condition' => 'good', 'status' => 'available'],
+            );
+        }
+    }
+
+    /**
+     * Rekonsiliasi unit serial saat edit asset.
+     *
+     * @param  array|null $submitted  daftar S/N dari form (null = tidak dikirim → mode jumlah)
+     */
+    private function reconcileSerials(Asset $asset, ?array $submitted, int $targetGood): void
+    {
+        if (! in_array($asset->asset_category, self::SERIAL_CATEGORIES, true)) {
+            return;
+        }
+
+        // Mode jumlah: form tidak mengirim daftar serial.
+        if ($submitted === null) {
+            $existing = $asset->serialNumbers()->count();
+            if ($targetGood > $existing) {
+                $this->generateSerials($asset, $targetGood, []);
+            } elseif ($targetGood < $existing) {
+                $asset->serialNumbers()
+                    ->where('status', 'available')
+                    ->latest('id')
+                    ->limit($existing - $targetGood)
+                    ->delete();
+            }
+            return;
+        }
+
+        // Mode daftar: rekonsiliasi berdasarkan nilai.
+        $submitted = array_values(array_unique(array_filter(array_map('trim', $submitted))));
+
+        // Serial yang terpasang di PC tidak boleh hilang dari daftar.
+        $locked = $asset->serialNumbers()->where('status', 'in_use')->pluck('serial_number')->all();
+        $final  = array_values(array_unique(array_merge($locked, $submitted)));
+
+        // Hapus serial available yang tidak ada lagi di daftar final.
+        $asset->serialNumbers()
+            ->where('status', 'available')
+            ->whereNotIn('serial_number', $final)
+            ->delete();
+
+        // Tambah serial baru.
+        foreach ($final as $sn) {
+            AssetSerialNumber::firstOrCreate(
+                ['asset_id' => $asset->id, 'serial_number' => $sn],
+                ['condition' => 'good', 'status' => 'available'],
+            );
+        }
     }
 }

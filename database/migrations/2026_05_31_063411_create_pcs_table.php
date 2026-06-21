@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('motherboard')->nullable();
             $table->string('vga')->nullable();
             $table->string('cpu_fan')->nullable();
-            $table->string('powersupply')->nullable();            
+            $table->string('powersupply')->nullable();
             $table->timestamps();
         });
     }

@@ -326,7 +326,7 @@
         <select name="lab_id" required
             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
             <option value="">Pilih Lab</option>
-            @foreach ($laboratories as $lab)
+            @foreach (auth()->user()->labs as $lab)
                 <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
             @endforeach
         </select>

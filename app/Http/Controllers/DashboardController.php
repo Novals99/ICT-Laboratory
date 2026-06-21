@@ -7,6 +7,7 @@ use App\Models\Laboratory;
 use App\Models\RequestLab;
 use App\Models\RequestItem;
 use App\Models\Asset;
+use App\Models\AssetLab;
 
 class DashboardController extends Controller
 {
@@ -17,7 +18,6 @@ class DashboardController extends Controller
         if ($user->role === 'spv inventory') {
             return $this->spvDashboard();
         }
-
 
         return $this->staffDashboard($user);
     }
@@ -44,14 +44,11 @@ class DashboardController extends Controller
             ];
         })->values();
 
-        $lowStockItems = \App\Models\Asset::where('total_good', '<=', 10)
+        // Low stock GUDANG (asset SPV) — tetap seperti semula.
+        $lowStockItems = Asset::where('total_good', '<=', 10)
             ->orderBy('total_good')
             ->limit(6)
-            ->get([
-                'id',
-                'asset_name',
-                'total_good',
-            ]);
+            ->get(['id', 'asset_name', 'total_good']);
 
         $recentRequests = RequestLab::with('user')
             ->withSum('request_items as total_requested_items', 'total_request')
@@ -122,6 +119,23 @@ class DashboardController extends Controller
 
         $totalUsers = $labUsers->count();
 
+        // ── (#3) LOW STOCK ITEMS — ambil dari ASSET LAB (stok di lab staff),
+        //         bukan asset gudang SPV. Tampilkan yang total_good_lab < 3.
+        $labNameById = $laboratories->pluck('lab_name', 'id');
+
+        $labLowStockItems = AssetLab::with('asset')
+            ->whereIn('lab_id', $labIds)
+            ->where('total_good_lab', '<', 3)
+            ->whereHas('asset')
+            ->orderBy('total_good_lab')
+            ->limit(6)
+            ->get()
+            ->map(fn ($al) => [
+                'asset_name' => $al->asset->asset_name ?? '-',
+                'lab_name'   => $labNameById[$al->lab_id] ?? '-',
+                'in_stock'   => $al->total_good_lab,
+            ]);
+
         $recentRequests = RequestLab::with('user')
             ->withSum('request_items as total_requested_items', 'total_request')
             ->whereIn('lab_id', $labIds)
@@ -158,6 +172,7 @@ class DashboardController extends Controller
             'labStaff',
             'chartData',
             'labUsers',
+            'labLowStockItems',
             'recentRequests',
             'recentReturnRequests',
             'recentTransferRequests'

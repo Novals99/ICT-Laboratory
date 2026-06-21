@@ -84,8 +84,10 @@ class RequestLabController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless(auth()->user()->role === 'staff', 403);
-
+            abort_unless(
+        auth()->user()->labs->pluck('id')->contains($request->lab_id),
+        403, 'Lab tersebut bukan milik Anda.'
+    );
         $validated = $request->validate([
             'lab_id' => ['required', 'exists:laboratories,id'],
             'request_date' => ['required', 'date'],
@@ -135,7 +137,7 @@ class RequestLabController extends Controller
                 'activity' => 'Created laboratory request: REQ-' .
                     str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
             ]);
-            
+
         });
 
         return redirect()->route('requestlab.index')

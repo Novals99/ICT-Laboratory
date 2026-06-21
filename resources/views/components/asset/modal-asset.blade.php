@@ -33,27 +33,17 @@
 >
 
 @if (! $isEdit)
-    <div class="asset-create-heading">
-        <div class="asset-field asset-field-category">
-            <label class="asset-field-label" for="create-asset-category">Category:</label>
-            <select
-                name="asset_category"
-                id="create-asset-category"
-                class="panel-form-input"
-                data-progress-field
-                required
-            >
-                <option value="" disabled {{ old('asset_category') ? '' : 'selected' }}>Choose category...</option>
-                <option value="electronic" {{ old('asset_category') === 'electronic' ? 'selected' : '' }}>Electronic</option>
-                <option value="non-electronic" {{ old('asset_category') === 'non-electronic' ? 'selected' : '' }}>Non-Electronic</option>
-                <option value="component-pc" {{ old('asset_category') === 'component-pc' ? 'selected' : '' }}>PC Component</option>
-            </select>
+    {{-- Pengaman: select tersembunyi (TANPA name, tidak ikut submit) supaya JS lama
+         yang masih mereferensikan #create-asset-category tidak error. Aman dihapus
+         jika asset JS-mu sudah tidak memakainya. --}}
+    <select id="create-asset-category" aria-hidden="true" tabindex="-1"
+            style="display:none;">
+        <option value="electronic">Electronic</option>
+        <option value="non-electronic">Non-Electronic</option>
+        <option value="component-pc">PC Component</option>
+    </select>
 
-            @error('asset_category')
-                <p class="panel-form-error">{{ $message }}</p>
-            @enderror
-        </div>
-
+    <div class="asset-create-heading" style="justify-content:flex-end;">
         <x-button.add type="button" onclick="addAssetItem()">
             Add Item
         </x-button.add>
@@ -104,13 +94,36 @@
 
                     <div class="asset-field asset-field-category">
                         <label class="asset-field-label">Category:</label>
-                        <input
-                            type="text"
-                            value="Choose category first"
-                            class="panel-form-input asset-category-display"
-                            data-category-display
-                            readonly
+                        <select
+                            name="items[0][asset_category]"
+                            class="panel-form-input js-asset-category"
+                            data-progress-field
+                            required
                         >
+                            <option value="" disabled {{ old('items.0.asset_category') ? '' : 'selected' }}>Choose category...</option>
+                            <option value="electronic" {{ old('items.0.asset_category') === 'electronic' ? 'selected' : '' }}>Electronic</option>
+                            <option value="non-electronic" {{ old('items.0.asset_category') === 'non-electronic' ? 'selected' : '' }}>Non-Electronic</option>
+                            <option value="component-pc" {{ old('items.0.asset_category') === 'component-pc' ? 'selected' : '' }}>PC Component</option>
+                        </select>
+
+                        @error('items.0.asset_category')
+                            <p class="panel-form-error">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    {{-- (#17) Component Type — tampil hanya jika PC Component --}}
+                    <div class="asset-field js-component-type-field" style="display:none;">
+                        <label class="asset-field-label">Component Type:</label>
+                        <select name="items[0][component_type]" class="panel-form-input">
+                            <option value="">— Pilih tipe —</option>
+                            <option value="processor" {{ old('items.0.component_type') === 'processor' ? 'selected' : '' }}>Processor</option>
+                            <option value="ram" {{ old('items.0.component_type') === 'ram' ? 'selected' : '' }}>RAM</option>
+                            <option value="ssd" {{ old('items.0.component_type') === 'ssd' ? 'selected' : '' }}>SSD</option>
+                            <option value="vga" {{ old('items.0.component_type') === 'vga' ? 'selected' : '' }}>VGA</option>
+                            <option value="powersupply" {{ old('items.0.component_type') === 'powersupply' ? 'selected' : '' }}>Power Supply</option>
+                            <option value="motherboard" {{ old('items.0.component_type') === 'motherboard' ? 'selected' : '' }}>Motherboard</option>
+                            <option value="cpu_fan" {{ old('items.0.component_type') === 'cpu_fan' ? 'selected' : '' }}>CPU Fan</option>
+                        </select>
                     </div>
 
                     <div class="asset-field asset-field-source">
@@ -127,6 +140,14 @@
                         @error('items.0.source')
                             <p class="panel-form-error">{{ $message }}</p>
                         @enderror
+                    </div>
+
+                    {{-- (#17) Serial Number — tampil untuk Electronic & PC Component (nullable) --}}
+                    <div class="asset-field js-serial-field" style="display:none;">
+                        <label class="asset-field-label">Serial Number:</label>
+                        <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+                        <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Add S/N</button>
+                        <p class="panel-form-help">Boleh dikosongkan — akan ter-generate otomatis.</p>
                     </div>
 
                     <div class="asset-field asset-field-notes">
@@ -188,48 +209,13 @@
                         @enderror
                     </div>
 
-                    <div class="asset-field">
-                        <label class="asset-field-label">Damaged:</label>
-                        <input
-                            type="number"
-                            name="items[0][total_damaged]"
-                            value="{{ old('items.0.total_damaged', 0) }}"
-                            placeholder="0"
-                            class="panel-form-input"
-                            data-progress-field
-                            data-validate="asset-number"
-                            data-stock-damaged
-                            min="0"
-                            required
-                        >
-
-                        @error('items.0.total_damaged')
-                            <p class="panel-form-error">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div class="asset-field">
-                        <label class="asset-field-label">Loss:</label>
-                        <input
-                            type="number"
-                            name="items[0][total_loss]"
-                            value="{{ old('items.0.total_loss', 0) }}"
-                            placeholder="0"
-                            class="panel-form-input"
-                            data-progress-field
-                            data-validate="asset-number"
-                            min="0"
-                            required
-                        >
-
-                        @error('items.0.total_loss')
-                            <p class="panel-form-error">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    {{-- (#17) Damaged & Loss disembunyikan — aset baru pasti good --}}
+                    <input type="hidden" name="items[0][total_damaged]" value="0" data-stock-damaged>
+                    <input type="hidden" name="items[0][total_loss]" value="0">
                 </div>
 
                 <p class="asset-stock-helper">
-                    Good and Damaged will auto-calculate based on Total. Loss must be entered manually.
+                    Good akan mengikuti Total. Aset baru otomatis berkondisi good.
                 </p>
             </div>
         </div>
@@ -273,13 +259,32 @@
 
                     <div class="asset-field asset-field-category">
                         <label class="asset-field-label">Category:</label>
-                        <input
-                            type="text"
-                            value="Choose category first"
-                            class="panel-form-input asset-category-display"
-                            data-category-display
-                            readonly
+                        <select
+                            data-name="asset_category"
+                            class="panel-form-input js-asset-category"
+                            data-progress-field
+                            required
                         >
+                            <option value="" disabled selected>Choose category...</option>
+                            <option value="electronic">Electronic</option>
+                            <option value="non-electronic">Non-Electronic</option>
+                            <option value="component-pc">PC Component</option>
+                        </select>
+                    </div>
+
+                    {{-- (#17) Component Type — tampil hanya jika PC Component --}}
+                    <div class="asset-field js-component-type-field" style="display:none;">
+                        <label class="asset-field-label">Component Type:</label>
+                        <select data-name="component_type" class="panel-form-input">
+                            <option value="">— Pilih tipe —</option>
+                            <option value="processor">Processor</option>
+                            <option value="ram">RAM</option>
+                            <option value="ssd">SSD</option>
+                            <option value="vga">VGA</option>
+                            <option value="powersupply">Power Supply</option>
+                            <option value="motherboard">Motherboard</option>
+                            <option value="cpu_fan">CPU Fan</option>
+                        </select>
                     </div>
 
                     <div class="asset-field asset-field-source">
@@ -291,6 +296,14 @@
                             class="panel-form-input"
                             data-progress-field
                         >
+                    </div>
+
+                    {{-- (#17) Serial Number — tampil untuk Electronic & PC Component (nullable) --}}
+                    <div class="asset-field js-serial-field" style="display:none;">
+                        <label class="asset-field-label">Serial Number:</label>
+                        <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+                        <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Add S/N</button>
+                        <p class="panel-form-help">Boleh dikosongkan — akan ter-generate otomatis.</p>
                     </div>
 
                     <div class="asset-field asset-field-notes">
@@ -339,40 +352,13 @@
                         >
                     </div>
 
-                    <div class="asset-field">
-                        <label class="asset-field-label">Damaged:</label>
-                        <input
-                            type="number"
-                            data-name="total_damaged"
-                            value="0"
-                            placeholder="0"
-                            class="panel-form-input"
-                            data-progress-field
-                            data-validate="asset-number"
-                            data-stock-damaged
-                            min="0"
-                            required
-                        >
-                    </div>
-
-                    <div class="asset-field">
-                        <label class="asset-field-label">Loss:</label>
-                        <input
-                            type="number"
-                            data-name="total_loss"
-                            value="0"
-                            placeholder="0"
-                            class="panel-form-input"
-                            data-progress-field
-                            data-validate="asset-number"
-                            min="0"
-                            required
-                        >
-                    </div>
+                    {{-- (#17) Damaged & Loss disembunyikan — aset baru pasti good --}}
+                    <input type="hidden" data-name="total_damaged" value="0" data-stock-damaged>
+                    <input type="hidden" data-name="total_loss" value="0">
                 </div>
 
                 <p class="asset-stock-helper">
-                    Good and Damaged will auto-calculate based on Total. Loss must be entered manually.
+                    Good akan mengikuti Total. Aset baru otomatis berkondisi good.
                 </p>
             </div>
         </div>
@@ -421,6 +407,30 @@
             </div>
         </div>
 
+        {{-- (#16) Component Type — hanya untuk PC Component (gaya tombol sama dgn Category) --}}
+        <div class="panel-form-row js-edit-component-type" style="{{ ($asset->asset_category ?? '') === 'component-pc' ? '' : 'display:none;' }}">
+            <label class="panel-form-label">Component Type:</label>
+            <div class="panel-form-field">
+                <div class="asset-category-options">
+                    @foreach ([
+                        'processor' => 'Processor',
+                        'ram' => 'RAM',
+                        'ssd' => 'SSD',
+                        'vga' => 'VGA',
+                        'powersupply' => 'Power Supply',
+                    ] as $value => $label)
+                        @php $ctId = $modalId . '-ctype-' . $value; @endphp
+                        <label for="{{ $ctId }}"
+                               class="asset-category-option {{ ($asset->component_type ?? '') === $value ? 'is-selected' : '' }}">
+                            <input id="{{ $ctId }}" type="radio" name="component_type" value="{{ $value }}" class="hidden"
+                                {{ ($asset->component_type ?? '') === $value ? 'checked' : '' }}>
+                            <span>{{ $label }}</span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
         <div class="panel-form-row">
             <label class="panel-form-label" for="{{ $modalId }}-asset-name">
                 Name:
@@ -441,6 +451,18 @@
                 @error('asset_name')
                     <p class="panel-form-error">{{ $message }}</p>
                 @enderror
+            </div>
+        </div>
+
+        {{-- (#16) Serial Number — untuk Electronic & PC Component (PC = electronic) --}}
+        <div class="panel-form-row js-edit-serial"
+             style="{{ in_array($asset->asset_category ?? '', ['electronic', 'component-pc']) ? '' : 'display:none;' }}">
+            <label class="panel-form-label">Serial Number:</label>
+            <div class="panel-form-field">
+                <div class="js-serial-list" data-asset-id="{{ $asset->id ?? '' }}"
+                     style="display:flex; flex-direction:column; gap:6px;"></div>
+                <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ S/N</button>
+                <p class="panel-form-help">Jumlah serial mengikuti Total unit. Kosongkan untuk generate otomatis.</p>
             </div>
         </div>
 
@@ -600,3 +622,110 @@
         </div>
     @endif
 </x-modal.index>
+
+@once
+    @push('scripts')
+        <script>
+            // (#16/#17) Logika serial number & component_type untuk modal Asset.
+            // Dibuat DELEGATIF berbasis `name`, jadi TIDAK menyentuh JS cloning (addAssetItem) milikmu.
+            (function () {
+                function addSerialInput(list, name, value, locked) {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex; gap:6px; align-items:center;';
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.name = name;
+                    input.value = value || '';
+                    input.placeholder = 'Serial number...';
+                    input.className = 'panel-form-input';
+                    input.style.flex = '1';
+                    if (locked) input.readOnly = true;
+                    row.appendChild(input);
+                    if (!locked) {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'panel-btn-secondary';
+                        btn.textContent = '×';
+                        btn.style.padding = '0 12px';
+                        btn.onclick = () => row.remove();
+                        row.appendChild(btn);
+                    }
+                    list.appendChild(row);
+                }
+
+                // CREATE: tampil/sembunyi component_type & serial per kartu.
+                function toggleCard(card, cat) {
+                    const isComp = cat === 'component-pc';
+                    const isElec = cat === 'electronic';
+                    const ct = card.querySelector('.js-component-type-field');
+                    const sr = card.querySelector('.js-serial-field');
+                    if (ct) ct.style.display = isComp ? '' : 'none';
+                    if (sr) sr.style.display = (isComp || isElec) ? '' : 'none';
+                }
+
+                // EDIT: tampil/sembunyi per form.
+                function toggleEdit(form, cat) {
+                    if (!form) return;
+                    const isComp = cat === 'component-pc';
+                    const isElec = cat === 'electronic';
+                    form.querySelectorAll('.js-edit-component-type').forEach(el => el.style.display = isComp ? '' : 'none');
+                    form.querySelectorAll('.js-edit-serial').forEach(el => el.style.display = (isComp || isElec) ? '' : 'none');
+                }
+
+                document.addEventListener('change', function (e) {
+                    if (e.target.matches && e.target.matches('select.js-asset-category')) {
+                        const card = e.target.closest('.asset-item-card');
+                        if (card) toggleCard(card, e.target.value);
+                    }
+                    if (e.target.matches && e.target.matches('input[name="asset_category"]')) {
+                        toggleEdit(e.target.closest('form'), e.target.value);
+                    }
+                });
+
+                // Tombol "Add S/N" (create & edit).
+                document.addEventListener('click', function (e) {
+                    if (!e.target.matches || !e.target.matches('.js-add-serial')) return;
+                    const field = e.target.closest('.asset-field, .panel-form-row');
+                    const list = field && field.querySelector('.js-serial-list');
+                    if (!list) return;
+
+                    let name = 'serials[]';
+                    const card = e.target.closest('.asset-item-card');
+                    if (card) {
+                        const catEl = card.querySelector('[name$="[asset_category]"]');
+                        const nm = catEl && catEl.getAttribute('name');
+                        const m = nm && nm.match(/items\[(\d+)\]/);
+                        name = m ? `items[${m[1]}][serials][]` : 'items[0][serials][]';
+                    }
+                    addSerialInput(list, name, '', false);
+                });
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    // Init create (kartu pertama bila ada old value).
+                    document.querySelectorAll('select.js-asset-category').forEach(sel => {
+                        const card = sel.closest('.asset-item-card');
+                        if (card && sel.value) toggleCard(card, sel.value);
+                    });
+                    // Init edit (kategori sudah terpilih).
+                    document.querySelectorAll('input[name="asset_category"]:checked').forEach(r => {
+                        toggleEdit(r.closest('form'), r.value);
+                    });
+                    // Preload serial existing untuk modal Edit yang relevan (electronic/component-pc).
+                    document.querySelectorAll('.js-edit-serial').forEach(field => {
+                        if (field.style.display === 'none') return;
+                        const list = field.querySelector('.js-serial-list');
+                        const assetId = list && list.dataset.assetId;
+                        if (!assetId) return;
+                        fetch(`/api/assets/${assetId}/serials`)
+                            .then(r => r.json())
+                            .then(d => {
+                                list.innerHTML = '';
+                                (d.serials || []).forEach(s => addSerialInput(list, 'serials[]', s.serial_number, s.locked));
+                            })
+                            .catch(() => {});
+                    });
+                });
+            })();
+        </script>
+    @endpush
+@endonce

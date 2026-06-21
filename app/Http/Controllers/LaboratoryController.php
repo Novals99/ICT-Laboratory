@@ -119,6 +119,13 @@ class LaboratoryController extends Controller
             'lab_assets.*.asset_id'     => 'nullable|exists:assets,id',
             'lab_assets.*.quantity'     => 'nullable|integer|min:0',
         ]);
+                // Kapasitas PC tidak boleh melebihi stok unit PC yang tersedia di gudang.
+        $pcStock = \App\Models\Asset::where('asset_category', 'pc')->sum('total_good');
+        if ($validated['capacity'] > $pcStock) {
+            return back()->withInput()->withErrors([
+                'capacity' => "Stok unit PC di Inventory & Stock tidak cukup (tersedia: {$pcStock}).",
+            ]);
+        }
 
         $lab = Laboratory::create([
             'lab_name' => $validated['lab_name'],
@@ -193,6 +200,14 @@ class LaboratoryController extends Controller
             'lab_assets.*.asset_id'     => 'nullable|exists:assets,id',
             'lab_assets.*.quantity'     => 'nullable|integer|min:0',
         ]);
+
+            // Kapasitas PC tidak boleh melebihi stok unit PC yang tersedia di gudang.
+        $pcStock = \App\Models\Asset::where('asset_category', 'pc')->sum('total_good');
+        if ($validated['capacity'] > $pcStock) {
+            return back()->withInput()->withErrors([
+                'capacity' => "Stok unit PC di Inventory & Stock tidak cukup (tersedia: {$pcStock}).",
+            ]);
+        }
 
         $laboratory->update([
             'lab_name' => $validated['lab_name'],

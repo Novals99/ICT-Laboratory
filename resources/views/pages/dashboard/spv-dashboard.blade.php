@@ -62,11 +62,12 @@
                             <span class="stat-label">Return Request</span>
                             <span class="stat-value">{{ number_format($totalReturnRequests) }}</span>
                         </div>
-                        <div class="stat-icon" style="color: #dc2626;">
+                        <div class="stat-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
                                 stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9 18V6L2 12l7 6z" />
-                                <path d="M22 18V6l-7 6 7 6z" />
+                                <path d="M9 10v-4h4" />
+                                <path d="M12 6a7 7 0 0 1 7 7" />
+                                <path d="M12 6a7 7 0 0 0-7 7" />
                             </svg>
                         </div>
                     </div>
@@ -76,10 +77,11 @@
                             <span class="stat-label">Transfer Request</span>
                             <span class="stat-value">{{ number_format($totalTransferRequests) }}</span>
                         </div>
-                        <div class="stat-icon" style="color: #059669;">
+                        <div class="stat-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
                                 stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" />
+                                <path d="M8 7h12l-4-4m4 4l-4 4" />
+                                <path d="M16 17H4l4 4M4 17l4-4" />
                             </svg>
                         </div>
                     </div>
@@ -151,33 +153,34 @@
                                 <td class="th-check">
                                     <input type="checkbox" class="db-checkbox row-check">
                                 </td>
-                                <td class="td-mono">{{ $req->id }}</td>
+                                <td class="td-mono">REQ-{{ str_pad($req->id, 3, '0', STR_PAD_LEFT) }}</td>
                                 <td>{{ $req->user->name ?? '-' }}</td>
-                                <td>{{ $req->total_request ?? $req->items_count ?? '-' }}</td>
+                                <td>{{ $req->total_requested_items ?? 0 }}</td>
                                 <td>{{ \Carbon\Carbon::parse($req->created_at)->format('d-m-y') }}</td>
                                 <td>
                                     @php
-                                        $status = strtolower($req->status ?? 'pending');
+                                        $status = strtolower($req->request_status ?? 'pending');
                                         $badgeClass = match ($status) {
-                                            'approved' => 'badge-approved',
+                                            'approved', 'done' => 'badge-approved',
                                             'rejected' => 'badge-rejected',
+                                            'partial' => 'badge-partial',
                                             default => 'badge-pending',
                                         };
                                     @endphp
                                     <span class="status-badge {{ $badgeClass }}">
-                                        {{ ucfirst($req->status ?? 'Pending') }}
+                                        {{ ucfirst($req->request_status ?? 'Pending') }}
                                     </span>
                                 </td>
                                 <td>
                                     <div class="action-btns">
-                                        <a href="{{ route('requestlab.edit', $req->id) }}" class="action-btn action-edit"
-                                            title="Edit">
+                                        <button type="button" onclick="openLabRequestModal({{ $req->id }})"
+                                            class="action-btn action-edit" title="Edit / Review">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                                 stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                             </svg>
-                                        </a>
+                                        </button>
                                         <form method="POST" action="{{ route('requestlab.destroy', $req->id) }}"
                                             onsubmit="return confirm('Hapus request ini?')" style="display:inline">
                                             @csrf @method('DELETE')
@@ -244,11 +247,11 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <button type="button" onclick="openReturnDetailModal({{ $req->id }})" class="action-btn" title="Detail">
+                                    <button type="button" onclick="openReturnDetailModal({{ $req->id }})" class="action-btn action-edit" title="Edit / Review">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                             stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                            <circle cx="12" cy="12" r="3" />
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                         </svg>
                                     </button>
                                 </td>
@@ -299,11 +302,11 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <button type="button" onclick="openTransferDetailModal({{ $req->id }})" class="action-btn" title="Detail">
+                                    <button type="button" onclick="openTransferDetailModal({{ $req->id }})" class="action-btn action-edit" title="Edit / Review">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                             stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                            <circle cx="12" cy="12" r="3" />
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                         </svg>
                                     </button>
                                 </td>
@@ -477,6 +480,90 @@
                 <button type="button" onclick="saveTransferStatuses()"
                     style="border:1px solid #111B4C; background:#111B4C; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
                     Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- ============ (#2) MODAL REVIEW LAB REQUEST (sama seperti di Request Lab) ============ --}}
+    <div id="labRequestModal"
+        style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+        <div
+            style="background:var(--bg-modal); border-radius:16px; width:100%; max-width:820px; margin:0 16px; max-height:90vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,0.15); border:1px solid var(--border-color);">
+            <div
+                style="display:flex; align-items:center; padding:24px 32px 12px 32px; gap:16px; border-bottom:1px solid var(--border-color);">
+                <h3 style="font-size:18px; font-weight:700; color:var(--text-primary); flex-shrink:0; margin:0;">
+                    Request Information
+                </h3>
+                <div style="flex:1;">
+                    <div style="height:6px; background:var(--border-color); border-radius:99px; overflow:hidden;">
+                        <div id="labModalProgress"
+                            style="height:6px; background:#93c5fd; border-radius:99px; width:0%; transition:width 0.5s;"></div>
+                    </div>
+                </div>
+                <button onclick="closeLabRequestModal()"
+                    style="color:var(--text-muted); background:none; border:none; cursor:pointer; padding:4px; line-height:1;">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div style="padding:16px 32px 8px 32px;">
+                <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <label style="width:110px; text-align:right; font-size:13px; color:var(--text-secondary);">ID Request:</label>
+                        <input id="lab_modal_id" type="text" readonly
+                            style="width:240px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <label style="width:110px; text-align:right; font-size:13px; color:var(--text-secondary);">Name:</label>
+                        <input id="lab_modal_name" type="text" readonly
+                            style="width:240px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <label style="width:110px; text-align:right; font-size:13px; color:var(--text-secondary);">Total:</label>
+                        <input id="lab_modal_total" type="text" readonly
+                            style="width:240px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    </div>
+                </div>
+
+                @php
+                    $labModalSections = [
+                        'electronic'     => 'Electronic Category',
+                        'non_electronic' => 'Non-Electronic Category',
+                        'component_pc'   => 'PC Component Category',
+                    ];
+                @endphp
+
+                @foreach ($labModalSections as $key => $label)
+                    <p style="font-size:13px; color:var(--text-muted); margin:14px 0 8px;">{{ $label }}</p>
+                    <table style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0; margin-bottom:6px;">
+                        <thead>
+                            <tr style="background:var(--bg-table-header);">
+                                <th style="padding:8px 14px; text-align:left;">Asset Name</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty</th>
+                                <th style="padding:8px 14px; text-align:center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lab_modal_{{ $key }}"></tbody>
+                    </table>
+                @endforeach
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; padding:12px 32px 24px 32px;">
+                <button type="button" onclick="rejectAllLabRequest()"
+                    style="border:1px solid #dc2626; background:#dc2626; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Reject All
+                </button>
+                <button type="button" onclick="approveAllLabRequest()"
+                    style="border:1px solid #16a34a; background:#16a34a; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Approve All
+                </button>
+                <button type="button" onclick="saveLabRequestStatuses()"
+                    style="border:1px solid #111B4C; background:#111B4C; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                    Save
                 </button>
             </div>
         </div>
@@ -799,7 +886,140 @@
             if (event.key === 'Escape') {
                 closeReturnDetailModal();
                 closeTransferDetailModal();
+                closeLabRequestModal();
             }
+        });
+
+        /* ============ (#2) MODAL REVIEW LAB REQUEST ============ */
+        let currentLabRequestId = null;
+
+        const LAB_SECTION_KEYS = ['electronic', 'non_electronic', 'component_pc'];
+
+        function labStatusBadge(status) {
+            const s = (status || 'pending').toLowerCase();
+            if (s === 'approved') return '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Approved</span>';
+            if (s === 'rejected') return '<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Rejected</span>';
+            return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+        }
+
+        function labRow(item) {
+            const s = (item.status || 'pending').toLowerCase();
+            return `
+                <tr style="border-top:1px solid var(--border-color);">
+                    <td style="padding:8px 14px;color:var(--text-primary);">${item.asset_name}</td>
+                    <td style="padding:8px 14px;text-align:center;color:var(--text-primary);">${item.quantity}</td>
+                    <td style="padding:8px 14px;">
+                        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+                            <span data-lab-badge>${labStatusBadge(s)}</span>
+                            <select data-lab-item-id="${item.item_id}"
+                                style="min-width:110px;padding:4px 8px;font-size:12px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);">
+                                <option value="pending"  ${s === 'pending'  ? 'selected' : ''}>Pending</option>
+                                <option value="approved" ${s === 'approved' ? 'selected' : ''}>Approve</option>
+                                <option value="rejected" ${s === 'rejected' ? 'selected' : ''}>Reject</option>
+                            </select>
+                        </div>
+                    </td>
+                </tr>`;
+        }
+
+        function openLabRequestModal(requestId) {
+            currentLabRequestId = requestId;
+            document.getElementById('labRequestModal').style.display = 'flex';
+            document.getElementById('labModalProgress').style.width = '30%';
+
+            LAB_SECTION_KEYS.forEach(k => {
+                document.getElementById('lab_modal_' + k).innerHTML =
+                    '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
+            });
+
+            fetch(`/requestlab/${requestId}/detail`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('labModalProgress').style.width = '100%';
+                    document.getElementById('lab_modal_id').value = data.request_id;
+                    document.getElementById('lab_modal_name').value = data.user_name;
+                    document.getElementById('lab_modal_total').value = data.total_request;
+
+                    LAB_SECTION_KEYS.forEach(k => {
+                        const items = data[k] || [];
+                        document.getElementById('lab_modal_' + k).innerHTML = items.length
+                            ? items.map(labRow).join('')
+                            : '<tr><td colspan="3" style="padding:10px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada data</td></tr>';
+                    });
+
+                    // Badge ikut berubah saat dropdown diganti.
+                    document.querySelectorAll('#labRequestModal [data-lab-item-id]').forEach(sel => {
+                        sel.addEventListener('change', e => {
+                            const badge = e.target.closest('div').querySelector('[data-lab-badge]');
+                            if (badge) badge.innerHTML = labStatusBadge(e.target.value);
+                        });
+                    });
+                })
+                .catch(() => {
+                    LAB_SECTION_KEYS.forEach(k => {
+                        document.getElementById('lab_modal_' + k).innerHTML =
+                            '<tr><td colspan="3" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Gagal memuat data</td></tr>';
+                    });
+                });
+        }
+
+        function closeLabRequestModal() {
+            currentLabRequestId = null;
+            document.getElementById('labRequestModal').style.display = 'none';
+            document.getElementById('labModalProgress').style.width = '0%';
+        }
+
+        async function saveLabRequestStatuses() {
+            if (!currentLabRequestId) return;
+            const selects = document.querySelectorAll('#labRequestModal [data-lab-item-id]');
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            try {
+                for (const sel of selects) {
+                    await fetch(`/requestlab/item/${sel.dataset.labItemId}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+                        body: JSON.stringify({ status: sel.value }),
+                    });
+                }
+                alert('Status request berhasil disimpan!');
+                closeLabRequestModal();
+                window.location.reload();
+            } catch (e) {
+                alert('Gagal menyimpan status.');
+            }
+        }
+
+        function applyAllLabRequest(status, confirmMsg) {
+            if (!currentLabRequestId) return;
+            if (confirmMsg && !confirm(confirmMsg)) return;
+            fetch(`/requestlab/${currentLabRequestId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: JSON.stringify({ status }),
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success === false) { alert(data.message || 'Gagal.'); return; }
+                alert('Request berhasil diperbarui!');
+                closeLabRequestModal();
+                window.location.reload();
+            })
+            .catch(() => alert('Gagal memproses request.'));
+        }
+
+        function approveAllLabRequest() {
+            applyAllLabRequest('approved', null);
+        }
+
+        function rejectAllLabRequest() {
+            applyAllLabRequest('rejected', 'Tolak seluruh item pada request ini?');
+        }
+
+        document.getElementById('labRequestModal').addEventListener('click', function(event) {
+            if (event.target === this) closeLabRequestModal();
         });
     </script>
 @endpush

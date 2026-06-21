@@ -3,49 +3,41 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssetLab;
+use App\Models\AssetSerialNumber;
 use App\Models\Laboratory;
 use App\Models\Pc;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PcController extends Controller
 {
+    /** Slot komponen + label (RAM 2 nullable). */
+    private const SLOTS = [
+        'processor', 'ram', 'ram2', 'ssd',
+        'motherboard', 'vga', 'cpu_fan', 'powersupply',
+    ];
+
     public function store(Request $request, Laboratory $laboratory)
     {
-        $validated = $request->validate([
-            'type_pc'     => 'required|in:dosen,mahasiswa',
-            'processor'   => 'nullable|string|max:255',
-            'ram'         => 'nullable|string|max:255',
-            'ssd'         => 'nullable|string|max:255',
-            'motherboard' => 'nullable|string|max:255',
-            'vga'         => 'nullable|string|max:255',
-            'cpu_fan'     => 'nullable|string|max:255',
-            'powersupply' => 'nullable|string|max:255',
-        ]);
+        $validated = $this->validatePc($request, withStatus: false);
 
-        $laboratory->pcs()->create(array_merge($validated, [
-            'status_pc' => 'active',
-            'pc_entry'  => now()->toDateString(),
-        ]));
+        DB::transaction(function () use ($validated, $laboratory) {
+            $pc = $laboratory->pcs()->create([
+                'type_pc'   => $validated['type_pc'],
+                'status_pc' => 'active',
+                'pc_entry'  => now()->toDateString(),
+            ]);
 
-        // 🔴 Kurangi stok component di Lab
-        $components = array_filter([
-            $validated['processor']   ?? null,
-            $validated['ram']         ?? null,
-            $validated['ssd']         ?? null,
-            $validated['motherboard'] ?? null,
-            $validated['vga']         ?? null,
-            $validated['cpu_fan']     ?? null,
-            $validated['powersupply'] ?? null,
-        ]);
-        $this->deductLabStock($laboratory, $components);
+            $this->syncSerials($pc, $laboratory, $validated);
 
-        $laboratory->update(['capacity' => $laboratory->pcs()->count()]);
+            $laboratory->update(['capacity' => $laboratory->pcs()->count()]);
 
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'activity' => 'Created PC in laboratory: ' . $laboratory->lab_name,
-        ]);
+            ActivityLog::create([
+                'user_id'  => auth()->id(),
+                'activity' => 'Created PC in laboratory: ' . $laboratory->lab_name,
+            ]);
+        });
 
         return redirect()->route('laboratory.show', $laboratory)
             ->with('success', 'PC berhasil ditambahkan.')
@@ -54,45 +46,24 @@ class PcController extends Controller
 
     public function update(Request $request, Laboratory $laboratory, Pc $pc)
     {
-        $validated = $request->validate([
-            'type_pc'     => 'required|in:dosen,mahasiswa',
-            'status_pc'   => 'required|in:active,inactive',
-            'processor'   => 'nullable|string|max:255',
-            'ram'         => 'nullable|string|max:255',
-            'ssd'         => 'nullable|string|max:255',
-            'motherboard' => 'nullable|string|max:255',
-            'vga'         => 'nullable|string|max:255',
-            'cpu_fan'     => 'nullable|string|max:255',
-            'powersupply' => 'nullable|string|max:255',
-            'keterangan'  => 'nullable|string',
-        ]);
+        $validated = $this->validatePc($request, withStatus: true);
 
-        $old = array_filter([
-            $pc->processor, $pc->ram, $pc->ssd, $pc->motherboard,
-            $pc->vga, $pc->cpu_fan, $pc->powersupply
-        ]);
-        $new = array_filter([
-            $validated['processor']   ?? null,
-            $validated['ram']         ?? null,
-            $validated['ssd']         ?? null,
-            $validated['motherboard'] ?? null,
-            $validated['vga']         ?? null,
-            $validated['cpu_fan']     ?? null,
-            $validated['powersupply'] ?? null,
-        ]);
+        DB::transaction(function () use ($validated, $laboratory, $pc) {
+            // Lepaskan semua serial lama PC ini dulu (balik ke stok lab).
+            $this->releaseAllSerials($pc, $laboratory);
 
-        // Kembalikan stok component yang dihapus / diganti
-        $this->returnLabStock($laboratory, array_diff($old, $new));
-        // Kurangi stok component yang baru ditambahkan
-        $this->deductLabStock($laboratory, array_diff($new, $old));
+            $pc->update([
+                'type_pc'   => $validated['type_pc'],
+                'status_pc' => $validated['status_pc'],
+            ]);
 
-        $pc->update($validated);
+            $this->syncSerials($pc, $laboratory, $validated);
 
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'activity' => 'Updated PC #' . $pc->id .
-                ' in laboratory: ' . $laboratory->lab_name,
-        ]);
+            ActivityLog::create([
+                'user_id'  => auth()->id(),
+                'activity' => 'Updated PC #' . $pc->id . ' in laboratory: ' . $laboratory->lab_name,
+            ]);
+        });
 
         return redirect()->route('laboratory.show', $laboratory)
             ->with('success', 'Data PC berhasil diperbarui.')
@@ -101,20 +72,16 @@ class PcController extends Controller
 
     public function destroy(Laboratory $laboratory, Pc $pc)
     {
-        // Kembalikan semua component ke stok Lab sebelum hapus PC
-        $components = array_filter([
-            $pc->processor, $pc->ram, $pc->ssd, $pc->motherboard,
-            $pc->vga, $pc->cpu_fan, $pc->powersupply
-        ]);
-        $this->returnLabStock($laboratory, $components);
+        DB::transaction(function () use ($laboratory, $pc) {
+            $this->releaseAllSerials($pc, $laboratory);
+            $pc->delete();
+            $laboratory->update(['capacity' => $laboratory->pcs()->count()]);
 
-        $pc->delete();
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'activity' => 'Deleted PC #' . $pc->id .
-                ' from laboratory: ' . $laboratory->lab_name,
-        ]);
-        $laboratory->update(['capacity' => $laboratory->pcs()->count()]);
+            ActivityLog::create([
+                'user_id'  => auth()->id(),
+                'activity' => 'Deleted PC #' . $pc->id . ' from laboratory: ' . $laboratory->lab_name,
+            ]);
+        });
 
         return redirect()->route('laboratory.show', $laboratory)
             ->with('success', 'PC berhasil dihapus.');
@@ -124,55 +91,121 @@ class PcController extends Controller
     {
         $request->validate(['status_pc' => 'required|in:active,inactive']);
         $pc->update(['status_pc' => $request->status_pc]);
+
         ActivityLog::create([
-            'user_id' => auth()->id(),
-            'activity' => 'Changed PC #' . $pc->id .
-                ' status to ' . ucfirst($request->status_pc),
+            'user_id'  => auth()->id(),
+            'activity' => 'Changed PC #' . $pc->id . ' status to ' . ucfirst($request->status_pc),
         ]);
+
         return redirect()->back()
             ->with('success', 'Status PC berhasil diubah menjadi ' . $request->status_pc)
             ->with('section', 'pc');
     }
 
-    /* ─────────────────────────────────────────
-       PRIVATE: Kurangi / Kembalikan stok Lab
-       ───────────────────────────────────────── */
-    private function deductLabStock(Laboratory $laboratory, array $names)
-    {
-        foreach ($names as $name) {
-            $al = AssetLab::where('lab_id', $laboratory->id)
-                ->whereHas('asset', function ($q) use ($name) {
-                    $q->where('asset_category', 'component-pc')
-                      ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)]);
-                })
-                ->where('total_good_lab', '>', 0)
-                ->first();
+    /* ───────────────────────────── helpers ───────────────────────────── */
 
-            if ($al) {
-                $al->decrement('total_good_lab');
-                $al->update([
-                    'total_asset_lab' => $al->total_good_lab + $al->total_damaged_lab + $al->total_loss_lab
-                ]);
+    private function validatePc(Request $request, bool $withStatus): array
+    {
+        $rules = [
+            'type_pc' => 'required|in:dosen,mahasiswa',
+        ];
+        if ($withStatus) {
+            $rules['status_pc'] = 'required|in:active,inactive';
+        }
+        foreach (self::SLOTS as $slot) {
+            // tiap slot pilih SATU serial number (boleh kosong).
+            $rules["{$slot}_serial_id"] = 'nullable|exists:asset_serial_numbers,id';
+        }
+
+        return $request->validate($rules);
+    }
+
+    /**
+     * Pasang serial yang dipilih ke tiap slot:
+     *  - set kolom *_serial_id + kolom string (nama asset, supaya tampilan lama jalan)
+     *  - tandai serial in_use + pc_id + slot
+     *  - kurangi stok good di asset_lab
+     */
+    private function syncSerials(Pc $pc, Laboratory $laboratory, array $validated): void
+    {
+        $usedIds = [];
+
+        foreach (self::SLOTS as $slot) {
+            $serialId = $validated["{$slot}_serial_id"] ?? null;
+
+            if (! $serialId) {
+                $pc->{$slot} = null;
+                $pc->{$slot . '_serial_id'} = null;
+                continue;
             }
+
+            // 1 serial tidak boleh dipakai 2 slot dalam 1 submit.
+            if (in_array($serialId, $usedIds, true)) {
+                abort(422, 'Satu serial number tidak boleh dipakai di dua slot.');
+            }
+            $usedIds[] = $serialId;
+
+            /** @var AssetSerialNumber $serial */
+            $serial = AssetSerialNumber::with('asset')->findOrFail($serialId);
+
+            // Pastikan serial available & berada di lab ini.
+            if ($serial->status === 'in_use' && $serial->pc_id !== $pc->id) {
+                abort(422, "Serial {$serial->serial_number} sudah terpasang di PC lain.");
+            }
+
+            $pc->{$slot} = $serial->asset->asset_name ?? null;
+            $pc->{$slot . '_serial_id'} = $serial->id;
+
+            $serial->update([
+                'status' => 'in_use',
+                'pc_id'  => $pc->id,
+                'slot'   => $slot,
+                'lab_id' => $laboratory->id,
+            ]);
+
+            $this->decrementLabStock($laboratory, $serial->asset_id);
+        }
+
+        $pc->save();
+    }
+
+    /** Lepaskan semua serial milik PC → balik available + tambah stok lab. */
+    private function releaseAllSerials(Pc $pc, Laboratory $laboratory): void
+    {
+        $serials = AssetSerialNumber::where('pc_id', $pc->id)->get();
+
+        foreach ($serials as $serial) {
+            $serial->update([
+                'status' => 'available',
+                'pc_id'  => null,
+                'slot'   => null,
+            ]);
+            $this->incrementLabStock($laboratory, $serial->asset_id);
+        }
+
+        // Kosongkan kolom slot di PC.
+        foreach (self::SLOTS as $slot) {
+            $pc->{$slot} = null;
+            $pc->{$slot . '_serial_id'} = null;
+        }
+        $pc->save();
+    }
+
+    private function decrementLabStock(Laboratory $laboratory, int $assetId): void
+    {
+        $al = AssetLab::where('lab_id', $laboratory->id)->where('asset_id', $assetId)->first();
+        if ($al && $al->total_good_lab > 0) {
+            $al->decrement('total_good_lab');
+            $al->update(['total_asset_lab' => $al->total_good_lab + $al->total_damaged_lab + $al->total_loss_lab]);
         }
     }
 
-    private function returnLabStock(Laboratory $laboratory, array $names)
+    private function incrementLabStock(Laboratory $laboratory, int $assetId): void
     {
-        foreach ($names as $name) {
-            $al = AssetLab::where('lab_id', $laboratory->id)
-                ->whereHas('asset', function ($q) use ($name) {
-                    $q->where('asset_category', 'component-pc')
-                      ->whereRaw('LOWER(asset_name) = ?', [strtolower($name)]);
-                })
-                ->first();
-
-            if ($al) {
-                $al->increment('total_good_lab');
-                $al->update([
-                    'total_asset_lab' => $al->total_good_lab + $al->total_damaged_lab + $al->total_loss_lab
-                ]);
-            }
+        $al = AssetLab::where('lab_id', $laboratory->id)->where('asset_id', $assetId)->first();
+        if ($al) {
+            $al->increment('total_good_lab');
+            $al->update(['total_asset_lab' => $al->total_good_lab + $al->total_damaged_lab + $al->total_loss_lab]);
         }
     }
 }
