@@ -1,6 +1,6 @@
 @extends('panel.content')
 
-@section('title', 'Retur ke Gudang')
+@section('title', 'Return to Warehouse')
 
 @php
     $role = auth()->user()->role;
@@ -13,16 +13,16 @@
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
             <h2 class="text-3xl font-semibold" style="color:var(--text-primary);">
-                Retur ke Gudang
+                Return to Warehouse
             </h2>
             <p class="mt-1 text-sm" style="color:var(--text-muted);">
-                Permintaan pengembalian barang dari lab ke gudang utama
+                Request to return assets from laboratories to the main warehouse
             </p>
         </div>
 
         @if ($canCreateRequest)
             <x-button.add type="button" onclick="openPanelModal('addReturnModal')">
-                Buat Return Request
+                Create Return Request
             </x-button.add>
         @endif
     </div>
@@ -45,20 +45,20 @@
                 <select name="status"
                     style="background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary);"
                     class="rounded-lg py-1.5 pl-2 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
-                    <option value="">Semua</option>
-                    <option value="pending" @selected(request('status') === 'pending')>Menunggu</option>
-                    <option value="completed" @selected(request('status') === 'completed')>Selesai</option>
-                    <option value="rejected" @selected(request('status') === 'rejected')>Ditolak</option>
+                    <option value="">All</option>
+                    <option value="pending" @selected(request('status') === 'pending')>Pending</option>
+                    <option value="completed" @selected(request('status') === 'completed')>Completed</option>
+                    <option value="rejected" @selected(request('status') === 'rejected')>Rejected</option>
                 </select>
             </div>
 
             @if($isSpv)
                 <div>
-                    <label class="mb-1 block text-xs font-medium" style="color:var(--text-muted);">Laboratorium</label>
+                    <label class="mb-1 block text-xs font-medium" style="color:var(--text-muted);">Laboratory</label>
                     <select name="lab_id"
                         style="background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary);"
                         class="rounded-lg py-1.5 pl-2 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
-                        <option value="">Semua Lab</option>
+                        <option value="">All Labs</option>
                         @foreach($labs as $lab)
                             <option value="{{ $lab->id }}" @selected(request('lab_id') == $lab->id)>
                                 {{ $lab->lab_name }}
@@ -87,12 +87,12 @@
         <table class="w-full text-sm">
             <thead>
                 <tr style="background:var(--bg-table-header); color:var(--text-secondary);">
-                    <th class="px-4 py-3 text-left font-medium">Kode</th>
+                    <th class="px-4 py-3 text-left font-medium">Request Code</th>
                     <th class="px-4 py-3 text-left font-medium">Lab</th>
-                    <th class="px-4 py-3 text-left font-medium">Diajukan oleh</th>
-                    <th class="px-4 py-3 text-center font-medium">Item</th>
+                    <th class="px-4 py-3 text-left font-medium">Requested by</th>
+                    <th class="px-4 py-3 text-center font-medium">Items</th>
                     <th class="px-4 py-3 text-center font-medium">Status</th>
-                    <th class="px-4 py-3 text-left font-medium">Tanggal</th>
+                    <th class="px-4 py-3 text-left font-medium">Date</th>
                     <th class="px-4 py-3 text-center font-medium">Action</th>
                 </tr>
             </thead>
@@ -146,7 +146,7 @@
                 @empty
                     <tr>
                         <td colspan="7" class="px-4 py-10 text-center text-gray-400">
-                            Tidak ada return request.
+                            No return requests found.
                         </td>
                     </tr>
                 @endforelse
@@ -189,7 +189,7 @@
         <div style="padding:16px 32px 24px 32px;">
             <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:28px;">
                 <div style="display:flex; align-items:center; gap:16px;">
-                    <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Kode Request:</label>
+                    <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Request Code:</label>
                     <input id="return_modal_request_code" type="text" readonly
                         style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                 </div>
@@ -199,21 +199,21 @@
                         style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                 </div>
                 <div style="display:flex; align-items:center; gap:16px;">
-                    <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Diajukan oleh:</label>
+                    <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Requested by:</label>
                     <input id="return_modal_requested_by" type="text" readonly
                         style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                 </div>
             </div>
 
             <div style="margin-bottom:20px;">
-                <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Barang yang Diretur</p>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Items to Return</p>
                 <table id="return_modal_items" style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
                     <thead>
                         <tr style="background:var(--bg-table-header);">
                             <th style="padding:8px 14px; text-align:left;">Asset Name</th>
                             <th style="padding:8px 14px; text-align:center;">Qty</th>
-                            <th style="padding:8px 14px; text-align:center;">Kondisi</th>
-                            <th style="padding:8px 14px; text-align:center;">{{ $isSpv ? 'Qty Disetujui' : 'Status' }}</th>
+                            <th style="padding:8px 14px; text-align:center;">Condition</th>
+                            <th style="padding:8px 14px; text-align:center;">{{ $isSpv ? 'Approved Qty' : 'Status' }}</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -225,15 +225,15 @@
             <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 32px 24px 32px;">
                 <button type="button" onclick="rejectAllReturn()"
                     style="border:1px solid #dc2626; background:#dc2626; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Tolak Semua
+                    Reject All
                 </button>
                 <button type="button" onclick="approveAllReturn()"
                     style="border:1px solid #16a34a; background:#16a34a; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Setujui Semua
+                    Approve All
                 </button>
                 <button type="button" onclick="saveReturnStatuses()"
                     style="border:1px solid #111B4C; background:#111B4C; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Simpan
+                    Save
                 </button>
             </div>
         @endif
@@ -241,17 +241,17 @@
 </div>
 
 @if ($canCreateRequest)
-    <x-modal.index id="addReturnModal" title="Buat Return Request"
-        :action="route('return-requests.store')" submitText="Ajukan Request"
+    <x-modal.index id="addReturnModal" title="Create Return Request"
+        :action="route('return-requests.store')" submitText="Submit Request"
         cancelText="Cancel" boxClass="return-create-modal" innerClass="return-create-inner">
         <div style="margin-bottom:16px;">
             <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
-                Laboratorium <span class="text-red-500">*</span>
+                Laboratory <span class="text-red-500">*</span>
             </label>
             <select name="lab_id" id="rr_modal_lab_id"
                 style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
                 onchange="handleRRModalLabChange()">
-                <option value="">-- Pilih Lab --</option>
+                <option value="">-- Choose Laboratory --</option>
                 @foreach($userLabs as $lab)
                     <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
                 @endforeach
@@ -260,22 +260,22 @@
 
         <div style="margin-bottom:16px;">
             <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
-                Catatan <span style="color:var(--text-muted);">(opsional)</span>
+                Notes <span style="color:var(--text-muted);">(optional)</span>
             </label>
             <textarea name="notes" rows="3"
                 style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
-                placeholder="Catatan tambahan untuk SPV..."></textarea>
+                placeholder="Additional notes for the supervisor..."></textarea>
         </div>
 
         <div id="rr_modal_item_list">
             <div id="rr_modal_no_lab" style="text-align:center; color:var(--text-muted); font-size:13px;">
-                Pilih laboratorium terlebih dahulu
+                Please select a laboratory first
             </div>
             <div id="rr_modal_loading" style="display:none; text-align:center; color:var(--text-muted); font-size:13px;">
-                Memuat daftar barang...
+                Loading assets...
             </div>
             <div id="rr_modal_no_assets" style="display:none; text-align:center; color:var(--text-muted); font-size:13px;">
-                Tidak ada barang di lab ini
+                No assets available in this laboratory
             </div>
             <div id="rr_modal_items" style="display:none;"></div>
         </div>
@@ -283,7 +283,7 @@
         <div id="rr_modal_add_btn" style="display:none; margin-top:12px;">
             <button type="button" onclick="addRRModalItem()"
                 class="inline-flex items-center justify-center gap-2 rounded-lg bg-[#111B4C] px-4 py-2 text-sm font-semibold text-white">
-                + Tambah Baris
+                + Add Item
             </button>
         </div>
     </x-modal.index>
@@ -367,7 +367,7 @@
             })
             .catch(() => {
                 document.getElementById('rr_modal_loading').style.display = 'none';
-                alert('Gagal memuat data aset.');
+                alert('Failed to load asset data');
             });
     }
 
@@ -381,31 +381,31 @@
                     <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
                     <select name="items[${idx}][asset_id]" required
                         style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                        <option value="">-- Pilih --</option>
+                        <option value="">-- Select Asset --</option>
                         ${rrLabAssets.map(a => `<option value="${a.asset_id}">${a.name}</option>`).join('')}
                     </select>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
                     <div>
-                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Kuantitas:</label>
+                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
                         <input type="number" name="items[${idx}][quantity]" min="1" value="1" required
                             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     </div>
                     <div>
-                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Kondisi:</label>
+                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Condition:</label>
                         <select name="items[${idx}][condition]"
                             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                            <option value="good">Baik</option>
-                            <option value="damaged">Rusak</option>
-                            <option value="lost">Hilang</option>
+                            <option value="good">Good</option>
+                            <option value="damaged">Damaged</option>
+                            <option value="lost">Lost</option>
                         </select>
                     </div>
                 </div>
                 <div>
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Alasan (opsional):</label>
+                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Reason (optional):</label>
                     <input type="text" name="items[${idx}][reason]"
                         style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
-                        placeholder="Alasan retur...">
+                        placeholder="Reason for return...">
                 </div>
             </div>
         `;
@@ -427,7 +427,7 @@
         const modal = document.getElementById('returnDetailModal');
         modal.style.display = 'flex';
         document.getElementById('returnModalProgress').style.width = '30%';
-        const loadingRow = '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
+        const loadingRow = '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Loading...</td></tr>';
         document.querySelector('#return_modal_items tbody').innerHTML = loadingRow;
         fetch(`/return-requests/${requestId}/detail`)
             .then(res => res.json())
@@ -452,11 +452,11 @@
                             </div>
                         </td>
                     </tr>
-                `).join('') || '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada barang</td></tr>';
+                `).join('') || '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">No items found</td></tr>';
             })
             .catch(() => {
                 document.getElementById('returnModalProgress').style.width = '100%';
-                const error = '<tr><td colspan="4" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Gagal memuat data</td></tr>';
+                const error = '<tr><td colspan="4" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Failed to load asset data</td></tr>';
                 document.querySelector('#return_modal_items tbody').innerHTML = error;
             });
     }
@@ -483,7 +483,7 @@
 
     window.saveReturnStatuses = async function() {
         if (!currentReturnRequestId) {
-            alert('Buka detail request terlebih dahulu.');
+            alert('Please open a request first.');
             return;
         }
 
@@ -506,20 +506,20 @@
             });
             const data = await response.json();
             if (!data.success) {
-                alert(data.message || 'Gagal menyimpan status.');
+                alert(data.message || 'Failed to save status.');
                 return;
             }
-            alert('Status berhasil disimpan!');
+            alert('Status successfully saved!');
             closeReturnDetailModal();
             window.location.reload();
         } catch (e) {
-            alert('Gagal menyimpan status.');
+            alert('Failed to save status.');
         }
     };
 
     window.approveAllReturn = function() {
         if (!currentReturnRequestId) {
-            alert('Buka detail request terlebih dahulu.');
+            alert('Please open a request first.');
             return;
         }
         document.querySelectorAll('[data-return-item-id]').forEach(input => {
@@ -529,29 +529,29 @@
 
     window.rejectAllReturn = function() {
         if (!currentReturnRequestId) {
-            alert('Buka detail request terlebih dahulu.');
+            alert('Please open a request first.');
             return;
         }
-        if (confirm('Apakah Anda yakin ingin menolak seluruh request ini?')) {
+        if (confirm('Are you sure you want to reject the entire request?')) {
             fetch(`/return-requests/${currentReturnRequestId}/reject`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 },
-                body: JSON.stringify({ rejection_reason: 'Ditolak seluruhnya oleh SPV' })
+                body: JSON.stringify({ rejection_reason: 'Rejected entirely by SPV' })
             })
             .then(res => res.json())
             .then(data => {
                 if (!data.success) {
-                    alert(data.message || 'Gagal menolak request.');
+                    alert(data.message || 'Failed to reject request.');
                     return;
                 }
-                alert('Request berhasil ditolak!');
+                alert('Request successfully rejected!');
                 closeReturnDetailModal();
                 window.location.reload();
             })
-            .catch(() => alert('Gagal menolak request.'));
+            .catch(() => alert('Failed to reject request.'));
         }
     };
 

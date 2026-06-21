@@ -2,7 +2,7 @@
 
 @extends('panel.content')
 
-@section('title', 'Mutasi Antar Lab')
+@section('title', 'Asset Transfer')
 
 @php
     $role = auth()->user()->role;
@@ -16,15 +16,15 @@
     {{-- ── Header ───────────────────────────────────────────────────────── --}}
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-            <h2 class="text-3xl font-semibold" style="color:var(--text-primary);">Mutasi Antar Lab</h2>
+            <h2 class="text-3xl font-semibold" style="color:var(--text-primary);">Asset Transfers</h2>
             <p class="mt-1 text-sm" style="color:var(--text-muted);">
-                Pemindahan barang langsung antar laboratorium
+                Transfer assets between laboratories
             </p>
         </div>
 
         @if($canCreateRequest)
             <x-button.add type="button" onclick="openPanelModal('createTransferModal')">
-                Buat Transfer Request
+                Create Transfer Request
             </x-button.add>
         @endif
     </div>
@@ -44,7 +44,7 @@
     @unless($isSpv)
         <div style="background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-secondary);"
              class="mb-4 rounded-lg px-4 py-2.5 text-xs">
-            Menampilkan transfer yang melibatkan lab Anda, baik sebagai pengirim maupun penerima.
+            Showing transfers involving your assigned laboratories, either as the source or destination.
         </div>
     @endunless
 
@@ -56,10 +56,10 @@
                 <select name="status"
                         style="background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary);"
                         class="rounded-lg py-1.5 pl-2 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
-                    <option value="">Semua</option>
-                    <option value="pending"   @selected(request('status') === 'pending')>Menunggu</option>
-                    <option value="completed" @selected(request('status') === 'completed')>Selesai</option>
-                    <option value="rejected"  @selected(request('status') === 'rejected')>Ditolak</option>
+                    <option value="">All</option>
+                    <option value="pending"   @selected(request('status') === 'pending')>Pending</option>
+                    <option value="completed" @selected(request('status') === 'completed')>Completed</option>
+                    <option value="rejected"  @selected(request('status') === 'rejected')>Rejected</option>
                 </select>
             </div>
 
@@ -83,14 +83,14 @@
         <table class="w-full text-sm">
             <thead>
                 <tr style="background:var(--bg-table-header); color:var(--text-secondary);">
-                    <th class="px-4 py-3 text-left font-medium">Kode</th>
-                    <th class="px-4 py-3 text-left font-medium">Lab Asal</th>
+                    <th class="px-4 py-3 text-left font-medium">Transfer ID</th>
+                    <th class="px-4 py-3 text-left font-medium">Origin Lab</th>
                     <th class="px-4 py-3"></th>
-                    <th class="px-4 py-3 text-left font-medium">Lab Tujuan</th>
-                    <th class="px-4 py-3 text-left font-medium">Diajukan oleh</th>
-                    <th class="px-4 py-3 text-center font-medium">Item</th>
+                    <th class="px-4 py-3 text-left font-medium">Target Lab</th>
+                    <th class="px-4 py-3 text-left font-medium">Requested By</th>
+                    <th class="px-4 py-3 text-center font-medium">Items</th>
                     <th class="px-4 py-3 text-center font-medium">Status</th>
-                    <th class="px-4 py-3 text-left font-medium">Tanggal</th>
+                    <th class="px-4 py-3 text-left font-medium">Date</th>
                     <th class="px-4 py-3 text-center font-medium">Action</th>
                 </tr>
             </thead>
@@ -129,7 +129,7 @@
                         <td class="px-4 py-3" style="color:var(--text-muted);">{{ $req->created_at->format('d M Y') }}</td>
                         <td class="px-4 py-3 text-center">
                             <button type="button" onclick="openTransferDetailModal({{ $req->id }})"
-                                title="Lihat Detail"
+                                title="View Details"
                                 style="background:none; border:none; cursor:pointer; padding:4px; color:#9ca3af;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -143,7 +143,7 @@
                 @empty
                     <tr>
                         <td colspan="9" class="px-4 py-12 text-center text-sm" style="color:var(--text-muted);">
-                            Belum ada transfer request
+                            No transfer requests available
                         </td>
                     </tr>
                 @endforelse
@@ -160,19 +160,19 @@
 
 {{-- MODAL CREATE TRANSFER REQUEST --}}
 @if($canCreateRequest)
-    <x-modal.index id="createTransferModal" title="Buat Transfer Request"
-        :action="route('transfer-requests.store')" submitText="Ajukan Request"
+    <x-modal.index id="createTransferModal" title="Create Transfer Request"
+        :action="route('transfer-requests.store')" submitText="Submit Request"
         cancelText="Cancel" boxClass="transfer-create-modal" innerClass="transfer-create-inner">
         <div style="margin-bottom: 16px;">
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
-                        Lab Asal <span class="text-red-500">*</span>
+                        Origin Lab <span class="text-red-500">*</span>
                     </label>
                     <select name="from_lab_id" id="tr_from_lab_id"
                         style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
                         onchange="handleTrFromLabChange()">
-                        <option value="">-- Pilih Lab Asal --</option>
+                        <option value="">-- Select Origin Lab --</option>
                         @foreach($userLabs as $lab)
                             <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
                         @endforeach
@@ -180,11 +180,11 @@
                 </div>
                 <div>
                     <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
-                        Lab Tujuan <span class="text-red-500">*</span>
+                        Target Lab <span class="text-red-500">*</span>
                     </label>
                     <select name="to_lab_id" id="tr_to_lab_id"
                         style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                        <option value="">-- Pilih Lab Tujuan --</option>
+                        <option value="">-- Select Target Lab --</option>
                         @foreach($targetLabs as $lab)
                             <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
                         @endforeach
@@ -195,22 +195,22 @@
 
         <div style="margin-bottom: 16px;">
             <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
-                Catatan <span style="color:var(--text-muted);">(opsional)</span>
+                Notes <span style="color:var(--text-muted);">(optional)</span>
             </label>
             <textarea name="notes" rows="3"
                 style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
-                placeholder="Catatan tambahan untuk SPV..."></textarea>
+                placeholder="Additional notes for the SPV..."></textarea>
         </div>
 
         <div id="tr_modal_item_list">
             <div id="tr_no_lab" style="text-align:center; color:var(--text-muted); font-size:13px;">
-                Pilih lab asal terlebih dahulu
+                Please select a source lab first
             </div>
             <div id="tr_loading" style="display:none; text-align:center; color:var(--text-muted); font-size:13px;">
-                Memuat daftar barang...
+                Loading assets...
             </div>
             <div id="tr_no_assets" style="display:none; text-align:center; color:var(--text-muted); font-size:13px;">
-                Tidak ada barang di lab ini
+                No assets available in this lab
             </div>
             <div id="tr_items" style="display:none;"></div>
         </div>
@@ -221,7 +221,7 @@
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                Tambah Baris
+                Add Item
             </button>
         </div>
     </x-modal.index>
@@ -257,36 +257,36 @@
             <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:28px;">
                 <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Kode Request</label>
+                        <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Transfer ID</label>
                         <input id="transfer_modal_request_code" type="text" readonly
                             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     </div>
                     <div>
-                        <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Lab Asal</label>
+                        <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Origin Lab</label>
                         <input id="transfer_modal_from_lab" type="text" readonly
                             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     </div>
                     <div>
-                        <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Lab Tujuan</label>
+                        <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Target Lab</label>
                         <input id="transfer_modal_to_lab" type="text" readonly
                             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:16px;">
-                    <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Diajukan oleh</label>
+                    <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Requested by</label>
                     <input id="transfer_modal_requested_by" type="text" readonly
                         style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                 </div>
             </div>
 
             <div style="margin-bottom:20px;">
-                <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Barang yang Ditransfer</p>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Assets to Transfer</p>
                 <table id="transfer_modal_items" style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
                     <thead>
                         <tr style="background:var(--bg-table-header);">
                             <th style="padding:8px 14px; text-align:left;">Asset Name</th>
                             <th style="padding:8px 14px; text-align:center;">Qty</th>
-                            <th style="padding:8px 14px; text-align:center;">{{ $isSpv ? 'Qty Disetujui' : 'Status' }}</th>
+                            <th style="padding:8px 14px; text-align:center;">{{ $isSpv ? 'Approved Qty' : 'Status' }}</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -298,15 +298,15 @@
             <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 32px 24px 32px;">
                 <button type="button" onclick="rejectAllTransfer()"
                     style="border:1px solid #dc2626; background:#dc2626; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Tolak Semua
+                    Reject All
                 </button>
                 <button type="button" onclick="approveAllTransfer()"
                     style="border:1px solid #16a34a; background:#16a34a; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Setujui Semua
+                    Approve All
                 </button>
                 <button type="button" onclick="saveTransferStatuses()"
                     style="border:1px solid #111B4C; background:#111B4C; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Simpan
+                    Save
                 </button>
             </div>
         @endif
@@ -394,7 +394,7 @@ function handleTrFromLabChange() {
         })
         .catch(() => {
             document.getElementById('tr_loading').style.display = 'none';
-            alert('Gagal memuat data aset.');
+            alert('Failed to load asset data.');
         });
 }
 
@@ -552,7 +552,7 @@ function closeTransferDetailModal() {
 
 window.saveTransferStatuses = async function() {
     if (!currentTransferRequestId) {
-        alert('Buka detail request terlebih dahulu.');
+        alert('Please open a request first.');
         return;
     }
 
@@ -575,20 +575,20 @@ window.saveTransferStatuses = async function() {
         });
         const data = await response.json();
         if (!data.success) {
-            alert(data.message || 'Gagal menyimpan status.');
+            alert(data.message || 'Failed to save status.');
             return;
         }
-        alert('Status berhasil disimpan!');
+        alert('Status saved successfully!');
         closeTransferDetailModal();
         window.location.reload();
     } catch (e) {
-        alert('Gagal menyimpan status.');
+        alert('Failed to save status.');
     }
 }
 
 window.approveAllTransfer = function() {
     if (!currentTransferRequestId) {
-        alert('Buka detail request terlebih dahulu.');
+        alert('Please open a request first.');
         return;
     }
     document.querySelectorAll('[data-tr-item-id]').forEach(input => {
@@ -598,29 +598,29 @@ window.approveAllTransfer = function() {
 
 window.rejectAllTransfer = function() {
     if (!currentTransferRequestId) {
-        alert('Buka detail request terlebih dahulu.');
+        alert('Please open a request first.');
         return;
     }
-    if (confirm('Apakah Anda yakin ingin menolak seluruh request ini?')) {
+    if (confirm('Are you sure you want to reject all items in this request?')) {
         fetch(`/transfer-requests/${currentTransferRequestId}/reject`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify({ rejection_reason: 'Ditolak seluruhnya oleh SPV' })
+            body: JSON.stringify({ rejection_reason: 'Rejected by SPV' })
         })
         .then(res => res.json())
         .then(data => {
             if (!data.success) {
-                alert(data.message || 'Gagal menolak request.');
+                alert(data.message || 'Failed to reject request.');
                 return;
             }
-            alert('Request berhasil ditolak!');
+            alert('Request rejected successfully!');
             closeTransferDetailModal();
             window.location.reload();
         })
-        .catch(() => alert('Gagal menolak request.'));
+        .catch(() => alert('Failed to reject request.'));
     }
 }
 

@@ -104,13 +104,13 @@
                     <input type="hidden" name="search" value="{{ $search }}">
 
                     <div>
-                        <label class="text-xs text-slate-500 font-medium mb-1 block">Dari Tanggal</label>
+                        <label class="text-xs text-slate-500 font-medium mb-1 block">From Date</label>
                         <input type="date" name="start_date" value="{{ $startDate }}"
                                class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E2A5E]/20 focus:border-[#1E2A5E]">
                     </div>
 
                     <div>
-                        <label class="text-xs text-slate-500 font-medium mb-1 block">Sampai Tanggal</label>
+                        <label class="text-xs text-slate-500 font-medium mb-1 block">To Date</label>
                         <input type="date" name="end_date" value="{{ $endDate }}"
                                class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E2A5E]/20 focus:border-[#1E2A5E]">
                     </div>
@@ -127,7 +127,7 @@
                     <div class="flex items-end gap-2">
                         <button type="submit"
                                 class="flex-1 px-4 py-2 text-sm bg-[#1E2A5E] text-white rounded-lg hover:bg-[#2D3A6F] transition font-medium">
-                            Terapkan
+                            Apply
                         </button>
                         <a href="{{ route('activity-log.index') }}"
                            class="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition text-slate-600">
@@ -178,7 +178,7 @@
                                     </div>
                                     <div>
                                         <div class="text-slate-700 font-medium">
-                                            {{ $log->user?->name ?? 'User dihapus' }}
+                                            {{ $log->user?->name ?? 'Deleted User' }}
                                         </div>
                                         <div class="text-xs text-slate-400">
                                             {{ $log->user?->email ?? '-' }}
@@ -216,13 +216,13 @@
                                         <i data-lucide="inbox" class="w-8 h-8 text-slate-300"></i>
                                     </div>
                                     <div>
-                                        <p class="text-sm font-medium text-slate-600">Belum ada aktivitas tercatat</p>
+                                        <p class="text-sm font-medium text-slate-600">No activity logs available</p>
                                         <p class="text-xs text-slate-400 mt-1">
                                             @if($search || $startDate || $endDate || $role)
-                                                Tidak ada log yang cocok dengan filter yang dipilih.
-                                                <a href="{{ route('activity-log.index') }}" class="text-[#1E2A5E] hover:underline">Reset filter</a>
+                                                No logs match the selected filters.
+                                                <a href="{{ route('activity-log.index') }}" class="text-[#1E2A5E] hover:underline">Reset filters</a>
                                             @else
-                                                Log aktivitas akan muncul saat user melakukan aksi di sistem.
+                                                Activity logs will appear when users perform actions in the system.
                                             @endif
                                         </p>
                                     </div>
@@ -242,13 +242,13 @@
 
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
                     <p class="text-slate-500">
-                        Menampilkan
+                        Showing
                         <span class="font-medium text-slate-700">{{ $logs->firstItem() }}</span>
-                        sampai
+                        to
                         <span class="font-medium text-slate-700">{{ $logs->lastItem() }}</span>
-                        dari
+                        of
                         <span class="font-medium text-slate-700">{{ $logs->total() }}</span>
-                        log
+                        logs
                     </p>
 
                     {{-- Custom pagination buttons --}}

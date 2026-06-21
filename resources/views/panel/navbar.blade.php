@@ -63,7 +63,7 @@
                 <div class="dropdown-divider"></div>
 
                 {{-- btn tema --}}
-                <div class="dropdown-section-label">Tema</div>
+                <div class="dropdown-section-label">Theme</div>
                 <div class="dropdown-theme-row"
                      x-data="{ theme: localStorage.getItem('theme') || 'light' }"
                      x-init="$watch('theme', val => {

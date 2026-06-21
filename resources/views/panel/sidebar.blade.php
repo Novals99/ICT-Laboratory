@@ -23,7 +23,7 @@
         </div>
         <div class="sidebar-brand-text">
             <span class="sidebar-brand-name">Inventory</span>
-            <span class="sidebar-brand-sub">Laboratorium ICT</span>
+            <span class="sidebar-brand-sub">ICT Laboratory</span>
         </div>
     </div>
 
@@ -95,7 +95,7 @@
                         {{ $lab->lab_name }}
                     </a>
                 @empty
-                    <p class="sidebar-subitem-empty">Belum ada laboratorium</p>
+                    <p class="sidebar-subitem-empty">No Laboratories Assigned</p>
                 @endforelse
             </div>
         </div>
@@ -130,7 +130,7 @@
                 <path d="M8 21l-4-4 4-4" />
                 <path d="M4 17h16" />
             </svg>
-            Mutasi Antar Lab
+            Asset Transfers
         </a>
 
         {{-- retur ke gudang --}}
@@ -142,7 +142,7 @@
                 <path d="M12 12v6" />
                 <path d="M9 14l3-3 3 3" />
             </svg>
-            Retur ke Gudang
+            Return to Warehouse
         </a>
 
         @if($isSpv)
