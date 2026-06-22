@@ -182,7 +182,7 @@
                         </x-table.td>
                     </tr>
                 @empty
-                    <x-table.empty colspan="8" message="Belum ada data user." />
+                    <x-table.empty colspan="8" message="User data not found." />
                 @endforelse
             </tbody>
         </x-table.index>

@@ -1,6 +1,6 @@
 @extends('panel.content')
 
-@section('title', 'spv Dashboard')
+@section('title', 'SPV Dashboard')
 
 @php
     $role = auth()->user()->role;
@@ -209,7 +209,7 @@
                 @empty
                     <tr>
                         <td colspan="7" class="px-4 py-10 text-center text-gray-400">
-                            Tidak ada data request.
+                            Request data not found.
                         </td>
                     </tr>
                 @endforelse

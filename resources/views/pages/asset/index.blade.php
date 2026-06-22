@@ -144,7 +144,7 @@
                                 </x-table.td>
                             </tr>
                 @empty
-                    <x-table.empty colspan="9" message="Belum ada data asset." />
+                    <x-table.empty colspan="9" message="Asset data not found." />
                 @endforelse
             </tbody>
         </x-table.index>
