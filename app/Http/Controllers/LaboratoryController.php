@@ -364,7 +364,7 @@ class LaboratoryController extends Controller
 
 
         return redirect()->route('laboratory.index')
-            ->with('success', "Lab {$laboratory->lab_name} dipindahkan ke Recycle Bin.");
+            ->with('success', "{$laboratory->lab_name} has been moved to the recycle bin.");
     }
 
     public function export(string $format)
@@ -486,6 +486,6 @@ class LaboratoryController extends Controller
         ]);
 
         return redirect()->route('laboratory.index')
-            ->with('success', count($labs) . ' lab dipindahkan ke Recycle Bin.');
+            ->with('success', count($labs) . 'Lab has been moved to the recycle bin.');
     }
 }
