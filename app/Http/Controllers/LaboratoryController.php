@@ -398,7 +398,7 @@ class LaboratoryController extends Controller
     ]);
 
     return redirect()->route('laboratory.recycle-bin')
-        ->with('success', "Lab {$laboratory->lab_name} berhasil dipulihkan.");
+        ->with('success', "{$laboratory->lab_name} has been successfully restored.");
 }
 
     public function forceDestroy($id)
