@@ -153,13 +153,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/laboratory/{laboratory}/assets/{asset}/serials', [SerialNumberController::class, 'byAssetInLab'])->name('api.lab.asset-serials');
     Route::post('/api/laboratory/{laboratory}/assets/{asset}/serials/sync', [SerialNumberController::class, 'syncInLab'])->name('api.lab.asset-serials.sync');
 
-    // ── SUPERVISOR ONLY (Laboratory Recycle Bin) ────────────────────────────────
+    // ── SUPERVISOR ONLY (Laboratory Recycle Bin) ──
     Route::middleware(\App\Http\Middleware\EnsureSpv::class)->group(function () {
         Route::get('/laboratory/recycle-bin', [LaboratoryController::class, 'recycleBin'])->name('laboratory.recycle-bin');
         Route::post('/laboratory/{id}/restore', [LaboratoryController::class, 'restore'])->name('laboratory.restore');
         Route::delete('/laboratory/{id}/force-delete', [LaboratoryController::class, 'forceDestroy'])->name('laboratory.forceDestroy');
     });
 
-});
+
+    Route::resource('laboratory', LaboratoryController::class)
+        ->where(['laboratory' => '[0-9]+']);
+    });
 
 require __DIR__ . '/auth.php';
