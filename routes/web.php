@@ -10,6 +10,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetLabController;
 use App\Http\Controllers\AssetLogController;
+use App\Http\Controllers\ActivityLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -21,6 +22,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
+
     Route::resource('users', UserController::class);
 
     Route::resource('laboratory', LaboratoryController::class);

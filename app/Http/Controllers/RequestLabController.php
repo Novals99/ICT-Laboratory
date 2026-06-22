@@ -120,13 +120,18 @@ class RequestLabController extends Controller
     {
         DB::beginTransaction();
         try {
-            $labRequest = LabRequest::findOrFail($id);
+            $labRequest = RequestLab::findOrFail($id);
             $labRequest->delete();
 
             DB::commit();
 
-        return redirect()->route('requestlab.index')
-            ->with('success', 'Request berhasil dihapus.');
+            return redirect()->route('requestlab.index')
+                ->with('success', 'Request berhasil dihapus.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('requestlab.index')
+                ->with('error', 'Request gagal dihapus.');
+        }
     }
 
     public function store(Request $request)
@@ -138,7 +143,7 @@ class RequestLabController extends Controller
             'status'        => 'nullable|in:Pending,Approved,Partially Approved,Rejected',
         ]);
 
-        LabRequest::create([
+        RequestLab::create([
             'name'          => $validated['name'],
             'total_request' => $validated['total_request'],
             'request_date'  => $validated['request_date'],
@@ -151,7 +156,7 @@ class RequestLabController extends Controller
 
     public function edit($id)
     {
-        $labRequest = LabRequest::findOrFail($id);
+        $labRequest = RequestLab::findOrFail($id);
         return view('pages.dashboard.requestlab.edit', compact('labRequest'));
     }
 
@@ -164,7 +169,7 @@ class RequestLabController extends Controller
             'status'        => 'nullable|in:Pending,Approved,Rejected',
         ]);
 
-        $labRequest = LabRequest::findOrFail($id);
+        $labRequest = RequestLab::findOrFail($id);
         $labRequest->update($validated);
 
         return redirect()->route('requestlab.index')
