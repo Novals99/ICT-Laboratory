@@ -590,6 +590,20 @@
 .fc-btn--delete { background: #ef4444; color: #fff; }
 .dark .fc-btn--delete { background: #ef4444; }
 
+.fc-btn--restore {
+    background: #22c55e;
+    color: #fff;
+}
+
+.fc-icon-dot--restore {
+    color: #22c55e;
+    background: #ecfdf5;
+}
+
+.dark .fc-icon-dot--restore {
+    background: rgba(34, 197, 94, 0.15);
+}
+
 /* ── Alpine transitions ── */
 .fc-overlay-enter        { transition: opacity 0.2s ease; }
 .fc-overlay-enter-start  { opacity: 0; }

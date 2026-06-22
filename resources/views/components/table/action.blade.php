@@ -9,6 +9,7 @@
     $variantClass = match ($variant) {
         'view' => 'panel-action-view',
         'edit' => 'panel-action-edit',
+        'restore' => 'panel-action-restore',
         'delete' => 'panel-action-delete',
         default => 'panel-action-default',
     };
