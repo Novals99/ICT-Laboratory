@@ -102,6 +102,7 @@
                 />
             @endif
 
+
             @if ($canCreateRequest)
                 <x-button.add type="button" onclick="openPanelModal('addRequestModal')">
                     Add Request
@@ -114,6 +115,9 @@
         <table class="w-full text-sm">
             <thead>
                 <tr style="background:var(--bg-table-header); color:var(--text-secondary);">
+                    <th class="w-12 px-4 py-3 text-left">
+                        <x-table.checkbox id="checkAll" />
+                    </th>
                     <th class="px-4 py-3 text-left font-medium">ID Request</th>
                     <th class="px-4 py-3 text-left font-medium">Name</th>
                     <th class="px-4 py-3 text-left font-medium">Laboratory</th>
@@ -126,6 +130,9 @@
             <tbody>
                 @forelse ($requests as $request)
                     <tr style="border-bottom:1px solid var(--border-color);" class="transition-colors">
+                        <td class="px-4 py-3">
+                            <x-table.checkbox class="row-check" value="{{ $request->id }}" />
+                        </td>
                         <td class="px-4 py-3" style="color:var(--text-secondary);">
                             REQ-{{ str_pad($request->id, 3, '0', STR_PAD_LEFT) }}
                         </td>
@@ -411,6 +418,17 @@
     let requestItemIndex = 1;
     const assets = @json($assetGroups);
     const canReviewRequest = @json($canReviewRequest);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const checkAll = document.getElementById('checkAll');
+        if (checkAll) {
+            checkAll.addEventListener('change', function () {
+                document.querySelectorAll('.row-check').forEach((checkbox) => {
+                    checkbox.checked = this.checked;
+                });
+            });
+        }
+    });
 
     window.openPanelModal = function(id) {
         const modal = document.getElementById(id);
