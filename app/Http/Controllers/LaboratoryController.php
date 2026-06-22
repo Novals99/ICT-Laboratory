@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\Laboratory;
 use App\Models\AssetLab;
+use App\Models\AssetSerialNumber;
+use App\Models\Pc;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -115,29 +117,38 @@ class LaboratoryController extends Controller
             'pcs.*.vga'                 => 'nullable|string|max:255',
             'pcs.*.cpu_fan'             => 'nullable|string|max:255',
             'pcs.*.powersupply'         => 'nullable|string|max:255',
+            'pcs.*.processor_serial_id'   => 'nullable|exists:asset_serial_numbers,id',
+            'pcs.*.ram_serial_id'         => 'nullable|exists:asset_serial_numbers,id',
+            'pcs.*.ram2_serial_id'        => 'nullable|exists:asset_serial_numbers,id',
+            'pcs.*.ssd_serial_id'         => 'nullable|exists:asset_serial_numbers,id',
+            'pcs.*.motherboard_serial_id' => 'nullable|exists:asset_serial_numbers,id',
+            'pcs.*.vga_serial_id'         => 'nullable|exists:asset_serial_numbers,id',
+            'pcs.*.cpu_fan_serial_id'     => 'nullable|exists:asset_serial_numbers,id',
+            'pcs.*.powersupply_serial_id' => 'nullable|exists:asset_serial_numbers,id',
             'lab_assets'                => 'nullable|array',
             'lab_assets.*.asset_id'     => 'nullable|exists:assets,id',
             'lab_assets.*.quantity'     => 'nullable|integer|min:0',
         ]);
-                // Kapasitas PC tidak boleh melebihi stok unit PC yang tersedia di gudang.
-        $pcStock = \App\Models\Asset::where('asset_category', 'pc')->sum('total_good');
-        if ($validated['capacity'] > $pcStock) {
-            return back()->withInput()->withErrors([
-                'capacity' => "Stok unit PC di Inventory & Stock tidak cukup (tersedia: {$pcStock}).",
+
+        $lab = DB::transaction(function () use ($validated) {
+            $lab = Laboratory::create([
+                'lab_name' => $validated['lab_name'],
+                'capacity' => $validated['capacity'],
             ]);
-        }
 
-        $lab = Laboratory::create([
-            'lab_name' => $validated['lab_name'],
-            'capacity' => $validated['capacity'],
-        ]);
+            foreach ($validated['pcs'] as $pcData) {
+                $pc = $lab->pcs()->create([
+                    'type_pc'   => $pcData['type_pc'],
+                    'status_pc' => 'active',
+                    'pc_entry'  => now()->toDateString(),
+                ]);
 
-        foreach ($validated['pcs'] as $pcData) {
-            $lab->pcs()->create(array_merge($pcData, [
-                'status_pc' => 'active',
-                'pc_entry'  => now()->toDateString(),
-            ]));
-        }
+                // (#9) Hubungkan serial number unit gudang ke slot PC.
+                $this->linkPcSerials($pc, $pcData, $lab->id);
+            }
+
+            return $lab;
+        });
 
         // ── SYNC ASSET KE LAB + KURANGI STOK SPV ──
         if (!empty($validated['lab_assets'])) {
@@ -181,6 +192,39 @@ class LaboratoryController extends Controller
             ->with('success', "Lab {$lab->lab_name} berhasil ditambahkan.");
     }
 
+    /**
+     * (#9) Pasang serial number unit gudang ke slot-slot sebuah PC saat lab dibuat.
+     *  - kolom string (processor, ram, ...) diisi dari nama asset serial
+     *  - kolom {slot}_serial_id diisi id serial
+     *  - serial ditandai in_use + lab_id + pc_id + slot (tidak bisa dipakai PC lain)
+     */
+    private function linkPcSerials(Pc $pc, array $pcData, int $labId): void
+    {
+        foreach (Pc::COMPONENT_SLOTS as $slot) {
+            $serialId = $pcData[$slot . '_serial_id'] ?? null;
+            if (! $serialId) {
+                continue;
+            }
+
+            $serial = AssetSerialNumber::with('asset')->find($serialId);
+            if (! $serial || $serial->status === 'in_use') {
+                continue;
+            }
+
+            $pc->{$slot}             = $serial->asset->asset_name ?? null;
+            $pc->{$slot . '_serial_id'} = $serial->id;
+
+            $serial->update([
+                'status' => 'in_use',
+                'lab_id' => $labId,
+                'pc_id'  => $pc->id,
+                'slot'   => $slot,
+            ]);
+        }
+
+        $pc->save();
+    }
+
     public function update(Request $request, Laboratory $laboratory)
     {
         $validated = $request->validate([
@@ -200,14 +244,6 @@ class LaboratoryController extends Controller
             'lab_assets.*.asset_id'     => 'nullable|exists:assets,id',
             'lab_assets.*.quantity'     => 'nullable|integer|min:0',
         ]);
-
-            // Kapasitas PC tidak boleh melebihi stok unit PC yang tersedia di gudang.
-        $pcStock = \App\Models\Asset::where('asset_category', 'pc')->sum('total_good');
-        if ($validated['capacity'] > $pcStock) {
-            return back()->withInput()->withErrors([
-                'capacity' => "Stok unit PC di Inventory & Stock tidak cukup (tersedia: {$pcStock}).",
-            ]);
-        }
 
         $laboratory->update([
             'lab_name' => $validated['lab_name'],

@@ -8,6 +8,19 @@ $isSPV = auth()->user()->role === 'spv inventory';
 $electronicAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'electronic')->values();
 $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'electronic')->values();
 $componentPcAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'component-pc')->values(); // ← tambahan
+
+// (#9) Komponen gudang + serial yang available (belum masuk lab) untuk wizard Create Lab
+$wizardComponents = \App\Models\Asset::where('asset_category', 'component-pc')
+    ->whereHas('serialNumbers', fn($q) => $q->where('status', 'available')->whereNull('lab_id'))
+    ->with(['serialNumbers' => fn($q) => $q->where('status', 'available')->whereNull('lab_id')->orderBy('serial_number')])
+    ->orderBy('asset_name')
+    ->get()
+    ->groupBy('component_type')
+    ->map(fn($assets) => $assets->map(fn($a) => [
+        'asset_id'   => $a->id,
+        'asset_name' => $a->asset_name,
+        'serials'    => $a->serialNumbers->map(fn($s) => ['id' => $s->id, 'serial_number' => $s->serial_number])->values(),
+    ])->values());
 @endphp
 
 <div class="panel-page-card">
@@ -370,33 +383,47 @@ function clabGoStep(step) {
         buildCreatePcList(cap);
     }
 }
-const pcComponentOptions = @json($componentPcAssets->map(fn($a) => ['id'=>$a->id,'name'=>$a->asset_name,'stock'=>$a->total_good])->values());
-const pcFieldLabels = {
-    processor: 'Processor', ram: 'RAM', ssd: 'SSD', motherboard: 'Motherboard',
-    vga: 'VGA', cpu_fan: 'CPU Fan', powersupply: 'Power Supply',
-};
+// (#9) Komponen + serial number untuk wizard Create Lab
+const wizardComponents = @json($wizardComponents);
+const wizSlots = [
+    { slot: 'processor',   label: 'Processor',        type: 'processor' },
+    { slot: 'ram',         label: 'RAM',              type: 'ram' },
+    { slot: 'ram2',        label: 'RAM 2 (opsional)', type: 'ram' },
+    { slot: 'ssd',         label: 'SSD',              type: 'ssd' },
+    { slot: 'motherboard', label: 'Motherboard',      type: 'motherboard' },
+    { slot: 'vga',         label: 'VGA',              type: 'vga' },
+    { slot: 'cpu_fan',     label: 'CPU Fan',          type: 'cpu_fan' },
+    { slot: 'powersupply', label: 'Power Supply',     type: 'powersupply' },
+];
+
+function wizAssetOptions(type) {
+    const list = wizardComponents[type] || [];
+    return '<option value="">— Pilih komponen —</option>' +
+        list.map(a => `<option value="${a.asset_id}">${a.asset_name}</option>`).join('');
+}
 
 function buildCreatePcList(cap) {
     const c = document.getElementById('clab-pc-list');
     c.innerHTML = '';
+
     for (let i = 0; i < cap; i++) {
-        const fieldsHtml = Object.keys(pcFieldLabels).map(f => `
-            <div style="position:relative;">
-                <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">${pcFieldLabels[f]}</label>
-                <input type="hidden" name="pcs[${i}][${f}]" id="clab_${i}_${f}_val">
-                <input type="text" id="clab_${i}_${f}_search"
-                       placeholder="Search component or type manually..."
-                       autocomplete="off"
-                       oninput="showClabDropdown(${i}, '${f}')"
-                       onfocus="showClabDropdown(${i}, '${f}')"
-                       style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
-                <div id="clab_${i}_${f}_dropdown"
-                     style="display:none; position:relative; z-index:200; background:#fff; border:1px solid #d1d5db; border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); margin-top:2px;">
+        const slotsHtml = wizSlots.map(s => `
+            <div data-slot-row>
+                <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">${s.label}</label>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <select class="wiz-asset" data-slot="${s.slot}" data-type="${s.type}"
+                            style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
+                        ${wizAssetOptions(s.type)}
+                    </select>
+                    <select name="pcs[${i}][${s.slot}_serial_id]" class="wiz-serial" data-slot="${s.slot}"
+                            style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
+                        <option value="">— Serial Number —</option>
+                    </select>
                 </div>
             </div>`).join('');
 
         c.innerHTML += `
-        <details style="border:1px solid #e5e7eb; border-radius:10px; margin-bottom:10px;">
+        <details style="border:1px solid #e5e7eb; border-radius:10px; margin-bottom:10px;" ${i === 0 ? 'open' : ''}>
             <summary style="padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; background:#f9fafb;">
                 PC-${String(i).padStart(2,'0')}
             </summary>
@@ -408,52 +435,50 @@ function buildCreatePcList(cap) {
                         <option value="dosen">Dosen</option>
                     </select>
                 </div>
-                ${fieldsHtml}
+                ${slotsHtml}
             </div>
         </details>`;
     }
-}
 
-function showClabDropdown(i, field) {
-    const search   = document.getElementById(`clab_${i}_${field}_search`);
-    const dropdown = document.getElementById(`clab_${i}_${field}_dropdown`);
-    if (!search || !dropdown) return;
-
-    const query    = search.value.toLowerCase();
-    const filtered = pcComponentOptions.filter(c => c.name.toLowerCase().includes(query));
-
-    dropdown.innerHTML = '';
-
-    const manualOpt = document.createElement('div');
-    manualOpt.textContent = '— Kosongkan / Ketik Manual —';
-    manualOpt.style.cssText = 'padding:8px 12px; font-size:13px; cursor:pointer; color:#9ca3af; border-bottom:1px solid #e5e7eb;';
-    manualOpt.onmousedown = () => selectClabComponent(i, field, search.value, search.value);
-    dropdown.appendChild(manualOpt);
-
-    filtered.forEach(comp => {
-        const disabled = comp.stock < 1;
-        const item = document.createElement('div');
-        item.style.cssText = `padding:8px 12px; font-size:13px; cursor:${disabled ? 'not-allowed' : 'pointer'}; display:flex; justify-content:space-between; align-items:center;`;
-        item.innerHTML = `
-            <span style="color:${disabled ? '#9ca3af' : '#374151'};">${comp.name}</span>
-            <span style="font-size:11px; background:${disabled ? '#fee2e2' : '#dcfce7'}; color:${disabled ? '#dc2626' : '#16a34a'}; padding:2px 6px; border-radius:4px; font-weight:600;">
-                Stok: ${comp.stock}
-            </span>`;
-        if (!disabled) {
-            item.onmousedown = () => selectClabComponent(i, field, comp.name, comp.name);
-            item.onmouseover = () => item.style.background = '#f9fafb';
-            item.onmouseout  = () => item.style.background = '';
-        }
-        dropdown.appendChild(item);
+    // Wiring event setelah HTML masuk DOM.
+    c.querySelectorAll('.wiz-asset').forEach(assetSel => {
+        assetSel.addEventListener('change', () => {
+            const row = assetSel.closest('[data-slot-row]');
+            const serialSel = row.querySelector('.wiz-serial');
+            fillWizSerials(serialSel, assetSel.dataset.type, assetSel.value, null);
+        });
     });
-
-    dropdown.style.display = 'block';
+    c.querySelectorAll('.wiz-serial').forEach(serialSel => {
+        serialSel.addEventListener('change', refreshWizardSerials);
+    });
 }
 
-function selectClabComponent(i, field, value, label) {
-    document.getElementById(`clab_${i}_${field}_val`).value    = value;
-    document.getElementById(`clab_${i}_${field}_search`).value = label;
-    document.getElementById(`clab_${i}_${field}_dropdown`).style.display = 'none';
+function fillWizSerials(serialSel, type, assetId, selectId) {
+    serialSel.innerHTML = '<option value="">— Serial Number —</option>';
+    const list = wizardComponents[type] || [];
+    const asset = list.find(a => String(a.asset_id) === String(assetId));
+    if (asset) {
+        asset.serials.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.serial_number;
+            if (selectId && String(s.id) === String(selectId)) opt.selected = true;
+            serialSel.appendChild(opt);
+        });
+    }
+    refreshWizardSerials();
+}
+
+// Satu serial number tidak boleh dipakai dua slot/PC dalam satu lab.
+function refreshWizardSerials() {
+    const selects = [...document.querySelectorAll('#clab-pc-list .wiz-serial')];
+    const chosen = selects.map(s => s.value).filter(Boolean);
+    selects.forEach(sel => {
+        [...sel.options].forEach(opt => {
+            if (!opt.value) return;
+            opt.disabled = chosen.includes(opt.value) && sel.value !== opt.value;
+        });
+    });
 }
 
 document.addEventListener('click', e => {

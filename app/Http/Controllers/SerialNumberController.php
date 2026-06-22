@@ -114,4 +114,59 @@ class SerialNumberController extends Controller
 
         return response()->json($grouped);
     }
+
+    /**
+     * (#14) Daftar serial sebuah aset YANG ADA DI LAB tertentu (untuk modal Asset Information).
+     */
+    public function byAssetInLab(Laboratory $laboratory, Asset $asset)
+    {
+        $serials = $asset->serialNumbers()
+            ->where('lab_id', $laboratory->id)
+            ->orderBy('serial_number')
+            ->get(['id', 'serial_number', 'condition', 'status', 'pc_id']);
+
+        return response()->json([
+            'asset_name' => $asset->asset_name,
+            'serials'    => $serials->map(fn ($s) => [
+                'id'            => $s->id,
+                'serial_number' => $s->serial_number,
+                'condition'     => $s->condition,
+                'status'        => $s->status,
+                // terpasang di PC → tidak boleh diubah/hapus dari sini
+                'locked'        => $s->status === 'in_use',
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * (#14) SPV menyimpan perubahan nomor seri unit yang ada di lab.
+     * Hanya mengubah nilai serial_number (jumlah tetap mengikuti stok lab).
+     */
+    public function syncInLab(Request $request, Laboratory $laboratory, Asset $asset)
+    {
+        abort_unless(auth()->user()->role === 'spv inventory', 403);
+
+        $data = $request->validate([
+            'serials'                 => ['array'],
+            'serials.*.id'            => ['nullable', 'integer'],
+            'serials.*.serial_number' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        foreach ($data['serials'] ?? [] as $row) {
+            if (empty($row['id']) || empty($row['serial_number'])) {
+                continue;
+            }
+
+            $serial = $asset->serialNumbers()
+                ->where('lab_id', $laboratory->id)
+                ->find($row['id']);
+
+            // Jangan ubah serial yang sedang terpasang di PC.
+            if ($serial && $serial->status !== 'in_use') {
+                $serial->update(['serial_number' => trim($row['serial_number'])]);
+            }
+        }
+
+        return response()->json(['success' => true]);
+    }
 }

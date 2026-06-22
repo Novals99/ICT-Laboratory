@@ -142,8 +142,17 @@
                     });
                 }
 
-                document.addEventListener('DOMContentLoaded', () => initAll());
-                // Modal sering ditampilkan via JS — sediakan hook manual.
+                document.addEventListener('DOMContentLoaded', () => {
+                    // Hanya init picker yang TERLIHAT saat load (mis. dipakai inline).
+                    // Picker di dalam modal (hidden) di-init saat modal dibuka via initPcComponentPickers().
+                    document.querySelectorAll('.pc-comp-picker').forEach(p => {
+                        if (p.offsetParent !== null && !p.dataset.pickerReady) {
+                            p.dataset.pickerReady = '1';
+                            initPicker(p);
+                        }
+                    });
+                });
+                // Modal ditampilkan via JS → panggil ini saat modal dibuka.
                 window.initPcComponentPickers = initAll;
             })();
         </script>

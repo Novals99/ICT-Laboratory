@@ -110,7 +110,7 @@ Route::middleware('auth')->group(function () {
             ->middleware(\App\Http\Middleware\EnsureSpv::class)
             ->name('reject');
         Route::get('/{returnRequest}', [ReturnRequestController::class, 'show'])->name('show');
-        
+
         // Supervisor Only Actions
         Route::middleware(\App\Http\Middleware\EnsureSpv::class)->group(function () {
             Route::post('/{returnRequest}/approve', [ReturnRequestController::class, 'approve'])->name('approve');
@@ -149,6 +149,8 @@ Route::middleware('auth')->group(function () {
     // Serial Number JSON feeds (dropdown S/N: Edit Asset, Asset Lab, Add/Edit PC, Create Lab)
     Route::get('/api/assets/{asset}/serials', [SerialNumberController::class, 'byAsset'])->name('api.assets.serials');
     Route::get('/api/laboratory/{laboratory}/pc-components', [SerialNumberController::class, 'pcComponents'])->name('api.lab.pc-components');
+    Route::get('/api/laboratory/{laboratory}/assets/{asset}/serials', [SerialNumberController::class, 'byAssetInLab'])->name('api.lab.asset-serials');
+    Route::post('/api/laboratory/{laboratory}/assets/{asset}/serials/sync', [SerialNumberController::class, 'syncInLab'])->name('api.lab.asset-serials.sync');
 
     // ── SUPERVISOR ONLY (Laboratory Recycle Bin) ────────────────────────────────
     Route::middleware(\App\Http\Middleware\EnsureSpv::class)->group(function () {

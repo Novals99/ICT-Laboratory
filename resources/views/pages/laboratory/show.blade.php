@@ -103,7 +103,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                         <td>
                             <div class="action-btns">
                                 <button type="button"
-                                        onclick='openEditPcModal({{ $pc->id }},{{ $loop->index }},"{{ addslashes($pc->type_pc) }}","{{ addslashes($pc->status_pc) }}","{{ addslashes($pc->processor??'') }}","{{ addslashes($pc->ram??'') }}","{{ addslashes($pc->ssd??'') }}","{{ addslashes($pc->motherboard??'') }}","{{ addslashes($pc->vga??'') }}","{{ addslashes($pc->cpu_fan??'') }}","{{ addslashes($pc->powersupply??'') }}")'
+                                        onclick="openEditPcModal({{ $pc->id }})"
                                         class="action-btn action-edit" title="Edit">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -297,6 +297,17 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 
                         @if($canEdit)
                         <td style="text-align:center;">
+                            <div class="action-btns" style="justify-content:center;">
+                            @if(in_array($asset->asset_category, ['electronic', 'component-pc']))
+                            <button type="button"
+                                    onclick="openAssetSerialModal({{ $asset->id }}, '{{ addslashes($asset->asset_name) }}')"
+                                    class="action-btn action-edit" title="{{ $isSPV ? 'Edit Serial' : 'Lihat Serial' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                                    <path d="M7 9v6M10 9v6M13 9v6M17 9v6"/>
+                                </svg>
+                            </button>
+                            @endif
                             @if($isStaffLab)
                             <button type="button"
                                     onclick='openReturnModal("asset", null, {{ $asset->id }}, "{{ addslashes($asset->asset_name) }}")'
@@ -309,6 +320,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                                 </svg>
                             </button>
                             @endif
+                            </div>
                         </td>
                         @endif
                     </tr>
@@ -364,52 +376,38 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
     </div>
 </div>
 
-{{-- ══ MODAL EDIT PC ══ --}}
-<div id="modal-edit-pc" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50; align-items:center; justify-content:center;">
+{{-- ══ MODAL EDIT PC (#10: per-PC + serial picker) ══ --}}
+@foreach($laboratory->pcs as $i => $pc)
+<div id="modal-edit-pc-{{ $pc->id }}" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50; align-items:center; justify-content:center;">
     <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:500px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; display:flex; flex-direction:column;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border-light); flex-shrink:0;">
-            <h3 id="edit-pc-title" style="font-size:16px; font-weight:700; color:var(--text-bold); margin:0;">Edit PC</h3>
-            <button onclick="closeEditPcModal()" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:22px;">&times;</button>
+            <h3 style="font-size:16px; font-weight:700; color:var(--text-bold); margin:0;">Edit PC-{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</h3>
+            <button type="button" onclick="closeEditPcModal({{ $pc->id }})" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:22px;">&times;</button>
         </div>
-        <form method="POST" id="editPcForm" style="overflow-y:auto; flex:1; padding:24px; display:flex; flex-direction:column; gap:14px;">
+        <form method="POST" action="{{ route('pc.update', [$laboratory->id, $pc->id]) }}" style="overflow-y:auto; flex:1; padding:24px; display:flex; flex-direction:column; gap:14px;">
             @csrf @method('PUT')
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                 <div>
                     <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Type</label>
-                    <select name="type_pc" id="epc_type_pc" style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
-                        <option value="mahasiswa">Mahasiswa</option>
-                        <option value="dosen">Dosen</option>
+                    <select name="type_pc" style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
+                        <option value="mahasiswa" {{ $pc->type_pc === 'mahasiswa' ? 'selected' : '' }}>Mahasiswa</option>
+                        <option value="dosen" {{ $pc->type_pc === 'dosen' ? 'selected' : '' }}>Dosen</option>
                     </select>
                 </div>
                 <div>
                     <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Status</label>
-                    <select name="status_pc" id="epc_status_pc" style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
+                    <select name="status_pc" style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
+                        <option value="active" {{ $pc->status_pc === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="inactive" {{ $pc->status_pc === 'inactive' ? 'selected' : '' }}>Inactive</option>
                     </select>
                 </div>
             </div>
 
-            @php $pcFields = ['processor'=>'Processor','ram'=>'RAM','ssd'=>'SSD','motherboard'=>'Motherboard','vga'=>'VGA','cpu_fan'=>'CPU Fan','powersupply'=>'Power Supply']; @endphp
-
-            @foreach($pcFields as $f => $l)
-            <div style="position:relative;">
-                <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">{{ $l }}</label>
-                <input type="hidden" name="{{ $f }}" id="epc_{{ $f }}_val">
-                <input type="text" id="epc_{{ $f }}_search"
-                       placeholder="Search component or type manually..."
-                       autocomplete="off"
-                       oninput="filterDropdown('{{ $f }}')"
-                       onfocus="showDropdown('{{ $f }}')"
-                       style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
-                <div id="epc_{{ $f }}_dropdown"
-                     style="display:none; position:absolute; z-index:200; background:var(--bg-main); border:1px solid var(--border-main); border-radius:8px; width:100%; max-height:160px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1); top:calc(100% + 2px); left:0;">
-                </div>
-            </div>
-            @endforeach
+            {{-- (#10) Pemilih komponen + serial number per slot --}}
+            <x-partials.pc-component-picker :laboratory="$laboratory" :pc="$pc" />
 
             <div style="display:flex; justify-content:flex-end; gap:8px; padding-top:4px;">
-                <button type="button" onclick="closeEditPcModal()"
+                <button type="button" onclick="closeEditPcModal({{ $pc->id }})"
                         style="border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
                 <button type="submit"
                         style="background:var(--bg-primary); color:var(--text-primary); border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Update</button>
@@ -417,6 +415,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
         </form>
     </div>
 </div>
+@endforeach
 
 {{-- ══ MODAL ADD ASSET ══ --}}
 <div id="modal-add-asset" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50; align-items:center; justify-content:center;">
@@ -514,10 +513,36 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
             <div style="display:flex; justify-content:flex-end; gap:8px;">
                 <button type="button" onclick="closeReturnModal()"
                         style="border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
-                <button type="submit"
+<button type="submit"
                         style="background:var(--bg-primary); color:var(--text-primary); border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Kirim Pengajuan Retur</button>
             </div>
         </form>
+    </div>
+</div>
+
+{{-- ══ MODAL SERIAL ASET (#14) ══ --}}
+<div id="modal-asset-serial" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:60; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:460px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border-light); flex-shrink:0;">
+            <h3 style="font-size:16px; font-weight:700; color:var(--text-bold); margin:0;">
+                Serial Number — <span id="asset-serial-title" style="font-weight:600;"></span>
+            </h3>
+            <button type="button" onclick="closeAssetSerialModal()" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:22px;">&times;</button>
+        </div>
+        <div style="overflow-y:auto; flex:1; padding:24px;">
+            <div id="asset-serial-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+            <p id="asset-serial-empty" style="display:none; text-align:center; color:var(--text-muted); font-size:13px; margin:8px 0 0;">
+                Belum ada serial number untuk aset ini di lab.
+            </p>
+        </div>
+        @if($isSPV)
+        <div style="display:flex; justify-content:flex-end; gap:8px; padding:0 24px 24px; flex-shrink:0;">
+            <button type="button" onclick="closeAssetSerialModal()"
+                    style="border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">Cancel</button>
+            <button type="button" onclick="saveAssetSerials()"
+                    style="background:var(--bg-primary); color:var(--text-primary); border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600;">Simpan</button>
+        </div>
+        @endif
     </div>
 </div>
 @endif
@@ -621,27 +646,17 @@ document.getElementById('modal-add-pc').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAddPcModal();
 });
 
-// ── Edit PC ──
-function openEditPcModal(pcId, index, type, status, processor, ram, ssd, motherboard, vga, cpuFan, ps) {
-    document.getElementById('edit-pc-title').textContent = `Edit PC-${String(index).padStart(2,'0')}`;
-    document.getElementById('editPcForm').action = `/laboratory/${labId}/pc/${pcId}`;
-    document.getElementById('epc_type_pc').value   = type;
-    document.getElementById('epc_status_pc').value = status;
-
-    const values = { processor, ram, ssd, motherboard, vga, cpu_fan: cpuFan, powersupply: ps };
-    pcFields.forEach(f => {
-        const val = values[f] || '';
-        document.getElementById(`epc_${f}_val`).value    = val;
-        document.getElementById(`epc_${f}_search`).value = val;
-        document.getElementById(`epc_${f}_dropdown`).style.display = 'none';
-    });
-
-    document.getElementById('modal-edit-pc').style.display = 'flex';
+// ── Edit PC (#10: per-PC modal + serial picker) ──
+function openEditPcModal(pcId) {
+    const m = document.getElementById('modal-edit-pc-' + pcId);
+    if (!m) return;
+    m.style.display = 'flex';
+    if (window.initPcComponentPickers) window.initPcComponentPickers(m);
 }
-function closeEditPcModal() { document.getElementById('modal-edit-pc').style.display = 'none'; }
-document.getElementById('modal-edit-pc').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeEditPcModal();
-});
+function closeEditPcModal(pcId) {
+    const m = document.getElementById('modal-edit-pc-' + pcId);
+    if (m) m.style.display = 'none';
+}
 
 // ── Return Modal ──
 function openReturnModal(type, pcId, assetId, itemName) {
@@ -724,12 +739,86 @@ document.addEventListener('click', e => {
         }
     });
 });
-
-// ── Add Asset ──
+// ── Add Asset Modal ──
 function openAddAssetModal()  { document.getElementById('modal-add-asset').style.display = 'flex'; }
 function closeAddAssetModal() { document.getElementById('modal-add-asset').style.display = 'none'; }
 document.getElementById('modal-add-asset').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAddAssetModal();
+});
+
+// ── Serial Aset (#14) ──
+const IS_SPV_SERIAL = @json($isSPV);
+let currentAssetSerialId = null;
+
+function openAssetSerialModal(assetId, name) {
+    currentAssetSerialId = assetId;
+    document.getElementById('asset-serial-title').textContent = name;
+    document.getElementById('asset-serial-empty').style.display = 'none';
+    const list = document.getElementById('asset-serial-list');
+    list.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:13px;">Memuat...</p>';
+    document.getElementById('modal-asset-serial').style.display = 'flex';
+
+    fetch(`/api/laboratory/${labId}/assets/${assetId}/serials`)
+        .then(r => r.json())
+        .then(d => {
+            list.innerHTML = '';
+            if (!(d.serials || []).length) {
+                document.getElementById('asset-serial-empty').style.display = 'block';
+                return;
+            }
+            d.serials.forEach((s, idx) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; gap:8px; align-items:center;';
+                const num = document.createElement('span');
+                num.textContent = (idx + 1) + '.';
+                num.style.cssText = 'width:22px; color:var(--text-muted); font-size:13px; flex-shrink:0;';
+                const inp = document.createElement('input');
+                inp.type = 'text';
+                inp.value = s.serial_number;
+                inp.dataset.serialId = s.id;
+                inp.readOnly = !IS_SPV_SERIAL || s.locked;
+                inp.style.cssText = 'flex:1; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:8px 12px; font-size:13px; outline:none;';
+                row.appendChild(num);
+                row.appendChild(inp);
+                if (s.locked) {
+                    const badge = document.createElement('span');
+                    badge.textContent = 'Terpasang';
+                    badge.style.cssText = 'font-size:11px; background:var(--bg-success); color:var(--text-success); padding:2px 8px; border-radius:6px; flex-shrink:0;';
+                    row.appendChild(badge);
+                }
+                list.appendChild(row);
+            });
+        })
+        .catch(() => { list.innerHTML = '<p style="text-align:center;color:#f87171;font-size:13px;">Gagal memuat.</p>'; });
+}
+
+function closeAssetSerialModal() {
+    document.getElementById('modal-asset-serial').style.display = 'none';
+    currentAssetSerialId = null;
+}
+
+function saveAssetSerials() {
+    if (!currentAssetSerialId) return;
+    const inputs = document.querySelectorAll('#asset-serial-list input[data-serial-id]');
+    const serials = Array.from(inputs)
+        .filter(i => !i.readOnly)
+        .map(i => ({ id: i.dataset.serialId, serial_number: i.value }));
+
+    fetch(`/api/laboratory/${labId}/assets/${currentAssetSerialId}/serials/sync`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ serials })
+    })
+        .then(r => r.json())
+        .then(d => { if (d.success) closeAssetSerialModal(); else alert('Gagal menyimpan.'); })
+        .catch(() => alert('Gagal menyimpan.'));
+}
+
+document.getElementById('modal-asset-serial').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAssetSerialModal();
 });
 @endif
 </script>
