@@ -81,6 +81,16 @@
                             class="w-full rounded-lg border px-3 py-2 text-sm">
                     </div>
                 @endif
+
+                <div class="filter-section">
+                    <div class="filter-section-title">Laboratory</div>
+                    <select name="lab_id" class="w-full rounded-lg border px-3 py-2 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary);">
+                        <option value="">All Labs</option>
+                        @foreach ($laboratories as $lab)
+                            <option value="{{ $lab->id }}" {{ request('lab_id') == $lab->id ? 'selected' : '' }}>{{ $lab->lab_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </x-button.filter>
 
             @if ($isSpv)
@@ -463,12 +473,14 @@
             </div>
         `;
         document.getElementById('requestItemList').appendChild(div);
+        if (typeof validateAddRequestForm === 'function') validateAddRequestForm();
     }
 
     function removeItemRow(btn) {
         const list = btn.closest('#requestItemList');
         if (list && list.querySelectorAll('.item-row').length === 1) return;
         btn.closest('.item-row').remove();
+        if (typeof validateAddRequestForm === 'function') validateAddRequestForm();
     }
 
     function openRequestModal(requestId) {
@@ -671,6 +683,49 @@
             });
             document.body.style.overflow = '';
         }
+    });
+
+    function validateAddRequestForm() {
+        const form = document.querySelector('#addRequestModal form');
+        if (!form) return;
+
+        const date = form.querySelector('[name="request_date"]');
+        const lab = form.querySelector('[name="lab_id"]');
+        
+        let hasValidItem = false;
+        const itemRows = form.querySelectorAll('.item-row');
+        itemRows.forEach(row => {
+            const assetSelect = row.querySelector('select[name*="[asset_id]"]');
+            const qtyInput = row.querySelector('input[name*="[total_request]"]');
+            if (assetSelect && assetSelect.value && qtyInput && qtyInput.value > 0) {
+                hasValidItem = true;
+            }
+        });
+
+        const submitBtn = form.querySelector('.panel-btn-submit');
+        if (submitBtn) {
+            if (date && date.value && lab && lab.value && hasValidItem) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.style.cursor = 'not-allowed';
+            }
+        }
+    }
+
+    document.addEventListener('input', function(e) {
+        if (e.target.closest('#addRequestModal')) validateAddRequestForm();
+    });
+    document.addEventListener('change', function(e) {
+        if (e.target.closest('#addRequestModal')) validateAddRequestForm();
+    });
+    
+    // Initial validation check
+    document.addEventListener('DOMContentLoaded', () => {
+        validateAddRequestForm();
     });
 </script>
 @endpush

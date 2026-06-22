@@ -48,10 +48,7 @@ abstract class BaseExport implements FromCollection, WithHeadings, WithStyles, S
               $pdf = Pdf::loadView('exports.pdf', compact('data', 'headings', 'title'))
                      ->setPaper('a4', 'landscape');
 
-              return response($pdf->output(), 200, [
-                     'Content-Type'        => 'application/octet-stream',
-                     'Content-Disposition' => 'attachment; filename="' . $this->filename() . '.pdf"',
-              ]);
+              return $pdf->download($this->filename() . '.pdf');
        }
 
        public function downloadExcel(): BinaryFileResponse
