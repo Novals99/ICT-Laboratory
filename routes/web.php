@@ -22,7 +22,6 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 Route::middleware('auth')->group(function () {
-
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Profile Management
@@ -34,6 +33,8 @@ Route::middleware('auth')->group(function () {
 
     // User Management
     Route::get('/users/export/{format}', [UserController::class, 'export'])->name('users.export');
+    
+    Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
     Route::resource('users', UserController::class);
 
     // Laboratory Management
