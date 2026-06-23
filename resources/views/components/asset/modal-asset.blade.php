@@ -145,11 +145,11 @@
                     </div>
 
 
-                    {{-- (#17) Serial Number — tampil untuk Electronic & PC Component (nullable) --}}
+                    {{-- (#17) Kode Inventaris — tampil untuk Electronic & PC Component (nullable) --}}
                     <div class="asset-field js-serial-field" style="display:none;">
-                        <label class="asset-field-label">Serial Number:</label>
+                        <label class="asset-field-label">Kode Inventaris:</label>
                         <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
-                        <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Add S/N</button>
+                        <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Tambah Kode</button>
                         <p class="panel-form-help">Boleh dikosongkan — akan ter-generate otomatis.</p>
                     </div>
 
@@ -303,11 +303,11 @@
                     </div>
 
 
-                    {{-- (#17) Serial Number — tampil untuk Electronic & PC Component (nullable) --}}
+                    {{-- (#17) Kode Inventaris — tampil untuk Electronic & PC Component (nullable) --}}
                     <div class="asset-field js-serial-field" style="display:none;">
-                        <label class="asset-field-label">Serial Number:</label>
+                        <label class="asset-field-label">Kode Inventaris:</label>
                         <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
-                        <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Add S/N</button>
+                        <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Tambah Kode</button>
                         <p class="panel-form-help">Boleh dikosongkan — akan ter-generate otomatis.</p>
                     </div>
 
@@ -460,15 +460,15 @@
             </div>
         </div>
 
-        {{-- (#16) Serial Number — untuk Electronic & PC Component (PC = electronic) --}}
+        {{-- (#16) Kode Inventaris — untuk Electronic & PC Component (PC = electronic) --}}
         <div class="panel-form-row js-edit-serial"
              style="{{ in_array($asset->asset_category ?? '', ['electronic', 'component-pc', 'pc']) ? '' : 'display:none;' }}">
-            <label class="panel-form-label">Serial Number:</label>
+            <label class="panel-form-label">Kode Inventaris:</label>
             <div class="panel-form-field">
                 <div class="js-serial-list" data-asset-id="{{ $asset->id ?? '' }}"
                      style="display:flex; flex-direction:column; gap:6px;"></div>
-                <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ S/N</button>
-                <p class="panel-form-help">Jumlah serial mengikuti Total unit. Kosongkan untuk generate otomatis.</p>
+                <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Kode</button>
+                <p class="panel-form-help">Jumlah kode inventaris mengikuti Total unit. Kosongkan untuk generate otomatis.</p>
             </div>
         </div>
 
@@ -700,7 +700,7 @@
                     input.type = 'text';
                     input.name = name;
                     input.value = value || '';
-                    input.placeholder = 'Serial number...';
+                    input.placeholder = 'Kode inventaris...';
                     input.className = 'panel-form-input';
                     input.style.flex = '1';
                     if (locked) input.readOnly = true;
