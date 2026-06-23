@@ -144,19 +144,6 @@
                         @enderror
                     </div>
 
-                    {{-- Serial Number (from SPV Inventory) — dropdown asset + serial number --}}
-                    <div class="asset-field js-spv-serial-field" style="display:none;">
-                        <label class="asset-field-label">Serial Number (SPV):</label>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                            <select class="panel-form-input js-spv-asset-select" data-progress-field>
-                                <option value="">— Pilih Asset SPV —</option>
-                            </select>
-                            <select name="items[0][spv_serial_id]" class="panel-form-input js-spv-serial-select" data-progress-field>
-                                <option value="">— Serial Number —</option>
-                            </select>
-                        </div>
-                        <p class="panel-form-help" style="margin-top:4px;">Pilih asset dari Inventory SPV, lalu pilih S/N yang available.</p>
-                    </div>
 
                     {{-- (#17) Serial Number — tampil untuk Electronic & PC Component (nullable) --}}
                     <div class="asset-field js-serial-field" style="display:none;">
@@ -315,19 +302,6 @@
                         >
                     </div>
 
-                    {{-- Serial Number (from SPV Inventory) — dropdown asset + serial number --}}
-                    <div class="asset-field js-spv-serial-field" style="display:none;">
-                        <label class="asset-field-label">Serial Number (SPV):</label>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                            <select class="panel-form-input js-spv-asset-select" data-progress-field>
-                                <option value="">— Pilih Asset SPV —</option>
-                            </select>
-                            <select data-name="spv_serial_id" class="panel-form-input js-spv-serial-select" data-progress-field>
-                                <option value="">— Serial Number —</option>
-                            </select>
-                        </div>
-                        <p class="panel-form-help" style="margin-top:4px;">Pilih asset dari Inventory SPV, lalu pilih S/N yang available.</p>
-                    </div>
 
                     {{-- (#17) Serial Number — tampil untuk Electronic & PC Component (nullable) --}}
                     <div class="asset-field js-serial-field" style="display:none;">

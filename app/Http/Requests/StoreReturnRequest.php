@@ -31,7 +31,8 @@ class StoreReturnRequest extends FormRequest
             'items.*.quantity'  => ['required', 'integer', 'min:1'],
             'items.*.condition' => ['required', 'in:good,damaged,lost'],
             'items.*.reason'    => ['nullable', 'string', 'max:500'],
-            'items.*.serial_number_id' => ['nullable', 'integer', 'exists:asset_serial_numbers,id'],
+            'items.*.serial_number_ids' => ['nullable', 'array'],
+            'items.*.serial_number_ids.*' => ['nullable', 'integer', 'exists:asset_serial_numbers,id'],
         ];
     }
 

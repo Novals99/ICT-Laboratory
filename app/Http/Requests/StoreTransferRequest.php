@@ -26,7 +26,8 @@ class StoreTransferRequest extends FormRequest
             'items.*.asset_id'  => ['required', 'integer', 'exists:assets,id'],
             'items.*.quantity'  => ['required', 'integer', 'min:1'],
             'items.*.notes'     => ['nullable', 'string', 'max:500'],
-            'items.*.serial_number_id' => ['nullable', 'integer', 'exists:asset_serial_numbers,id'],
+            'items.*.serial_number_ids' => ['nullable', 'array'],
+            'items.*.serial_number_ids.*' => ['nullable', 'integer', 'exists:asset_serial_numbers,id'],
         ];
     }
 

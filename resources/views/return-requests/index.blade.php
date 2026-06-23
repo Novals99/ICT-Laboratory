@@ -401,11 +401,13 @@
                 </div>
 
                 <div id="rr_serial_container_${idx}" style="display:none; margin-bottom:8px;">
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Serial Number</label>
-                    <select name="items[${idx}][serial_number_id]" id="rr_serial_${idx}"
-                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                        <option value="">-- Choose Serial Number --</option>
-                    </select>
+                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Serial Numbers</label>
+                    <div id="rr_serial_list_${idx}" style="display:flex; flex-direction:column; gap:6px; margin-bottom:6px;">
+                    </div>
+                    <button type="button" onclick="addRRSerialSelect(${idx})"
+                        class="rounded-lg bg-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-300 transition" style="border:none; cursor:pointer;">
+                        + Add Serial Number
+                    </button>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
@@ -434,19 +436,99 @@
         `;
     }
 
+    window.addRRSerialSelect = function(index, preselectedValue = null) {
+        const list = document.getElementById(`rr_serial_list_${index}`);
+        const assetSelect = document.getElementById(`rr_asset_${index}`);
+        const assetId = assetSelect.value;
+        const serials = (window.rrSerialData && window.rrSerialData[assetId]) ? window.rrSerialData[assetId] : [];
+        
+        if (serials.length === 0) return;
+        
+        const rowId = Date.now() + Math.random().toString(36).substr(2, 5);
+        
+        const row = document.createElement('div');
+        row.id = `rr_serial_row_${rowId}`;
+        row.style.cssText = 'display:flex; gap:6px; align-items:center; margin-bottom:4px;';
+        
+        const select = document.createElement('select');
+        select.name = `items[${index}][serial_number_ids][]`;
+        select.className = `rr-serial-select-${index}`;
+        select.style.cssText = 'flex:1; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);';
+        select.required = true;
+        select.innerHTML = '<option value="">-- Choose Serial Number --</option>' +
+            serials.map(s => {
+                const pcLabel = s.pc_sku ? ` - (PC: ${s.pc_sku})` : '';
+                return `<option value="${s.id}">${s.serial_number}${pcLabel}</option>`;
+            }).join('');
+            
+        if (preselectedValue) {
+            select.value = preselectedValue;
+        }
+        
+        select.addEventListener('change', () => {
+            validateRRUniqueSerials(index);
+        });
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'panel-btn-secondary';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.style.padding = '0 12px';
+        removeBtn.style.fontSize = '16px';
+        removeBtn.style.border = '1px solid var(--border-color)';
+        removeBtn.style.borderRadius = '8px';
+        removeBtn.style.cursor = 'pointer';
+        removeBtn.style.height = '38px';
+        removeBtn.onclick = () => {
+            row.remove();
+            updateRRQtyFromSerials(index);
+            validateRRUniqueSerials(index);
+        };
+        
+        row.appendChild(select);
+        row.appendChild(removeBtn);
+        list.appendChild(row);
+        
+        updateRRQtyFromSerials(index);
+        validateRRUniqueSerials(index);
+    };
+
+    window.updateRRQtyFromSerials = function(index) {
+        const list = document.getElementById(`rr_serial_list_${index}`);
+        const count = list.querySelectorAll('select').length;
+        const qtyInput = document.getElementById(`rr_qty_${index}`);
+        qtyInput.value = count;
+    };
+
+    window.validateRRUniqueSerials = function(index) {
+        const list = document.getElementById(`rr_serial_list_${index}`);
+        const selects = list.querySelectorAll('select');
+        const selectedValues = Array.from(selects).map(s => s.value).filter(Boolean);
+        
+        selects.forEach(sel => {
+            const currentVal = sel.value;
+            Array.from(sel.options).forEach(opt => {
+                if (opt.value && opt.value !== currentVal) {
+                    opt.disabled = selectedValues.includes(opt.value);
+                } else {
+                    opt.disabled = false;
+                }
+            });
+        });
+    };
+
     function handleRRCategoryChange(idx) {
         const labId = document.getElementById('rr_modal_lab_id').value;
         const category = document.getElementById(`rr_category_${idx}`).value;
         const assetSelect = document.getElementById(`rr_asset_${idx}`);
         const serialContainer = document.getElementById(`rr_serial_container_${idx}`);
-        const serialSelect = document.getElementById(`rr_serial_${idx}`);
+        const serialList = document.getElementById(`rr_serial_list_${idx}`);
         const qtyInput = document.getElementById(`rr_qty_${idx}`);
 
         assetSelect.innerHTML = '<option value="">-- Choose Asset --</option>';
         assetSelect.disabled = true;
         serialContainer.style.display = 'none';
-        serialSelect.innerHTML = '<option value="">-- Choose Serial Number --</option>';
-        serialSelect.required = false;
+        if (serialList) serialList.innerHTML = '';
         qtyInput.value = 1;
         qtyInput.readOnly = false;
 
@@ -473,11 +555,10 @@
         const assetId = assetSelect.value;
         const qtyEl = document.getElementById(`rr_qty_${idx}`);
         const serialContainer = document.getElementById(`rr_serial_container_${idx}`);
-        const serialSelect = document.getElementById(`rr_serial_${idx}`);
+        const serialList = document.getElementById(`rr_serial_list_${idx}`);
 
         serialContainer.style.display = 'none';
-        serialSelect.innerHTML = '<option value="">-- Choose Serial Number --</option>';
-        serialSelect.required = false;
+        if (serialList) serialList.innerHTML = '';
         qtyEl.value = 1;
         qtyEl.readOnly = false;
 
@@ -492,22 +573,21 @@
 
         if (usesSerial) {
             serialContainer.style.display = 'block';
-            serialSelect.required = true;
-            qtyEl.value = 1;
             qtyEl.readOnly = true;
 
             fetch(`/api/laboratory/${labId}/assets/${assetId}/serials-with-pc`)
                 .then(res => res.json())
                 .then(data => {
+                    window.rrSerialData = window.rrSerialData || {};
+                    window.rrSerialData[assetId] = data.serials || [];
+
                     if (!data.serials || data.serials.length === 0) {
-                        serialSelect.innerHTML = '<option value="">No serial numbers available in this lab</option>';
+                        if (serialList) serialList.innerHTML = '<div style="color:#f87171; font-size:12px; padding:4px 0;">No serial numbers available in this lab</div>';
+                        qtyEl.value = 0;
                         return;
                     }
-                    serialSelect.innerHTML = '<option value="">-- Choose Serial Number --</option>' +
-                        data.serials.map(s => {
-                            const pcLabel = s.pc_sku ? ` - (PC: ${s.pc_sku})` : '';
-                            return `<option value="${s.id}">${s.serial_number}${pcLabel}</option>`;
-                        }).join('');
+                    
+                    addRRSerialSelect(idx);
                 })
                 .catch(() => alert('Failed to load serial numbers.'));
         }

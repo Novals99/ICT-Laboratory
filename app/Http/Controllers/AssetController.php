@@ -240,13 +240,39 @@ class AssetController extends Controller
 
         $manual = array_values(array_filter(array_map('trim', $manual)));
 
-        for ($i = 0; $i < $count; $i++) {
-            $serial = $manual[$i] ?? ($asset->sku . '-' . str_pad($i + 1, 3, '0', STR_PAD_LEFT));
-
+        // Create the manual ones first
+        foreach ($manual as $sn) {
             AssetSerialNumber::firstOrCreate(
-                ['asset_id' => $asset->id, 'serial_number' => $serial],
+                ['asset_id' => $asset->id, 'serial_number' => $sn],
                 ['condition' => 'good', 'status' => 'available'],
             );
+        }
+
+        // Fill the rest automatically to match count
+        $currentCount = $asset->serialNumbers()->count();
+        if ($currentCount < $count) {
+            $diff = $count - $currentCount;
+            $autoCount = 0;
+            $index = 1;
+            while ($autoCount < $diff) {
+                $serial = $asset->sku . '-' . str_pad($index, 3, '0', STR_PAD_LEFT);
+                $exists = AssetSerialNumber::where('asset_id', $asset->id)
+                    ->where('serial_number', $serial)
+                    ->exists();
+                if (!$exists) {
+                    AssetSerialNumber::create([
+                        'asset_id' => $asset->id,
+                        'serial_number' => $serial,
+                        'condition' => 'good',
+                        'status' => 'available',
+                    ]);
+                    $autoCount++;
+                }
+                $index++;
+                if ($index > 9999) {
+                    break;
+                }
+            }
         }
     }
 
@@ -296,5 +322,42 @@ class AssetController extends Controller
                 ['condition' => 'good', 'status' => 'available'],
             );
         }
+
+        // Jika jumlah serial masih kurang dari targetGood, auto-generate sisanya.
+        $currentCount = $asset->serialNumbers()->count();
+        if ($currentCount < $targetGood) {
+            $diff = $targetGood - $currentCount;
+            $autoCount = 0;
+            $index = 1;
+            while ($autoCount < $diff) {
+                $serial = $asset->sku . '-' . str_pad($index, 3, '0', STR_PAD_LEFT);
+                $exists = AssetSerialNumber::where('asset_id', $asset->id)
+                    ->where('serial_number', $serial)
+                    ->exists();
+                if (!$exists) {
+                    AssetSerialNumber::create([
+                        'asset_id' => $asset->id,
+                        'serial_number' => $serial,
+                        'condition' => 'good',
+                        'status' => 'available',
+                    ]);
+                    $autoCount++;
+                }
+                $index++;
+                if ($index > 9999) {
+                    break;
+                }
+            }
+        } elseif ($currentCount > $targetGood) {
+            // Jika jumlah serial melebihi targetGood (misal karena stok dikurangi),
+            // hapus kelebihan serial yang available.
+            $excess = $currentCount - $targetGood;
+            $asset->serialNumbers()
+                ->where('status', 'available')
+                ->latest('id')
+                ->limit($excess)
+                ->delete();
+        }
     }
 }
+

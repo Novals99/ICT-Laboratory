@@ -155,13 +155,26 @@ class TransferRequestController extends Controller
                 ]);
 
                 foreach ($validated['items'] as $item) {
-                    TransferRequestItem::create([
-                        'transfer_request_id' => $transferRequest->id,
-                        'asset_id'            => $item['asset_id'],
-                        'quantity_requested'  => $item['quantity'],
-                        'notes'               => $item['notes'] ?? null,
-                        'serial_number_id'    => $item['serial_number_id'] ?? null,
-                    ]);
+                    $serialIds = $item['serial_number_ids'] ?? [];
+                    if (!empty($serialIds)) {
+                        foreach ($serialIds as $sid) {
+                            TransferRequestItem::create([
+                                'transfer_request_id' => $transferRequest->id,
+                                'asset_id'            => $item['asset_id'],
+                                'quantity_requested'  => 1,
+                                'notes'               => $item['notes'] ?? null,
+                                'serial_number_id'    => $sid,
+                            ]);
+                        }
+                    } else {
+                        TransferRequestItem::create([
+                            'transfer_request_id' => $transferRequest->id,
+                            'asset_id'            => $item['asset_id'],
+                            'quantity_requested'  => $item['quantity'],
+                            'notes'               => $item['notes'] ?? null,
+                            'serial_number_id'    => null,
+                        ]);
+                    }
                 }
 
                 ActivityLog::create([

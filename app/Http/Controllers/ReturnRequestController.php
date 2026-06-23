@@ -180,14 +180,28 @@ class ReturnRequestController extends Controller
 
                 // Buat detail item
                 foreach ($validated['items'] as $item) {
-                    ReturnRequestItem::create([
-                        'return_request_id'  => $returnRequest->id,
-                        'asset_id'           => $item['asset_id'],
-                        'quantity_requested' => $item['quantity'],
-                        'condition'          => $item['condition'],
-                        'reason'             => $item['reason'] ?? null,
-                        'serial_number_id'   => $item['serial_number_id'] ?? null,
-                    ]);
+                    $serialIds = $item['serial_number_ids'] ?? [];
+                    if (!empty($serialIds)) {
+                        foreach ($serialIds as $sid) {
+                            ReturnRequestItem::create([
+                                'return_request_id'  => $returnRequest->id,
+                                'asset_id'           => $item['asset_id'],
+                                'quantity_requested' => 1,
+                                'condition'          => $item['condition'],
+                                'reason'             => $item['reason'] ?? null,
+                                'serial_number_id'   => $sid,
+                            ]);
+                        }
+                    } else {
+                        ReturnRequestItem::create([
+                            'return_request_id'  => $returnRequest->id,
+                            'asset_id'           => $item['asset_id'],
+                            'quantity_requested' => $item['quantity'],
+                            'condition'          => $item['condition'],
+                            'reason'             => $item['reason'] ?? null,
+                            'serial_number_id'   => null,
+                        ]);
+                    }
                 }
 
                 ActivityLog::create([
