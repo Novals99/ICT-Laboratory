@@ -48,7 +48,17 @@
                     <option value="">All</option>
                     <option value="pending" @selected(request('status') === 'pending')>Pending</option>
                     <option value="completed" @selected(request('status') === 'completed')>Completed</option>
-                    <option value="rejected" @selected(request('status') === 'rejected')>Rejected</option>
+                    <option value="partial" @selected(request('status') === 'partial')>Partially Approved</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-xs font-medium" style="color:var(--text-muted);">Sort By Date</label>
+                <select name="sort"
+                    style="background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary);"
+                    class="rounded-lg py-1.5 pl-2 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
+                    <option value="newest" @selected(request('sort', 'newest') === 'newest')>Newest to Oldest</option>
+                    <option value="oldest" @selected(request('sort') === 'oldest')>Oldest to Newest</option>
                 </select>
             </div>
 
@@ -74,7 +84,7 @@
                 Filter
             </button>
 
-            @if(request()->hasAny(['status', 'lab_id']))
+            @if(request()->hasAny(['status', 'sort', 'lab_id']))
                 <a href="{{ route('return-requests.index') }}"
                     class="py-1.5 text-sm" style="color:var(--text-muted);">
                     Reset
@@ -211,9 +221,10 @@
                     <thead>
                         <tr style="background:var(--bg-table-header);">
                             <th style="padding:8px 14px; text-align:left;">Asset Name</th>
+                            <th style="padding:8px 14px; text-align:left;">Serial Number</th>
                             <th style="padding:8px 14px; text-align:center;">Qty</th>
                             <th style="padding:8px 14px; text-align:center;">Condition</th>
-                            <th style="padding:8px 14px; text-align:center;">{{ $isSpv ? 'Approved Qty' : 'Status' }}</th>
+                            <th style="padding:8px 14px; text-align:center;">Status / Action</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -343,57 +354,69 @@
         const labId = document.getElementById('rr_modal_lab_id').value;
 
         document.getElementById('rr_modal_no_lab').style.display = labId ? 'none' : 'block';
-        document.getElementById('rr_modal_loading').style.display = labId ? 'block' : 'none';
+        document.getElementById('rr_modal_loading').style.display = 'none';
         document.getElementById('rr_modal_no_assets').style.display = 'none';
-        document.getElementById('rr_modal_items').style.display = 'none';
-        document.getElementById('rr_modal_add_btn').style.display = 'none';
+        
+        if (!labId) {
+            document.getElementById('rr_modal_items').style.display = 'none';
+            document.getElementById('rr_modal_add_btn').style.display = 'none';
+            return;
+        }
 
-        if (!labId) return;
-
-        fetch(`/api/labs/${labId}/assets`)
-            .then(res => res.json())
-            .then(data => {
-                rrLabAssets = data;
-                document.getElementById('rr_modal_loading').style.display = 'none';
-                if (data.length === 0) {
-                    document.getElementById('rr_modal_no_assets').style.display = 'block';
-                } else {
-                    document.getElementById('rr_modal_items').innerHTML = '';
-                    rrItemIndex = 1;
-                    addRRModalItem();
-                    document.getElementById('rr_modal_items').style.display = 'block';
-                    document.getElementById('rr_modal_add_btn').style.display = 'block';
-                }
-            })
-            .catch(() => {
-                document.getElementById('rr_modal_loading').style.display = 'none';
-                alert('Failed to load asset data');
-            });
+        document.getElementById('rr_modal_items').innerHTML = '';
+        rrItemIndex = 1;
+        addRRModalItem();
+        document.getElementById('rr_modal_items').style.display = 'block';
+        document.getElementById('rr_modal_add_btn').style.display = 'block';
     }
 
     function getRRItemRowHtml(idx) {
         return `
-            <div class="item-row"
+            <div class="item-row" data-index="${idx}"
                 style="border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative;">
                 <button type="button" onclick="removeRRModalItem(this)"
-                    style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted);">x</button>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
-                    <select name="items[${idx}][asset_id]" required
+                    style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:16px;">&times;</button>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <div>
+                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Category</label>
+                        <select id="rr_category_${idx}"
+                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
+                            onchange="handleRRCategoryChange(${idx})" required>
+                            <option value="">-- Choose Category --</option>
+                            <option value="electronic">Electronic</option>
+                            <option value="component-pc">PC Component</option>
+                            <option value="pc">PC</option>
+                            <option value="non-electronic">Non-Electronic</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
+                        <select name="items[${idx}][asset_id]" id="rr_asset_${idx}" required disabled
+                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
+                            onchange="handleRRModalAssetChange(${idx})">
+                            <option value="">-- Select Asset --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="rr_serial_container_${idx}" style="display:none; margin-bottom:8px;">
+                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Serial Number</label>
+                    <select name="items[${idx}][serial_number_id]" id="rr_serial_${idx}"
                         style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                        <option value="">-- Select Asset --</option>
-                        ${rrLabAssets.map(a => `<option value="${a.asset_id}">${a.name}</option>`).join('')}
+                        <option value="">-- Choose Serial Number --</option>
                     </select>
                 </div>
+
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
                     <div>
                         <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
-                        <input type="number" name="items[${idx}][quantity]" min="1" value="1" required
+                        <input type="number" name="items[${idx}][quantity]" id="rr_qty_${idx}" min="1" value="1" required
                             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     </div>
                     <div>
                         <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Condition:</label>
-                        <select name="items[${idx}][condition]"
+                        <select name="items[${idx}][condition]" id="rr_condition_${idx}"
                             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                             <option value="good">Good</option>
                             <option value="damaged">Damaged</option>
@@ -411,6 +434,85 @@
         `;
     }
 
+    function handleRRCategoryChange(idx) {
+        const labId = document.getElementById('rr_modal_lab_id').value;
+        const category = document.getElementById(`rr_category_${idx}`).value;
+        const assetSelect = document.getElementById(`rr_asset_${idx}`);
+        const serialContainer = document.getElementById(`rr_serial_container_${idx}`);
+        const serialSelect = document.getElementById(`rr_serial_${idx}`);
+        const qtyInput = document.getElementById(`rr_qty_${idx}`);
+
+        assetSelect.innerHTML = '<option value="">-- Choose Asset --</option>';
+        assetSelect.disabled = true;
+        serialContainer.style.display = 'none';
+        serialSelect.innerHTML = '<option value="">-- Choose Serial Number --</option>';
+        serialSelect.required = false;
+        qtyInput.value = 1;
+        qtyInput.readOnly = false;
+
+        if (!labId || !category) return;
+
+        fetch(`/api/labs/${labId}/assets?category=${category}`)
+            .then(res => res.json())
+            .then(data => {
+                assetSelect.dataset.assetsJson = JSON.stringify(data);
+                if (data.length === 0) {
+                    assetSelect.innerHTML = '<option value="">No assets in this category</option>';
+                    return;
+                }
+                assetSelect.innerHTML = '<option value="">-- Choose Asset --</option>' + 
+                    data.map(a => `<option value="${a.asset_id}" data-category="${a.category}">${a.name}</option>`).join('');
+                assetSelect.disabled = false;
+            })
+            .catch(() => alert('Failed to load assets by category.'));
+    }
+
+    function handleRRModalAssetChange(idx) {
+        const labId = document.getElementById('rr_modal_lab_id').value;
+        const assetSelect = document.getElementById(`rr_asset_${idx}`);
+        const assetId = assetSelect.value;
+        const qtyEl = document.getElementById(`rr_qty_${idx}`);
+        const serialContainer = document.getElementById(`rr_serial_container_${idx}`);
+        const serialSelect = document.getElementById(`rr_serial_${idx}`);
+
+        serialContainer.style.display = 'none';
+        serialSelect.innerHTML = '<option value="">-- Choose Serial Number --</option>';
+        serialSelect.required = false;
+        qtyEl.value = 1;
+        qtyEl.readOnly = false;
+
+        if (!labId || !assetId) return;
+
+        const assets = JSON.parse(assetSelect.dataset.assetsJson || '[]');
+        const asset = assets.find(a => a.asset_id == assetId);
+        if (!asset) return;
+
+        const category = asset.category;
+        const usesSerial = ['electronic', 'component-pc', 'pc'].includes(category);
+
+        if (usesSerial) {
+            serialContainer.style.display = 'block';
+            serialSelect.required = true;
+            qtyEl.value = 1;
+            qtyEl.readOnly = true;
+
+            fetch(`/api/laboratory/${labId}/assets/${assetId}/serials-with-pc`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.serials || data.serials.length === 0) {
+                        serialSelect.innerHTML = '<option value="">No serial numbers available in this lab</option>';
+                        return;
+                    }
+                    serialSelect.innerHTML = '<option value="">-- Choose Serial Number --</option>' +
+                        data.serials.map(s => {
+                            const pcLabel = s.pc_sku ? ` - (PC: ${s.pc_sku})` : '';
+                            return `<option value="${s.id}">${s.serial_number}${pcLabel}</option>`;
+                        }).join('');
+                })
+                .catch(() => alert('Failed to load serial numbers.'));
+        }
+    }
+
     function addRRModalItem() {
         const container = document.getElementById('rr_modal_items');
         container.innerHTML += getRRItemRowHtml(rrItemIndex++);
@@ -422,13 +524,20 @@
         btn.closest('.item-row').remove();
     }
 
+    let rrItemStates = {};
+    let rrItemsList = [];
+
     function openReturnDetailModal(requestId) {
         currentReturnRequestId = requestId;
         const modal = document.getElementById('returnDetailModal');
         modal.style.display = 'flex';
         document.getElementById('returnModalProgress').style.width = '30%';
-        const loadingRow = '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Loading...</td></tr>';
+        const loadingRow = '<tr><td colspan="5" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Loading...</td></tr>';
         document.querySelector('#return_modal_items tbody').innerHTML = loadingRow;
+
+        rrItemStates = {};
+        rrItemsList = [];
+
         fetch(`/return-requests/${requestId}/detail`)
             .then(res => res.json())
             .then(data => {
@@ -436,41 +545,85 @@
                 document.getElementById('return_modal_request_code').value = data.request_code;
                 document.getElementById('return_modal_lab').value = data.lab_name;
                 document.getElementById('return_modal_requested_by').value = data.requested_by;
-                document.querySelector('#return_modal_items tbody').innerHTML = data.items.map(item => `
-                    <tr style="border-top:1px solid var(--border-color);">
-                        <td style="padding:8px 14px;color:var(--text-primary);">${item.asset_name}</td>
-                        <td style="padding:8px 14px;text-align:center;color:var(--text-primary);">${item.quantity}</td>
-                        <td style="padding:8px 14px;text-align:center;color:var(--text-primary);">${item.condition}</td>
-                        <td style="padding:8px 14px;text-align:center;">
-                            <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
-                                ${getReturnStatusBadge(item)}
-                                ${@json($isSpv) ? `
-                                    <input type="number" data-return-item-id="${item.id}"
-                                        value="${item.quantity_approved ?? item.quantity}" min="0" max="${item.quantity}"
-                                        style="min-width:80px;padding:4px 8px;font-size:12px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);text-align:center;">
-                                ` : ''}
-                            </div>
-                        </td>
-                    </tr>
-                `).join('') || '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">No items found</td></tr>';
+                
+                rrItemsList = data.items;
+                data.items.forEach(item => {
+                    if (item.status === 'pending') {
+                        rrItemStates[item.id] = 'pending';
+                    }
+                });
+                
+                renderReturnRows();
             })
             .catch(() => {
                 document.getElementById('returnModalProgress').style.width = '100%';
-                const error = '<tr><td colspan="4" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Failed to load asset data</td></tr>';
+                const error = '<tr><td colspan="5" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Failed to load data</td></tr>';
                 document.querySelector('#return_modal_items tbody').innerHTML = error;
             });
     }
 
-    function getReturnStatusBadge(item) {
-        if (!item.status) {
-            if (item.quantity_approved == 0) {
-                return '<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Rejected</span>';
-            } else if (item.quantity_approved == item.quantity) {
-                return '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Approved</span>';
-            }
-            return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+    function renderReturnRows() {
+        const isSpv = @json($isSpv);
+        const tbody = document.querySelector('#return_modal_items tbody');
+        
+        if (rrItemsList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">No items</td></tr>';
+            return;
         }
-        return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+        
+        tbody.innerHTML = rrItemsList.map(item => {
+            let actionHtml = '';
+            if (item.status !== 'pending') {
+                const isApproved = item.status === 'approved';
+                const badgeBg = isApproved ? 'rgba(22, 163, 74, 0.2)' : 'rgba(220, 38, 38, 0.2)';
+                const badgeText = isApproved ? '#4ade80' : '#f87171';
+                const badgeLabel = isApproved ? 'Approved' : 'Rejected';
+                actionHtml = `<span style="background:${badgeBg}; color:${badgeText}; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600;">${badgeLabel}</span>`;
+            } else {
+                if (isSpv) {
+                    const curState = rrItemStates[item.id];
+                    const appOpacity = curState === 'approved' ? '1.0' : (curState === 'pending' ? '0.4' : '0.15');
+                    const rejOpacity = curState === 'rejected' ? '1.0' : (curState === 'pending' ? '0.4' : '0.15');
+                    
+                    actionHtml = `
+                        <div style="display:flex; align-items:center; justify-content:center; gap:12px;">
+                            <button type="button" onclick="setRrRowState(${item.id}, 'approved')"
+                                style="background:none; border:none; cursor:pointer; color:#4ade80; padding:4px; opacity:${appOpacity}; transition:opacity 0.2s;" title="Approve">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </button>
+                            <button type="button" onclick="setRrRowState(${item.id}, 'rejected')"
+                                style="background:none; border:none; cursor:pointer; color:#f87171; padding:4px; opacity:${rejOpacity}; transition:opacity 0.2s;" title="Reject">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    actionHtml = `<span style="background:rgba(245, 158, 11, 0.2); color:#fbbf24; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600;">Pending</span>`;
+                }
+            }
+            
+            return `
+                <tr style="border-top:1px solid var(--border-color);">
+                    <td style="padding:10px 14px;color:var(--text-primary);">${item.asset_name}</td>
+                    <td style="padding:10px 14px;color:var(--text-secondary);font-family:monospace;">${item.serial_number ?? '-'}</td>
+                    <td style="padding:10px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.quantity}</td>
+                    <td style="padding:10px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.condition}</td>
+                    <td style="padding:10px 14px;text-align:center;">${actionHtml}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function setRrRowState(itemId, state) {
+        if (rrItemStates[itemId] !== undefined) {
+            rrItemStates[itemId] = state;
+            renderReturnRows();
+        }
     }
 
     function closeReturnDetailModal() {
@@ -485,13 +638,10 @@
             return;
         }
 
-        const items = [];
-        document.querySelectorAll('[data-return-item-id]').forEach(input => {
-            items.push({
-                id: input.dataset.returnItemId,
-                quantity_approved: parseInt(input.value) || 0
-            });
-        });
+        const items = Object.keys(rrItemStates).map(id => ({
+            id: parseInt(id),
+            status: rrItemStates[id]
+        }));
 
         try {
             const response = await fetch(`/return-requests/${currentReturnRequestId}/approve`, {
@@ -507,52 +657,35 @@
                 alert(data.message || 'Failed to save status.');
                 return;
             }
-            alert('Status successfully saved!');
+            alert('Status saved successfully!');
             closeReturnDetailModal();
             window.location.reload();
         } catch (e) {
             alert('Failed to save status.');
         }
-    };
+    }
 
     window.approveAllReturn = function() {
         if (!currentReturnRequestId) {
             alert('Please open a request first.');
             return;
         }
-        document.querySelectorAll('[data-return-item-id]').forEach(input => {
-            input.value = input.getAttribute('max');
+        Object.keys(rrItemStates).forEach(id => {
+            rrItemStates[id] = 'approved';
         });
-        alert('Semua item di-set ke qty penuh. Klik Save untuk menyimpan.');
-    };
+        renderReturnRows();
+    }
 
     window.rejectAllReturn = function() {
         if (!currentReturnRequestId) {
             alert('Please open a request first.');
             return;
         }
-        if (confirm('Are you sure you want to reject the entire request?')) {
-            fetch(`/return-requests/${currentReturnRequestId}/reject`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({ rejection_reason: 'Rejected entirely by SPV' })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.success) {
-                    alert(data.message || 'Failed to reject request.');
-                    return;
-                }
-                alert('Request successfully rejected!');
-                closeReturnDetailModal();
-                window.location.reload();
-            })
-            .catch(() => alert('Failed to reject request.'));
-        }
-    };
+        Object.keys(rrItemStates).forEach(id => {
+            rrItemStates[id] = 'rejected';
+        });
+        renderReturnRows();
+    }
 
     document.getElementById('returnDetailModal').addEventListener('click', function(event) {
         if (event.target === this) closeReturnDetailModal();

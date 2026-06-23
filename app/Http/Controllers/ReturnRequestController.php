@@ -55,7 +55,13 @@ class ReturnRequestController extends Controller
             $query->where('lab_id', $request->lab_id);
         }
 
-        $returnRequests = $query->latest()->paginate(15)->withQueryString();
+        if ($request->sort === 'oldest') {
+            $query->oldest();
+        } else {
+            $query->latest();
+        }
+
+        $returnRequests = $query->paginate(15)->withQueryString();
 
         // Lab untuk filter dropdown
         $labs = $this->isSPV()
@@ -96,7 +102,7 @@ class ReturnRequestController extends Controller
      *
      * Response: JSON array aset dengan total_asset_lab > 0
      */
-    public function getLabAssets(int $labId)
+    public function getLabAssets(int $labId, Request $request)
     {
         // Security: cek akses user ke lab ini
         if (!$this->isSPV()) {
@@ -106,10 +112,17 @@ class ReturnRequestController extends Controller
             }
         }
 
-        $assets = AssetLab::with('asset:id,asset_name,asset_category')
+        $category = $request->query('category');
+
+        $query = AssetLab::with('asset:id,asset_name,asset_category')
             ->where('lab_id', $labId)
-            ->where('total_asset_lab', '>', 0)
-            ->get()
+            ->where('total_asset_lab', '>', 0);
+
+        if ($category) {
+            $query->whereHas('asset', fn($q) => $q->where('asset_category', $category));
+        }
+
+        $assets = $query->get()
             ->map(fn($item) => [
                 'asset_id'      => $item->asset_id,
                 'name'          => $item->asset->asset_name,
@@ -173,6 +186,7 @@ class ReturnRequestController extends Controller
                         'quantity_requested' => $item['quantity'],
                         'condition'          => $item['condition'],
                         'reason'             => $item['reason'] ?? null,
+                        'serial_number_id'   => $item['serial_number_id'] ?? null,
                     ]);
                 }
 
@@ -362,7 +376,8 @@ class ReturnRequestController extends Controller
         $returnRequest = ReturnRequest::with([
             'laboratory',
             'requestedBy',
-            'items.asset'
+            'items.asset',
+            'items.serialNumber'
         ])->findOrFail($id);
 
         return response()->json([
@@ -374,10 +389,11 @@ class ReturnRequestController extends Controller
                     'id' => $item->id,
                     'asset_id' => $item->asset_id,
                     'asset_name' => $item->asset?->asset_name ?? '-',
+                    'serial_number' => $item->serialNumber?->serial_number ?? '-',
                     'quantity' => $item->quantity_requested,
                     'condition' => ucfirst($item->condition),
                     'quantity_approved' => $item->quantity_approved,
-                    'status' => $item->status ?? null
+                    'status' => $item->status ?? 'pending'
                 ];
             })
         ]);
@@ -386,31 +402,58 @@ class ReturnRequestController extends Controller
     public function approveViaModal(Request $request, $id)
     {
         abort_unless($this->isSPV(), 403);
-        $returnRequest = ReturnRequest::findOrFail($id);
-        abort_unless($returnRequest->isPending(), 400, 'Request sudah diproses');
+        $returnRequest = ReturnRequest::with('items')->findOrFail($id);
+
+        if (in_array($returnRequest->status, [ReturnRequest::STATUS_COMPLETED, ReturnRequest::STATUS_REJECTED])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request has already been fully processed.'
+            ]);
+        }
 
         $validated = $request->validate([
             'items' => 'nullable|array',
             'items.*.id' => 'required|exists:return_request_items,id',
-            'items.*.quantity_approved' => 'required|integer|min:0',
+            'items.*.status' => 'required|in:approved,rejected,pending',
         ]);
 
         try {
             DB::transaction(function () use ($validated, $returnRequest) {
-                foreach ($validated['items'] as $itemData) {
+                foreach ($validated['items'] ?? [] as $itemData) {
                     $item = ReturnRequestItem::where('id', $itemData['id'])
                         ->where('return_request_id', $returnRequest->id)
                         ->first();
-                    if ($item) {
-                        $item->update(['quantity_approved' => $itemData['quantity_approved']]);
+                    if ($item && $item->status === 'pending') {
+                        $this->mutationService->processReturnRequestItem($item, $itemData['status']);
                     }
                 }
-                $this->mutationService->approveReturnRequest($returnRequest);
-                $returnRequest->load('laboratory');
 
+                // Recalculate request status
+                $returnRequest->refresh();
+                $allItems = $returnRequest->items;
+                $pendingCount = $allItems->where('status', 'pending')->count();
+                $approvedCount = $allItems->where('status', 'approved')->count();
+                $rejectedCount = $allItems->where('status', 'rejected')->count();
+
+                if ($pendingCount > 0) {
+                    $returnRequest->update([
+                        'status' => 'partial',
+                        'approved_by' => Auth::id(),
+                        'approved_at' => now(),
+                    ]);
+                } else {
+                    $finalStatus = ($rejectedCount === $allItems->count()) ? ReturnRequest::STATUS_REJECTED : ReturnRequest::STATUS_COMPLETED;
+                    $returnRequest->update([
+                        'status' => $finalStatus,
+                        'approved_by' => Auth::id(),
+                        'approved_at' => now(),
+                    ]);
+                }
+
+                $returnRequest->load('laboratory');
                 ActivityLog::create([
                     'user_id' => auth()->id(),
-                    'activity' => 'Approved return request ' .
+                    'activity' => 'Processed return request ' .
                         $returnRequest->request_code .
                         ' (' .
                         $returnRequest->laboratory->lab_name .

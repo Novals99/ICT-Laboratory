@@ -338,104 +338,189 @@ class LaboratoryController extends Controller
             'lab_assets'                => 'nullable|array',
             'lab_assets.*.asset_id'     => 'nullable|exists:assets,id',
             'lab_assets.*.quantity'     => 'nullable|integer|min:0',
+            'lab_assets.*.serial_ids'   => 'nullable|array',
+            'lab_assets.*.serial_ids.*' => 'nullable|exists:asset_serial_numbers,id',
         ]);
 
-        $laboratory->update([
-            'lab_name' => $validated['lab_name'],
-            'capacity' => $validated['capacity'],
-        ]);
+        try {
+            DB::transaction(function () use ($validated, $laboratory) {
+                $laboratory->update([
+                    'lab_name' => $validated['lab_name'],
+                    'capacity' => $validated['capacity'],
+                ]);
 
-        if (!empty($validated['pcs'])) {
-            $keepIds = [];
-            foreach ($validated['pcs'] as $pcData) {
-                $pcId = $pcData['id'] ?? null;
-                if ($pcId) {
-                    $laboratory->pcs()->where('id', $pcId)
-                        ->update(collect($pcData)->except('id')->toArray());
-                    $keepIds[] = $pcId;
-                } else {
-                    $new = $laboratory->pcs()->create(array_merge(
-                        collect($pcData)->except('id')->toArray(),
-                        ['pc_entry' => now()->toDateString()]
-                    ));
-                    $keepIds[] = $new->id;
-                }
-            }
-            $laboratory->pcs()->whereNotIn('id', $keepIds)->delete();
-        }
-
-        // ── SYNC ASSET + SESUAIKAN STOK SPV ──
-        if (isset($validated['lab_assets'])) {
-            $existingInLab = $laboratory->assets()->get()->keyBy('id');
-            $sync = [];
-
-            foreach ($validated['lab_assets'] as $a) {
-                if (!empty($a['asset_id'])) {
-                    $asset   = Asset::find($a['asset_id']);
-                    $qty     = $a['quantity'] ?? 0;
-                    $oldQty  = $existingInLab->has($a['asset_id'])
-                        ? $existingInLab[$a['asset_id']]->pivot->total_good_lab
-                        : 0;
-
-                    if ($asset) {
-                        if ($qty > $oldQty) {
-                            $diff = $qty - $oldQty;
-                            if ($asset->total_good < $diff) {
-                                return back()
-                                    ->withInput()
-                                    ->withErrors(['lab_assets' => "Stok good untuk {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good})."]);
-                            }
-                            $asset->decrement('total_good', $diff);
-                            $asset->refresh();
-                            $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
-                        } elseif ($qty < $oldQty) {
-                            $diff = $oldQty - $qty;
-                            $asset->increment('total_good', $diff);
-                            $asset->refresh();
-                            $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
+                if (!empty($validated['pcs'])) {
+                    $keepIds = [];
+                    foreach ($validated['pcs'] as $pcData) {
+                        $pcId = $pcData['id'] ?? null;
+                        if ($pcId) {
+                            $laboratory->pcs()->where('id', $pcId)
+                                ->update(collect($pcData)->except('id')->toArray());
+                            $keepIds[] = $pcId;
+                        } else {
+                            $new = $laboratory->pcs()->create(array_merge(
+                                collect($pcData)->except('id')->toArray(),
+                                ['pc_entry' => now()->toDateString()]
+                            ));
+                            $keepIds[] = $new->id;
                         }
+                    }
+                    $laboratory->pcs()->whereNotIn('id', $keepIds)->delete();
+                }
 
-                        if ($qty > 0) {
-                            $existingDamaged = 0;
-                            $existingLoss = 0;
-                            if ($existingInLab->has($a['asset_id'])) {
-                                $existingDamaged = $existingInLab[$a['asset_id']]->pivot->total_damaged_lab ?? 0;
-                                $existingLoss = $existingInLab[$a['asset_id']]->pivot->total_loss_lab ?? 0;
-                            }
-
-                            $sync[$a['asset_id']] = [
-                                'total_asset_lab'   => $qty + $existingDamaged + $existingLoss,
-                                'total_good_lab'    => $qty,
-                                'total_damaged_lab' => (int) $existingDamaged,
-                                'total_loss_lab'    => (int) $existingLoss,
+                // ── SYNC ASSET + SESUAIKAN STOK SPV ──
+                if (isset($validated['lab_assets'])) {
+                    $existingInLab = $laboratory->assets()->get()->keyBy('id');
+                    
+                    // Group by asset_id
+                    $groupedLabAssets = [];
+                    foreach ($validated['lab_assets'] as $a) {
+                        if (empty($a['asset_id'])) continue;
+                        $aid = $a['asset_id'];
+                        if (!isset($groupedLabAssets[$aid])) {
+                            $groupedLabAssets[$aid] = [
+                                'asset_id' => $aid,
+                                'quantity' => 0,
+                                'serial_ids' => []
                             ];
                         }
+                        $groupedLabAssets[$aid]['quantity'] += (int)($a['quantity'] ?? 0);
+                        if (!empty($a['serial_ids']) && is_array($a['serial_ids'])) {
+                            $groupedLabAssets[$aid]['serial_ids'] = array_merge(
+                                $groupedLabAssets[$aid]['serial_ids'],
+                                $a['serial_ids']
+                            );
+                        }
                     }
-                }
-            }
 
-            // Asset yang dihapus dari form → balikin semua kondisi ke SPV
-            $newAssetIds = collect($validated['lab_assets'])->pluck('asset_id')->filter()->toArray();
-            foreach ($existingInLab as $assetId => $assetLab) {
-                if (!in_array($assetId, $newAssetIds)) {
-                    $asset = Asset::find($assetId);
-                    if ($asset) {
-                        if ($assetLab->pivot->total_good_lab > 0) {
-                            $asset->increment('total_good', $assetLab->pivot->total_good_lab);
+                    $sync = [];
+
+                    foreach ($groupedLabAssets as $assetId => $a) {
+                        $asset   = Asset::find($assetId);
+                        $qty     = $a['quantity'] ?? 0;
+                        $oldQty  = $existingInLab->has($assetId)
+                            ? $existingInLab[$assetId]->pivot->total_good_lab
+                            : 0;
+
+                        if ($asset) {
+                            $isSerialized = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc']);
+                            
+                            if ($isSerialized) {
+                                $serialIds = $a['serial_ids'] ?? [];
+                                $validSerials = \App\Models\AssetSerialNumber::where('asset_id', $assetId)
+                                    ->whereNull('lab_id')
+                                    ->whereIn('id', $serialIds)
+                                    ->get();
+                                    
+                                $addedCount = $validSerials->count();
+                                if ($addedCount > 0) {
+                                    \App\Models\AssetSerialNumber::whereIn('id', $validSerials->pluck('id'))->update([
+                                        'lab_id' => $laboratory->id,
+                                        'status' => 'available'
+                                    ]);
+                                    
+                                    $asset->decrement('total_good', $addedCount);
+                                    $asset->refresh();
+                                    $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
+                                }
+                                
+                                $currentSerialsInLabCount = \App\Models\AssetSerialNumber::where('asset_id', $assetId)
+                                    ->where('lab_id', $laboratory->id)
+                                    ->count();
+                                $qty = $currentSerialsInLabCount;
+                            } else {
+                                if ($qty > $oldQty) {
+                                    $diff = $qty - $oldQty;
+                                    if ($asset->total_good < $diff) {
+                                        throw new \Exception("Stok good untuk {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good}).");
+                                    }
+                                    $asset->decrement('total_good', $diff);
+                                    $asset->refresh();
+                                    $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
+                                } elseif ($qty < $oldQty) {
+                                    $diff = $oldQty - $qty;
+                                    $asset->increment('total_good', $diff);
+                                    $asset->refresh();
+                                    $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
+                                }
+                            }
+
+                            if ($qty > 0) {
+                                $existingDamaged = 0;
+                                $existingLoss = 0;
+                                if ($existingInLab->has($assetId)) {
+                                    $existingDamaged = $existingInLab[$assetId]->pivot->total_damaged_lab ?? 0;
+                                    $existingLoss = $existingInLab[$assetId]->pivot->total_loss_lab ?? 0;
+                                }
+
+                                $sync[$assetId] = [
+                                    'total_asset_lab'   => $qty + $existingDamaged + $existingLoss,
+                                    'total_good_lab'    => $qty,
+                                    'total_damaged_lab' => (int) $existingDamaged,
+                                    'total_loss_lab'    => (int) $existingLoss,
+                                ];
+                            }
                         }
-                        if ($assetLab->pivot->total_damaged_lab > 0) {
-                            $asset->increment('total_damaged', $assetLab->pivot->total_damaged_lab);
-                        }
-                        if ($assetLab->pivot->total_loss_lab > 0) {
-                            $asset->increment('total_loss', $assetLab->pivot->total_loss_lab);
-                        }
-                        $asset->refresh();
-                        $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
                     }
-                }
-            }
 
-            $laboratory->assets()->sync($sync);
+                    // Asset yang dihapus dari form → balikin semua kondisi ke SPV
+                    $newAssetIds = array_keys($groupedLabAssets);
+                    foreach ($existingInLab as $assetId => $assetLab) {
+                        if (!in_array($assetId, $newAssetIds)) {
+                            $asset = Asset::find($assetId);
+                            if ($asset) {
+                                $isSerialized = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc']);
+                                if ($isSerialized) {
+                                    $labSerials = \App\Models\AssetSerialNumber::where('asset_id', $assetId)
+                                        ->where('lab_id', $laboratory->id)
+                                        ->get();
+                                    
+                                    foreach ($labSerials as $serial) {
+                                        if ($serial->pc_id) {
+                                            $pc = \App\Models\Pc::find($serial->pc_id);
+                                            if ($pc) {
+                                                if ($pc->pc_serial_id === $serial->id) {
+                                                    $pc->pc_serial_id = null;
+                                                    $pc->asset_id = null;
+                                                }
+                                                foreach (array_keys(\App\Models\Pc::COMPONENT_SLOTS) as $slot) {
+                                                    if ($pc->{$slot . '_serial_id'} === $serial->id) {
+                                                        $pc->{$slot} = null;
+                                                        $pc->{$slot . '_serial_id'} = null;
+                                                    }
+                                                }
+                                                $pc->save();
+                                            }
+                                        }
+                                        $serial->update([
+                                            'lab_id' => null,
+                                            'status' => 'available',
+                                            'pc_id' => null,
+                                            'slot' => null
+                                        ]);
+                                    }
+                                }
+
+                                if ($assetLab->pivot->total_good_lab > 0) {
+                                    $asset->increment('total_good', $assetLab->pivot->total_good_lab);
+                                }
+                                if ($assetLab->pivot->total_damaged_lab > 0) {
+                                    $asset->increment('total_damaged', $assetLab->pivot->total_damaged_lab);
+                                }
+                                if ($assetLab->pivot->total_loss_lab > 0) {
+                                    $asset->increment('total_loss', $assetLab->pivot->total_loss_lab);
+                                }
+                                $asset->refresh();
+                                $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
+                            }
+                        }
+                    }
+
+                    $laboratory->assets()->sync($sync);
+                }
+            });
+        } catch (\Exception $e) {
+            return back()->withInput()->withErrors(['lab_assets' => $e->getMessage()]);
         }
 
         ActivityLog::create([

@@ -6,6 +6,7 @@
 @php
     // Slot komponen → component_type asset. RAM 2 nullable & berbagi pool 'ram'.
     $slots = [
+        'pc'          => ['label' => 'PC Serial Number', 'type' => 'pc',         'required' => false],
         'processor'   => ['label' => 'Processor',    'type' => 'processor',   'required' => false],
         'ram'         => ['label' => 'RAM',          'type' => 'ram',         'required' => false],
         'ram2'        => ['label' => 'RAM 2 (opsional)', 'type' => 'ram',     'required' => false],

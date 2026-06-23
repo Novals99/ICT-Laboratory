@@ -306,7 +306,8 @@
                         <thead>
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:left;">Qty</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty</th>
+                                <th style="padding:8px 14px; text-align:left;">Serial Numbers</th>
                                 <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
                             </tr>
                         </thead>
@@ -320,7 +321,7 @@
                         <thead>
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:left;">Qty</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty</th>
                                 <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
                             </tr>
                         </thead>
@@ -334,7 +335,8 @@
                         <thead>
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:left;">Qty</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty</th>
+                                <th style="padding:8px 14px; text-align:left;">Serial Numbers</th>
                                 <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
                             </tr>
                         </thead>
@@ -360,6 +362,29 @@
                 </button>
             </div>
         @endif
+    </div>
+</div>
+
+<div id="serialPickerModal"
+    style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div style="background:var(--bg-modal); border-radius:16px; width:100%; max-width:400px; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.2); border:1px solid var(--border-color);">
+        <h4 style="font-size:16px; font-weight:700; color:var(--text-primary); margin-bottom:12px;">Select Serial Numbers</h4>
+        <p style="font-size:12px; color:var(--text-secondary); margin-bottom:16px;">
+            Choose up to <span id="serial_picker_max_qty" style="font-weight:700; color:#4ade80;">1</span> serial numbers.
+        </p>
+        <div id="serial_picker_list" style="max-height:200px; overflow-y:auto; margin-bottom:20px; display:flex; flex-direction:column; gap:8px;">
+            <!-- Serial checkbox options will go here -->
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" onclick="closeSerialPicker()"
+                style="background:none; border:1px solid var(--border-color); color:var(--text-secondary); border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                Cancel
+            </button>
+            <button type="button" onclick="confirmSerialSelection()"
+                style="background:#111B4C; border:none; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                Confirm
+            </button>
+        </div>
     </div>
 </div>
 
@@ -536,16 +561,21 @@
         if (typeof validateAddRequestForm === 'function') validateAddRequestForm();
     }
 
+    let requestItemSerials = {};
+    window.currentRequestItemsList = [];
+
     function openRequestModal(requestId) {
         currentRequestId = requestId;
         const modal = document.getElementById('requestModal');
         modal.style.display = 'flex';
         document.getElementById('modalProgress').style.width = '30%';
 
-        const loading = '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
+        const loading = '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Loading...</td></tr>';
         document.getElementById('modal_electronic').innerHTML = loading;
-        document.getElementById('modal_nonelectronic').innerHTML = loading;
+        document.getElementById('modal_nonelectronic').innerHTML = '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Loading...</td></tr>';
         document.getElementById('modal_componentpc').innerHTML = loading;
+
+        requestItemSerials = {};
 
         fetch(`/requestlab/${requestId}/detail`)
             .then(res => res.json())
@@ -554,15 +584,22 @@
                 document.getElementById('modal_request_id').value = data.request_id;
                 document.getElementById('modal_user_name').value = data.user_name;
                 document.getElementById('modal_total').value = data.total_request;
-                document.getElementById('modal_electronic').innerHTML = rowHtml(data.electronic);
-                document.getElementById('modal_nonelectronic').innerHTML = rowHtml(data.non_electronic);
-                document.getElementById('modal_componentpc').innerHTML = rowHtml(data.component_pc);
+                
+                window.currentRequestItemsList = [
+                    ...(data.electronic || []),
+                    ...(data.non_electronic || []),
+                    ...(data.component_pc || [])
+                ];
+
+                document.getElementById('modal_electronic').innerHTML = rowHtml(data.electronic, true);
+                document.getElementById('modal_nonelectronic').innerHTML = rowHtml(data.non_electronic, false);
+                document.getElementById('modal_componentpc').innerHTML = rowHtml(data.component_pc, true);
             })
             .catch(() => {
-                const error = '<tr><td colspan="3" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Gagal memuat data</td></tr>';
+                const error = '<tr><td colspan="4" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Failed to load data</td></tr>';
                 document.getElementById('modalProgress').style.width = '100%';
                 document.getElementById('modal_electronic').innerHTML = error;
-                document.getElementById('modal_nonelectronic').innerHTML = error;
+                document.getElementById('modal_nonelectronic').innerHTML = '<tr><td colspan="3" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Failed to load data</td></tr>';
                 document.getElementById('modal_componentpc').innerHTML = error;
             });
     }
@@ -583,34 +620,156 @@
         return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
     }
 
-    function rowHtml(items) {
+    function rowHtml(items, hasSerial = false) {
         if (!(items ?? []).length) {
-            return '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada data</td></tr>';
+            return `<tr><td colspan="${hasSerial ? 4 : 3}" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">No data</td></tr>`;
         }
 
-        return items.map(item => `
-            <tr style="border-top:1px solid var(--border-color);">
-                <td style="padding:8px 14px;color:var(--text-primary);">${item.asset_name}</td>
-                <td style="padding:8px 14px;color:var(--text-primary);">${item.quantity}</td>
-                <td style="padding:8px 14px;text-align:center;">
-                    <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
-                        ${itemStatusBadge(item.status)}
-                        ${canReviewRequest ? `
-                            <select data-item-status-select data-item-id="${item.item_id}"
-                                style="min-width:100px;padding:4px 8px;font-size:11px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);cursor:pointer;">
-                                <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>Pending</option>
-                                <option value="approved" ${item.status === 'approved' ? 'selected' : ''}>Approve</option>
-                                <option value="rejected" ${item.status === 'rejected' ? 'selected' : ''}>Reject</option>
-                            </select>
-                        ` : ''}
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+        return items.map(item => {
+            let serialCol = '';
+            if (hasSerial) {
+                if (!requestItemSerials[item.item_id]) {
+                    requestItemSerials[item.item_id] = (item.serials ?? []).map(s => s.id);
+                }
+                const currentLabels = (item.serials ?? []).map(s => s.serial_number).join(', ') || 'None';
+                const isSpvPending = canReviewRequest && item.status === 'pending';
+                
+                if (isSpvPending) {
+                    serialCol = `
+                        <td style="padding:8px 14px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span id="serial_labels_${item.item_id}" style="color:var(--text-secondary); font-family:monospace; font-size:12px;">${currentLabels}</span>
+                                <button type="button" onclick="selectItemSerials(${item.item_id}, ${item.asset_id}, ${item.quantity})"
+                                    style="background:#111B4C; border:none; cursor:pointer; color:#fff; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600;">
+                                    Select S/N
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                } else {
+                    serialCol = `
+                        <td style="padding:8px 14px; color:var(--text-secondary); font-family:monospace; font-size:12px;">
+                            ${currentLabels}
+                        </td>
+                    `;
+                }
+            }
+
+            return `
+                <tr style="border-top:1px solid var(--border-color);">
+                    <td style="padding:8px 14px;color:var(--text-primary);">${item.asset_name}</td>
+                    <td style="padding:8px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.quantity}</td>
+                    ${serialCol}
+                    <td style="padding:8px 14px;text-align:center;">
+                        <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
+                            ${itemStatusBadge(item.status)}
+                            ${canReviewRequest && item.status === 'pending' ? `
+                                <select data-item-status-select data-item-id="${item.item_id}"
+                                    style="min-width:100px;padding:4px 8px;font-size:11px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);cursor:pointer;">
+                                    <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="approved" ${item.status === 'approved' ? 'selected' : ''}>Approve</option>
+                                    <option value="rejected" ${item.status === 'rejected' ? 'selected' : ''}>Reject</option>
+                                </select>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    let currentPickerItemId = null;
+    let currentPickerMaxQty = 0;
+    let tempSelectedSerials = [];
+
+    window.selectItemSerials = function(itemId, assetId, maxQty) {
+        currentPickerItemId = itemId;
+        currentPickerMaxQty = maxQty;
+        tempSelectedSerials = [...(requestItemSerials[itemId] || [])];
+
+        document.getElementById('serial_picker_max_qty').innerText = maxQty;
+        const pickerList = document.getElementById('serial_picker_list');
+        pickerList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Loading serial numbers...</div>';
+        
+        document.getElementById('serialPickerModal').style.display = 'flex';
+
+        fetch(`/api/assets/${assetId}/available-spv-serials`)
+            .then(res => res.json())
+            .then(data => {
+                const serials = data.serials || [];
+                
+                const originalSerials = (window.currentRequestItemsList.find(i => i.item_id === itemId)?.serials || []).map(s => ({
+                    id: s.id,
+                    serial_number: s.serial_number,
+                    condition: 'good'
+                }));
+
+                const allOptions = [...serials];
+                originalSerials.forEach(orig => {
+                    if (!allOptions.some(opt => opt.id === orig.id)) {
+                        allOptions.push(orig);
+                    }
+                });
+
+                if (allOptions.length === 0) {
+                    pickerList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">No available serial numbers in SPV warehouse.</div>';
+                    return;
+                }
+
+                pickerList.innerHTML = allOptions.map(s => {
+                    const checked = tempSelectedSerials.includes(s.id) ? 'checked' : '';
+                    return `
+                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-primary); cursor:pointer;">
+                            <input type="checkbox" value="${s.id}" data-serial-no="${s.serial_number}" ${checked} onchange="handleSerialCheckboxChange(this)"
+                                style="accent-color:#111B4C;">
+                            <span>${s.serial_number} (${s.condition})</span>
+                        </label>
+                    `;
+                }).join('');
+            })
+            .catch(() => {
+                pickerList.innerHTML = '<div style="color:#f87171; font-size:12px;">Failed to load serial numbers.</div>';
+            });
+    }
+
+    window.handleSerialCheckboxChange = function(cb) {
+        const id = parseInt(cb.value);
+        if (cb.checked) {
+            if (tempSelectedSerials.length >= currentPickerMaxQty) {
+                cb.checked = false;
+                alert(`You can select at most ${currentPickerMaxQty} serial numbers.`);
+                return;
+            }
+            if (!tempSelectedSerials.includes(id)) {
+                tempSelectedSerials.push(id);
+            }
+        } else {
+            tempSelectedSerials = tempSelectedSerials.filter(x => x !== id);
+        }
+    }
+
+    window.closeSerialPicker = function() {
+        document.getElementById('serialPickerModal').style.display = 'none';
+        currentPickerItemId = null;
+    }
+
+    window.confirmSerialSelection = function() {
+        if (currentPickerItemId) {
+            requestItemSerials[currentPickerItemId] = [...tempSelectedSerials];
+            const labelsEl = document.getElementById(`serial_labels_${currentPickerItemId}`);
+            if (labelsEl) {
+                const checkedBoxes = document.querySelectorAll(`#serial_picker_list input[type="checkbox"]:checked`);
+                const serialNos = Array.from(checkedBoxes).map(cb => cb.dataset.serialNo);
+                labelsEl.innerText = serialNos.join(', ') || 'None';
+            }
+        }
+        closeSerialPicker();
     }
 
     function updateItemStatus(itemId, status) {
         if (!status) return;
+
+        const serialIds = requestItemSerials[itemId] || [];
 
         fetch(`/requestlab/item/${itemId}/status`, {
             method: 'PATCH',
@@ -618,7 +777,7 @@
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify({ status })
+            body: JSON.stringify({ status, serial_ids: serialIds })
         })
             .then(res => res.json())
             .then(data => {
@@ -642,14 +801,18 @@
         let latestStatus = null;
 
         for (const select of selects) {
+            const itemId = select.dataset.itemId;
+            const status = select.value;
+            const serialIds = requestItemSerials[itemId] || [];
+
             try {
-                const response = await fetch(`/requestlab/item/${select.dataset.itemId}/status`, {
+                const response = await fetch(`/requestlab/item/${itemId}/status`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({ status: select.value })
+                    body: JSON.stringify({ status, serial_ids: serialIds })
                 });
                 const data = await response.json();
 

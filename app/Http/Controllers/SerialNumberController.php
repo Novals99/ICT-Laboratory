@@ -105,14 +105,14 @@ class SerialNumberController extends Controller
             $keepSerialIds = $pc->usedSerialIds();
         }
 
-        // Asset komponen yang stok-nya ada di lab ini.
+        // Asset komponen/PC yang stok-nya ada di lab ini.
         $componentAssetIds = AssetLab::where('lab_id', $laboratory->id)
-            ->whereHas('asset', fn ($q) => $q->where('asset_category', 'component-pc'))
+            ->whereHas('asset', fn ($q) => $q->whereIn('asset_category', ['component-pc', 'pc']))
             ->where('total_good_lab', '>', 0)
             ->pluck('asset_id');
 
         $assets = Asset::whereIn('id', $componentAssetIds)
-            ->where('asset_category', 'component-pc')
+            ->whereIn('asset_category', ['component-pc', 'pc'])
             ->with(['serialNumbers' => function ($q) use ($laboratory, $keepSerialIds) {
                 $q->where('lab_id', $laboratory->id)
                   ->where(function ($w) use ($keepSerialIds) {
@@ -128,12 +128,13 @@ class SerialNumberController extends Controller
 
         // Kelompokkan per component_type (semua tipe muncul walau kosong).
         $grouped = [];
+        $grouped['pc'] = []; // Add whole unit PC slot
         foreach (Pc::SLOT_COMPONENT_TYPE as $type) {
             $grouped[$type] = [];
         }
 
         foreach ($assets as $asset) {
-            $type = $asset->component_type;
+            $type = $asset->asset_category === 'pc' ? 'pc' : $asset->component_type;
             if (! $type || ! array_key_exists($type, $grouped)) {
                 continue;
             }
@@ -206,5 +207,53 @@ class SerialNumberController extends Controller
         }
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * S/N yang available milik asset SPV / SPV warehouse (lab_id is null).
+     * GET /api/assets/{asset}/available-spv-serials
+     */
+    public function availableSpvSerials(Asset $asset)
+    {
+        return response()->json([
+            'asset_id'   => $asset->id,
+            'asset_name' => $asset->asset_name,
+            'serials'    => $asset->serialNumbers()
+                ->where('status', 'available')
+                ->whereNull('lab_id')
+                ->orderBy('serial_number')
+                ->get(['id', 'serial_number', 'condition'])
+                ->map(fn ($s) => [
+                    'id'            => $s->id,
+                    'serial_number' => $s->serial_number,
+                    'condition'     => $s->condition,
+                ]),
+        ]);
+    }
+
+    /**
+     * S/N milik asset tertentu di lab tertentu, termasuk yang terpasang di PC.
+     * GET /api/laboratory/{laboratory}/assets/{asset}/serials-with-pc
+     */
+    public function byAssetInLabWithPc(Laboratory $laboratory, Asset $asset)
+    {
+        $serials = $asset->serialNumbers()
+            ->where('lab_id', $laboratory->id)
+            ->with('pc:id,sku')
+            ->orderBy('serial_number')
+            ->get();
+
+        return response()->json([
+            'asset_id'   => $asset->id,
+            'asset_name' => $asset->asset_name,
+            'serials'    => $serials->map(fn ($s) => [
+                'id'            => $s->id,
+                'serial_number' => $s->serial_number,
+                'condition'     => $s->condition,
+                'status'        => $s->status,
+                'pc_id'         => $s->pc_id,
+                'pc_sku'        => $s->pc?->sku,
+            ]),
+        ]);
     }
 }

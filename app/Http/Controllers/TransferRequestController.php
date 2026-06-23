@@ -45,7 +45,13 @@ class TransferRequestController extends Controller
             $query->where('status', $request->status);
         }
 
-        $transferRequests = $query->latest()->paginate(15)->withQueryString();
+        if ($request->sort === 'oldest') {
+            $query->oldest();
+        } else {
+            $query->latest();
+        }
+
+        $transferRequests = $query->paginate(15)->withQueryString();
 
         $labs = $this->isSPV()
             ? Laboratory::all()
@@ -154,6 +160,7 @@ class TransferRequestController extends Controller
                         'asset_id'            => $item['asset_id'],
                         'quantity_requested'  => $item['quantity'],
                         'notes'               => $item['notes'] ?? null,
+                        'serial_number_id'    => $item['serial_number_id'] ?? null,
                     ]);
                 }
 
@@ -263,7 +270,8 @@ class TransferRequestController extends Controller
             'fromLab',
             'toLab',
             'requestedBy',
-            'items.asset'
+            'items.asset',
+            'items.serialNumber'
         ])->findOrFail($id);
 
         return response()->json([
@@ -276,9 +284,10 @@ class TransferRequestController extends Controller
                     'id' => $item->id,
                     'asset_id' => $item->asset_id,
                     'asset_name' => $item->asset?->asset_name ?? '-',
+                    'serial_number' => $item->serialNumber?->serial_number ?? '-',
                     'quantity' => $item->quantity_requested,
                     'quantity_approved' => $item->quantity_approved,
-                    'status' => $item->status ?? null
+                    'status' => $item->status ?? 'pending'
                 ];
             })
         ]);
@@ -287,31 +296,57 @@ class TransferRequestController extends Controller
     public function approveViaModal(Request $request, $id)
     {
         abort_unless($this->isSPV(), 403);
-        $transferRequest = TransferRequest::findOrFail($id);
-        abort_unless($transferRequest->isPending(), 400, 'Request sudah diproses');
+        $transferRequest = TransferRequest::with('items')->findOrFail($id);
+
+        if (in_array($transferRequest->status, [TransferRequest::STATUS_COMPLETED, TransferRequest::STATUS_REJECTED])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request has already been fully processed.'
+            ]);
+        }
 
         $validated = $request->validate([
             'items' => 'nullable|array',
             'items.*.id' => 'required|exists:transfer_request_items,id',
-            'items.*.quantity_approved' => 'required|integer|min:0',
+            'items.*.status' => 'required|in:approved,rejected,pending',
         ]);
 
         try {
             DB::transaction(function () use ($validated, $transferRequest) {
-                foreach ($validated['items'] as $itemData) {
+                foreach ($validated['items'] ?? [] as $itemData) {
                     $item = TransferRequestItem::where('id', $itemData['id'])
                         ->where('transfer_request_id', $transferRequest->id)
                         ->first();
-                    if ($item) {
-                        $item->update(['quantity_approved' => $itemData['quantity_approved']]);
+                    if ($item && $item->status === 'pending') {
+                        $this->mutationService->processTransferRequestItem($item, $itemData['status']);
                     }
                 }
-                $transferRequest->load('items.asset', 'fromLab', 'toLab');
-                $this->mutationService->approveTransferRequest($transferRequest);
+
+                // Recalculate request status
+                $transferRequest->refresh();
+                $allItems = $transferRequest->items;
+                $pendingCount = $allItems->where('status', 'pending')->count();
+                $approvedCount = $allItems->where('status', 'approved')->count();
+                $rejectedCount = $allItems->where('status', 'rejected')->count();
+
+                if ($pendingCount > 0) {
+                    $transferRequest->update([
+                        'status' => 'partial',
+                        'approved_by' => Auth::id(),
+                        'approved_at' => now(),
+                    ]);
+                } else {
+                    $finalStatus = ($rejectedCount === $allItems->count()) ? TransferRequest::STATUS_REJECTED : TransferRequest::STATUS_COMPLETED;
+                    $transferRequest->update([
+                        'status' => $finalStatus,
+                        'approved_by' => Auth::id(),
+                        'approved_at' => now(),
+                    ]);
+                }
 
                 ActivityLog::create([
                     'user_id' => auth()->id(),
-                    'activity' => 'Approved transfer request: ' . $transferRequest->request_code,
+                    'activity' => 'Processed transfer request: ' . $transferRequest->request_code,
                 ]);
             });
         } catch (\Exception $e) {

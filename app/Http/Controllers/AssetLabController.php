@@ -90,6 +90,38 @@ class AssetLabController extends Controller
         if ($assetLab) {
             $asset = Asset::find($assetId);
             if ($asset) {
+                $isSerialized = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc']);
+                if ($isSerialized) {
+                    $labSerials = \App\Models\AssetSerialNumber::where('asset_id', $assetId)
+                        ->where('lab_id', $laboratory->id)
+                        ->get();
+                    
+                    foreach ($labSerials as $serial) {
+                        if ($serial->pc_id) {
+                            $pc = \App\Models\Pc::find($serial->pc_id);
+                            if ($pc) {
+                                if ($pc->pc_serial_id === $serial->id) {
+                                    $pc->pc_serial_id = null;
+                                    $pc->asset_id = null;
+                                }
+                                foreach (array_keys(\App\Models\Pc::COMPONENT_SLOTS) as $slot) {
+                                    if ($pc->{$slot . '_serial_id'} === $serial->id) {
+                                        $pc->{$slot} = null;
+                                        $pc->{$slot . '_serial_id'} = null;
+                                    }
+                                }
+                                $pc->save();
+                            }
+                        }
+                        $serial->update([
+                            'lab_id' => null,
+                            'status' => 'available',
+                            'pc_id' => null,
+                            'slot' => null
+                        ]);
+                    }
+                }
+
                 if ($assetLab->total_good_lab > 0) {
                     $asset->total_good += $assetLab->total_good_lab;
                 }

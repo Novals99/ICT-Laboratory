@@ -353,31 +353,32 @@
             <div style="padding:16px 32px 24px 32px;">
                 <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:28px;">
                     <div style="display:flex; align-items:center; gap:16px;">
-                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Kode Request:</label>
+                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Request Code:</label>
                         <input id="return_modal_request_code" type="text" readonly
                             style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     </div>
                     <div style="display:flex; align-items:center; gap:16px;">
-                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Lab:</label>
+                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Laboratory:</label>
                         <input id="return_modal_lab" type="text" readonly
                             style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     </div>
                     <div style="display:flex; align-items:center; gap:16px;">
-                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Diajukan oleh:</label>
+                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Requested by:</label>
                         <input id="return_modal_requested_by" type="text" readonly
                             style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     </div>
                 </div>
 
                 <div style="margin-bottom:20px;">
-                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Barang yang Diretur</p>
+                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Items to Return</p>
                     <table id="return_modal_items" style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
                         <thead>
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
+                                <th style="padding:8px 14px; text-align:left;">Serial Number</th>
                                 <th style="padding:8px 14px; text-align:center;">Qty</th>
-                                <th style="padding:8px 14px; text-align:center;">Kondisi</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty Disetujui</th>
+                                <th style="padding:8px 14px; text-align:center;">Condition</th>
+                                <th style="padding:8px 14px; text-align:center;">Status / Action</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -388,15 +389,15 @@
             <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 32px 24px 32px;">
                 <button type="button" onclick="rejectAllReturn()"
                     style="border:1px solid #dc2626; background:#dc2626; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Tolak Semua
+                    Reject All
                 </button>
                 <button type="button" onclick="approveAllReturn()"
                     style="border:1px solid #16a34a; background:#16a34a; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Setujui Semua
+                    Approve All
                 </button>
                 <button type="button" onclick="saveReturnStatuses()"
                     style="border:1px solid #111B4C; background:#111B4C; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Simpan
+                    Save
                 </button>
             </div>
         </div>
@@ -431,7 +432,7 @@
                 <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:28px;">
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Kode Request</label>
+                            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Request Code</label>
                             <input id="transfer_modal_request_code" type="text" readonly
                                 style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                         </div>
@@ -447,20 +448,21 @@
                         </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:16px;">
-                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Diajukan oleh:</label>
+                        <label style="width:130px; text-align:right; font-size:13px; color:var(--text-secondary);">Requested by:</label>
                         <input id="transfer_modal_requested_by" type="text" readonly
                             style="width:260px; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     </div>
                 </div>
 
                 <div style="margin-bottom:20px;">
-                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Barang yang Ditransfer</p>
+                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">Items to Transfer</p>
                     <table id="transfer_modal_items" style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
                         <thead>
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
+                                <th style="padding:8px 14px; text-align:left;">Serial Number</th>
                                 <th style="padding:8px 14px; text-align:center;">Qty</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty Disetujui</th>
+                                <th style="padding:8px 14px; text-align:center;">Status / Action</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -471,15 +473,15 @@
             <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 32px 24px 32px;">
                 <button type="button" onclick="rejectAllTransfer()"
                     style="border:1px solid #dc2626; background:#dc2626; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Tolak Semua
+                    Reject All
                 </button>
                 <button type="button" onclick="approveAllTransfer()"
                     style="border:1px solid #16a34a; background:#16a34a; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Setujui Semua
+                    Approve All
                 </button>
                 <button type="button" onclick="saveTransferStatuses()"
                     style="border:1px solid #111B4C; background:#111B4C; color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
-                    Simpan
+                    Save
                 </button>
             </div>
         </div>
@@ -611,13 +613,22 @@
         let currentReturnRequestId = null;
         let currentTransferRequestId = null;
 
+        let rrItemStates = {};
+        let rrItemsList = [];
+        let trItemStates = {};
+        let trItemsList = [];
+
+        // Return Request Details Modal
         function openReturnDetailModal(requestId) {
             currentReturnRequestId = requestId;
             const modal = document.getElementById('returnDetailModal');
             modal.style.display = 'flex';
             document.getElementById('returnModalProgress').style.width = '30%';
-            const loadingRow = '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
+            const loadingRow = '<tr><td colspan="5" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Loading...</td></tr>';
             document.querySelector('#return_modal_items tbody').innerHTML = loadingRow;
+
+            rrItemStates = {};
+            rrItemsList = [];
 
             fetch(`/return-requests/${requestId}/detail`)
                 .then(res => res.json())
@@ -626,42 +637,76 @@
                     document.getElementById('return_modal_request_code').value = data.request_code;
                     document.getElementById('return_modal_lab').value = data.lab_name;
                     document.getElementById('return_modal_requested_by').value = data.requested_by;
-                    document.querySelector('#return_modal_items tbody').innerHTML = data.items.map(item => `
-                        <tr style="border-top:1px solid var(--border-color);">
-                            <td style="padding:8px 14px;color:var(--text-primary);">${item.asset_name}</td>
-                            <td style="padding:8px 14px;text-align:center;color:var(--text-primary);">${item.quantity}</td>
-                            <td style="padding:8px 14px;text-align:center;color:var(--text-primary);">${item.condition}</td>
-                            <td style="padding:8px 14px;text-align:center;">
-                                <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
-                                    ${getReturnStatusBadge(item)}
-                                    <input type="number" data-return-item-id="${item.id}"
-                                        value="${item.quantity_approved ?? item.quantity}" min="0" max="${item.quantity}"
-                                        style="min-width:80px;padding:4px 8px;font-size:12px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);text-align:center;">
-                                </div>
-                            </td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada barang</td></tr>';
+                    
+                    rrItemsList = data.items;
+                    data.items.forEach(item => {
+                        if (item.status === 'pending') {
+                            rrItemStates[item.id] = 'pending';
+                        }
+                    });
+                    renderReturnRows();
                 })
                 .catch(() => {
                     document.getElementById('returnModalProgress').style.width = '100%';
-                    const error = '<tr><td colspan="4" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Gagal memuat data</td></tr>';
+                    const error = '<tr><td colspan="5" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Failed to load data</td></tr>';
                     document.querySelector('#return_modal_items tbody').innerHTML = error;
                 });
         }
 
-        function getReturnStatusBadge(item) {
-            if (!item.status) {
-                if (item.quantity_approved == 0) {
-                    return '<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Rejected</span>';
-                } else if (item.quantity_approved < item.quantity) {
-                    return '<span style="background:#2563eb;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Partial</span>';
-                } else if (item.quantity_approved == item.quantity) {
-                    return '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Approved</span>';
-                }
-                return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+        function renderReturnRows() {
+            const tbody = document.querySelector('#return_modal_items tbody');
+            if (rrItemsList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">No items</td></tr>';
+                return;
             }
-            return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+            tbody.innerHTML = rrItemsList.map(item => {
+                let actionHtml = '';
+                if (item.status !== 'pending') {
+                    const isApproved = item.status === 'approved';
+                    const badgeBg = isApproved ? 'rgba(22, 163, 74, 0.2)' : 'rgba(220, 38, 38, 0.2)';
+                    const badgeText = isApproved ? '#4ade80' : '#f87171';
+                    const badgeLabel = isApproved ? 'Approved' : 'Rejected';
+                    actionHtml = `<span style="background:${badgeBg}; color:${badgeText}; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600;">${badgeLabel}</span>`;
+                } else {
+                    const curState = rrItemStates[item.id];
+                    const appOpacity = curState === 'approved' ? '1.0' : (curState === 'pending' ? '0.4' : '0.15');
+                    const rejOpacity = curState === 'rejected' ? '1.0' : (curState === 'pending' ? '0.4' : '0.15');
+                    actionHtml = `
+                        <div style="display:flex; align-items:center; justify-content:center; gap:12px;">
+                            <button type="button" onclick="setRrRowState(${item.id}, 'approved')"
+                                style="background:none; border:none; cursor:pointer; color:#4ade80; padding:4px; opacity:${appOpacity}; transition:opacity 0.2s;" title="Approve">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </button>
+                            <button type="button" onclick="setRrRowState(${item.id}, 'rejected')"
+                                style="background:none; border:none; cursor:pointer; color:#f87171; padding:4px; opacity:${rejOpacity}; transition:opacity 0.2s;" title="Reject">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                }
+                return `
+                    <tr style="border-top:1px solid var(--border-color);">
+                        <td style="padding:10px 14px;color:var(--text-primary);">${item.asset_name}</td>
+                        <td style="padding:10px 14px;color:var(--text-secondary);font-family:monospace;">${item.serial_number ?? '-'}</td>
+                        <td style="padding:10px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.quantity}</td>
+                        <td style="padding:10px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.condition}</td>
+                        <td style="padding:10px 14px;text-align:center;">${actionHtml}</td>
+                    </tr>
+                `;
+            }).join('');
         }
+
+        window.setRrRowState = function(itemId, state) {
+            if (rrItemStates[itemId] !== undefined) {
+                rrItemStates[itemId] = state;
+                renderReturnRows();
+            }
+        };
 
         function closeReturnDetailModal() {
             currentReturnRequestId = null;
@@ -671,18 +716,13 @@
 
         window.saveReturnStatuses = async function() {
             if (!currentReturnRequestId) {
-                alert('Buka detail request terlebih dahulu.');
+                alert('Please open a request first.');
                 return;
             }
-
-            const items = [];
-            document.querySelectorAll('[data-return-item-id]').forEach(input => {
-                items.push({
-                    id: input.dataset.returnItemId,
-                    quantity_approved: parseInt(input.value) || 0
-                });
-            });
-
+            const items = Object.keys(rrItemStates).map(id => ({
+                id: parseInt(id),
+                status: rrItemStates[id]
+            }));
             try {
                 const response = await fetch(`/return-requests/${currentReturnRequestId}/approve`, {
                     method: 'POST',
@@ -694,62 +734,50 @@
                 });
                 const data = await response.json();
                 if (!data.success) {
-                    alert(data.message || 'Gagal menyimpan status.');
+                    alert(data.message || 'Failed to save status.');
                     return;
                 }
-                alert('Status berhasil disimpan!');
+                alert('Status saved successfully!');
                 closeReturnDetailModal();
                 window.location.reload();
             } catch (e) {
-                alert('Gagal menyimpan status.');
+                alert('Failed to save status.');
             }
-        }
+        };
 
         window.approveAllReturn = function() {
             if (!currentReturnRequestId) {
-                alert('Buka detail request terlebih dahulu.');
+                alert('Please open a request first.');
                 return;
             }
-            document.querySelectorAll('[data-return-item-id]').forEach(input => {
-                input.value = input.getAttribute('max');
+            Object.keys(rrItemStates).forEach(id => {
+                rrItemStates[id] = 'approved';
             });
-        }
+            renderReturnRows();
+        };
 
         window.rejectAllReturn = function() {
             if (!currentReturnRequestId) {
-                alert('Buka detail request terlebih dahulu.');
+                alert('Please open a request first.');
                 return;
             }
-            if (confirm('Apakah Anda yakin ingin menolak seluruh request ini?')) {
-                fetch(`/return-requests/${currentReturnRequestId}/reject`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({ rejection_reason: 'Ditolak seluruhnya oleh SPV' })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (!data.success) {
-                        alert(data.message || 'Gagal menolak request.');
-                        return;
-                    }
-                    alert('Request berhasil ditolak!');
-                    closeReturnDetailModal();
-                    window.location.reload();
-                })
-                .catch(() => alert('Gagal menolak request.'));
-            }
-        }
+            Object.keys(rrItemStates).forEach(id => {
+                rrItemStates[id] = 'rejected';
+            });
+            renderReturnRows();
+        };
 
+        // Transfer Request Details Modal
         function openTransferDetailModal(requestId) {
             currentTransferRequestId = requestId;
             const modal = document.getElementById('transferDetailModal');
             modal.style.display = 'flex';
             document.getElementById('transferModalProgress').style.width = '30%';
-            const loadingRow = '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Memuat...</td></tr>';
+            const loadingRow = '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Loading...</td></tr>';
             document.querySelector('#transfer_modal_items tbody').innerHTML = loadingRow;
+
+            trItemStates = {};
+            trItemsList = [];
 
             fetch(`/transfer-requests/${requestId}/detail`)
                 .then(res => res.json())
@@ -759,41 +787,75 @@
                     document.getElementById('transfer_modal_from_lab').value = data.from_lab;
                     document.getElementById('transfer_modal_to_lab').value = data.to_lab;
                     document.getElementById('transfer_modal_requested_by').value = data.requested_by;
-                    document.querySelector('#transfer_modal_items tbody').innerHTML = data.items.map(item => `
-                        <tr style="border-top:1px solid var(--border-color);">
-                            <td style="padding:8px 14px;color:var(--text-primary);">${item.asset_name}</td>
-                            <td style="padding:8px 14px;text-align:center;color:var(--text-primary);">${item.quantity}</td>
-                            <td style="padding:8px 14px;text-align:center;">
-                                <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
-                                    ${getTransferStatusBadge(item)}
-                                    <input type="number" data-tr-item-id="${item.id}"
-                                        value="${item.quantity_approved ?? item.quantity}" min="0" max="${item.quantity}"
-                                        style="min-width:80px;padding:4px 8px;font-size:12px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);text-align:center;">
-                                </div>
-                            </td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada barang</td></tr>';
+                    
+                    trItemsList = data.items;
+                    data.items.forEach(item => {
+                        if (item.status === 'pending') {
+                            trItemStates[item.id] = 'pending';
+                        }
+                    });
+                    renderTransferRows();
                 })
                 .catch(() => {
                     document.getElementById('transferModalProgress').style.width = '100%';
-                    const error = '<tr><td colspan="3" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Gagal memuat data</td></tr>';
+                    const error = '<tr><td colspan="4" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Failed to load data</td></tr>';
                     document.querySelector('#transfer_modal_items tbody').innerHTML = error;
                 });
         }
 
-        function getTransferStatusBadge(item) {
-            if (!item.status) {
-                if (item.quantity_approved == 0) {
-                    return '<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Rejected</span>';
-                } else if (item.quantity_approved < item.quantity) {
-                    return '<span style="background:#2563eb;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Partial</span>';
-                } else if (item.quantity_approved == item.quantity) {
-                    return '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Approved</span>';
-                }
-                return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+        function renderTransferRows() {
+            const tbody = document.querySelector('#transfer_modal_items tbody');
+            if (trItemsList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">No items</td></tr>';
+                return;
             }
-            return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+            tbody.innerHTML = trItemsList.map(item => {
+                let actionHtml = '';
+                if (item.status !== 'pending') {
+                    const isApproved = item.status === 'approved';
+                    const badgeBg = isApproved ? 'rgba(22, 163, 74, 0.2)' : 'rgba(220, 38, 38, 0.2)';
+                    const badgeText = isApproved ? '#4ade80' : '#f87171';
+                    const badgeLabel = isApproved ? 'Approved' : 'Rejected';
+                    actionHtml = `<span style="background:${badgeBg}; color:${badgeText}; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600;">${badgeLabel}</span>`;
+                } else {
+                    const curState = trItemStates[item.id];
+                    const appOpacity = curState === 'approved' ? '1.0' : (curState === 'pending' ? '0.4' : '0.15');
+                    const rejOpacity = curState === 'rejected' ? '1.0' : (curState === 'pending' ? '0.4' : '0.15');
+                    actionHtml = `
+                        <div style="display:flex; align-items:center; justify-content:center; gap:12px;">
+                            <button type="button" onclick="setTrRowState(${item.id}, 'approved')"
+                                style="background:none; border:none; cursor:pointer; color:#4ade80; padding:4px; opacity:${appOpacity}; transition:opacity 0.2s;" title="Approve">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </button>
+                            <button type="button" onclick="setTrRowState(${item.id}, 'rejected')"
+                                style="background:none; border:none; cursor:pointer; color:#f87171; padding:4px; opacity:${rejOpacity}; transition:opacity 0.2s;" title="Reject">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                }
+                return `
+                    <tr style="border-top:1px solid var(--border-color);">
+                        <td style="padding:10px 14px;color:var(--text-primary);">${item.asset_name}</td>
+                        <td style="padding:10px 14px;color:var(--text-secondary);font-family:monospace;">${item.serial_number ?? '-'}</td>
+                        <td style="padding:10px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.quantity}</td>
+                        <td style="padding:10px 14px;text-align:center;">${actionHtml}</td>
+                    </tr>
+                `;
+            }).join('');
         }
+
+        window.setTrRowState = function(itemId, state) {
+            if (trItemStates[itemId] !== undefined) {
+                trItemStates[itemId] = state;
+                renderTransferRows();
+            }
+        };
 
         function closeTransferDetailModal() {
             currentTransferRequestId = null;
@@ -803,18 +865,13 @@
 
         window.saveTransferStatuses = async function() {
             if (!currentTransferRequestId) {
-                alert('Buka detail request terlebih dahulu.');
+                alert('Please open a request first.');
                 return;
             }
-
-            const items = [];
-            document.querySelectorAll('[data-tr-item-id]').forEach(input => {
-                items.push({
-                    id: input.dataset.trItemId,
-                    quantity_approved: parseInt(input.value) || 0
-                });
-            });
-
+            const items = Object.keys(trItemStates).map(id => ({
+                id: parseInt(id),
+                status: trItemStates[id]
+            }));
             try {
                 const response = await fetch(`/transfer-requests/${currentTransferRequestId}/approve`, {
                     method: 'POST',
@@ -826,54 +883,38 @@
                 });
                 const data = await response.json();
                 if (!data.success) {
-                    alert(data.message || 'Gagal menyimpan status.');
+                    alert(data.message || 'Failed to save status.');
                     return;
                 }
-                alert('Status berhasil disimpan!');
+                alert('Status saved successfully!');
                 closeTransferDetailModal();
                 window.location.reload();
             } catch (e) {
-                alert('Gagal menyimpan status.');
+                alert('Failed to save status.');
             }
-        }
+        };
 
         window.approveAllTransfer = function() {
             if (!currentTransferRequestId) {
-                alert('Buka detail request terlebih dahulu.');
+                alert('Please open a request first.');
                 return;
             }
-            document.querySelectorAll('[data-tr-item-id]').forEach(input => {
-                input.value = input.getAttribute('max');
+            Object.keys(trItemStates).forEach(id => {
+                trItemStates[id] = 'approved';
             });
-        }
+            renderTransferRows();
+        };
 
         window.rejectAllTransfer = function() {
             if (!currentTransferRequestId) {
-                alert('Buka detail request terlebih dahulu.');
+                alert('Please open a request first.');
                 return;
             }
-            if (confirm('Apakah Anda yakin ingin menolak seluruh request ini?')) {
-                fetch(`/transfer-requests/${currentTransferRequestId}/reject`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({ rejection_reason: 'Ditolak seluruhnya oleh SPV' })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (!data.success) {
-                        alert(data.message || 'Gagal menolak request.');
-                        return;
-                    }
-                    alert('Request berhasil ditolak!');
-                    closeTransferDetailModal();
-                    window.location.reload();
-                })
-                .catch(() => alert('Gagal menolak request.'));
-            }
-        }
+            Object.keys(trItemStates).forEach(id => {
+                trItemStates[id] = 'rejected';
+            });
+            renderTransferRows();
+        };
 
         document.getElementById('returnDetailModal').addEventListener('click', function(event) {
             if (event.target === this) closeReturnDetailModal();

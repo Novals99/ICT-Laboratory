@@ -47,10 +47,11 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
         </div>
 
         <div style="overflow-x:auto;">
-            <table class="db-table" style="min-width:{{ $canEdit ? '1200px' : '1100px' }};">
+            <table class="db-table" style="min-width:{{ $canEdit ? '1350px' : '1250px' }};">
                 <thead>
                     <tr>
                         <th>No PC</th>
+                        <th>PC Unit / Serial</th>
                         <th>Type</th>
                         <th>Processor</th>
                         <th>RAM</th>
@@ -67,6 +68,14 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                     @forelse($laboratory->pcs as $i => $pc)
                     <tr>
                         <td style="font-weight:600;">PC-{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</td>
+                        <td>
+                            @if($pc->pcSerial)
+                                <div style="font-weight:600; color:var(--text-bold);">{{ $pc->pcSerial->asset->asset_name }}</div>
+                                <div style="font-size:11px; color:var(--text-muted); font-family:monospace;">S/N: {{ $pc->pcSerial->serial_number }}</div>
+                            @else
+                                <span style="color:var(--text-muted);">-</span>
+                            @endif
+                        </td>
                         <td>{{ ucfirst($pc->type_pc) }}</td>
                         <td>{{ $pc->processor ?? '-' }}</td>
                         <td>{{ $pc->ram ?? '-' }}</td>
@@ -428,17 +437,25 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 
             <div>
                 <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Asset Name:</label>
-                <select name="lab_assets[new0][asset_id]"
-                        style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
+                <select name="lab_assets[new0][asset_id]" id="add-asset-select"
+                        style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;" required>
                     <option value="">Choose asset...</option>
                     @foreach($allAssets as $a)
-                    <option value="{{ $a->id }}">{{ $a->asset_name }} ({{ ucfirst($a->asset_category) }})</option>
+                    <option value="{{ $a->id }}" data-category="{{ $a->asset_category }}">{{ $a->asset_name }} ({{ ucfirst($a->asset_category) }})</option>
                     @endforeach
                 </select>
             </div>
+            
+            <div id="add-asset-serials-container" style="display:none;">
+                <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Select Serial Number(s) from SPV:</label>
+                <div id="add-asset-serials-list" style="border:1px solid var(--border-main); border-radius:8px; padding:10px; max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; background:var(--bg-main);">
+                    <!-- Checkboxes will be populated here -->
+                </div>
+            </div>
+
             <div>
                 <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Quantity:</label>
-                <input type="number" name="lab_assets[new0][quantity]" value="1" min="1"
+                <input type="number" name="lab_assets[new0][quantity]" id="add-asset-qty" value="1" min="1"
                        style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none; box-sizing:border-box;">
             </div>
             <div style="display:flex; justify-content:flex-end; gap:8px;">
@@ -721,10 +738,91 @@ document.addEventListener('click', e => {
     });
 });
 // ── Add Asset Modal ──
-function openAddAssetModal()  { document.getElementById('modal-add-asset').style.display = 'flex'; }
+function openAddAssetModal()  { 
+    document.getElementById('modal-add-asset').style.display = 'flex'; 
+    document.getElementById('add-asset-select').value = '';
+    document.getElementById('add-asset-serials-container').style.display = 'none';
+    document.getElementById('add-asset-serials-list').innerHTML = '';
+    const qtyInp = document.getElementById('add-asset-qty');
+    qtyInp.value = 1;
+    qtyInp.readOnly = false;
+    qtyInp.min = 1;
+}
 function closeAddAssetModal() { document.getElementById('modal-add-asset').style.display = 'none'; }
 document.getElementById('modal-add-asset').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAddAssetModal();
+});
+
+document.getElementById('add-asset-select').addEventListener('change', function() {
+    const assetId = this.value;
+    const selectedOption = this.options[this.selectedIndex];
+    const category = selectedOption ? selectedOption.getAttribute('data-category') : '';
+    
+    const container = document.getElementById('add-asset-serials-container');
+    const list = document.getElementById('add-asset-serials-list');
+    const qtyInp = document.getElementById('add-asset-qty');
+    
+    list.innerHTML = '';
+    
+    if (!assetId) {
+        container.style.display = 'none';
+        qtyInp.value = 1;
+        qtyInp.readOnly = false;
+        qtyInp.min = 1;
+        return;
+    }
+    
+    const usesSerial = ['electronic', 'component-pc', 'pc'].includes(category);
+    
+    if (usesSerial) {
+        container.style.display = 'block';
+        qtyInp.value = 0;
+        qtyInp.readOnly = true;
+        qtyInp.min = 0;
+        
+        list.innerHTML = '<p style="font-size:12px;color:var(--text-muted);padding:4px 0;">Memuat nomor seri...</p>';
+        
+        fetch(`/api/assets/${assetId}/available-spv-serials`)
+            .then(r => r.json())
+            .then(data => {
+                list.innerHTML = '';
+                if (!data.serials || data.serials.length === 0) {
+                    list.innerHTML = '<p style="font-size:12px;color:var(--text-muted);padding:4px 0;">Tidak ada nomor seri tersedia di gudang SPV.</p>';
+                    return;
+                }
+                
+                data.serials.forEach(s => {
+                    const lbl = document.createElement('label');
+                    lbl.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-normal); cursor:pointer; margin:2px 0;';
+                    
+                    const chk = document.createElement('input');
+                    chk.type = 'checkbox';
+                    chk.name = 'lab_assets[new0][serial_ids][]';
+                    chk.value = s.id;
+                    chk.className = 'add-asset-serial-checkbox';
+                    chk.style.cssText = 'accent-color: var(--bg-primary);';
+                    chk.addEventListener('change', function() {
+                        const checkedCount = list.querySelectorAll('.add-asset-serial-checkbox:checked').length;
+                        qtyInp.value = checkedCount;
+                    });
+                    
+                    const span = document.createElement('span');
+                    span.textContent = `${s.serial_number} (${s.condition})`;
+                    
+                    lbl.appendChild(chk);
+                    lbl.appendChild(span);
+                    list.appendChild(lbl);
+                });
+            })
+            .catch(() => {
+                list.innerHTML = '<p style="font-size:12px;color:#f87171;padding:4px 0;">Gagal memuat nomor seri.</p>';
+            });
+    } else {
+        container.style.display = 'none';
+        qtyInp.value = 1;
+        qtyInp.readOnly = false;
+        qtyInp.min = 1;
+    }
 });
 
 // ── Serial Aset (#14) ──

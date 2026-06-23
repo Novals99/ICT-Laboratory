@@ -81,6 +81,7 @@ class RequestLabController extends Controller
         $labRequest = RequestLab::with([
             'user',
             'request_items.asset',
+            'request_items.serialNumbers',
         ])->findOrFail($id);
 
         return response()->json([
@@ -161,15 +162,44 @@ class RequestLabController extends Controller
 
         $validated = $request->validate([
             'status' => 'required|in:pending,approved,rejected',
+            'serial_ids' => 'nullable|array',
+            'serial_ids.*' => 'exists:asset_serial_numbers,id',
         ]);
 
         $item = RequestItem::findOrFail($itemId);
-
         $labRequest = RequestLab::findOrFail($item->request_lab_id);
+
+        $asset = $item->asset;
+        $usesSerial = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc']);
+
+        if ($validated['status'] === 'approved' && $usesSerial) {
+            $serialIds = $validated['serial_ids'] ?? [];
+            if (count($serialIds) > $item->total_request) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Number of selected serial numbers cannot exceed the requested quantity ({$item->total_request})."
+                ], 422);
+            }
+            
+            // Check that they match the asset and are available in SPV warehouse (lab_id is null) or already assigned to this request item
+            $validSerialsCount = \App\Models\AssetSerialNumber::where('asset_id', $item->asset_id)
+                ->where(function($q) use ($item) {
+                    $q->whereNull('lab_id')
+                      ->orWhere('request_item_id', $item->id);
+                })
+                ->whereIn('id', $serialIds)
+                ->count();
+            if ($validSerialsCount !== count($serialIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Some selected serial numbers are invalid or no longer available."
+                ], 422);
+            }
+        }
 
         try {
             DB::transaction(function () use ($item, $validated, $labRequest) {
-                $this->applyItemStatus($item, $labRequest, $validated['status']);
+                $this->applyItemStatus($item, $labRequest, $validated['status'], $validated['serial_ids'] ?? []);
 
                 // Recalculate status request
                 $requestStatus = $this->resolveRequestStatus($labRequest->fresh()->request_items);
@@ -209,7 +239,21 @@ class RequestLabController extends Controller
         try {
             DB::transaction(function () use ($labRequest, $validated) {
                 foreach ($labRequest->request_items as $item) {
-                    $this->applyItemStatus($item, $labRequest, $validated['status']);
+                    $serialIds = [];
+                    $asset = $item->asset;
+                    $usesSerial = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc']);
+                    if ($validated['status'] === 'approved' && $usesSerial) {
+                        $serialIds = \App\Models\AssetSerialNumber::where('asset_id', $item->asset_id)
+                            ->whereNull('lab_id')
+                            ->where('status', 'available')
+                            ->limit($item->total_request)
+                            ->pluck('id')
+                            ->toArray();
+                        if (count($serialIds) < $item->total_request) {
+                            throw new \Exception("Stok serial number untuk {$asset->asset_name} tidak mencukupi di gudang.");
+                        }
+                    }
+                    $this->applyItemStatus($item, $labRequest, $validated['status'], $serialIds);
                 }
 
                 $requestStatus = $this->resolveRequestStatus($labRequest->fresh()->request_items);
@@ -315,14 +359,20 @@ class RequestLabController extends Controller
             ->get()
             ->map(fn ($item) => [
                 'item_id' => $item->id,
+                'asset_id' => $item->asset_id,
                 'asset_name' => $item->asset->asset_name ?? '-',
                 'quantity' => $item->total_request,
                 'status' => $item->status ?? 'pending',
+                'category' => $category,
+                'serials' => $item->serialNumbers->map(fn($s) => [
+                    'id' => $s->id,
+                    'serial_number' => $s->serial_number
+                ])->toArray()
             ])
             ->toArray();
     }
 
-    private function applyItemStatus(RequestItem $item, RequestLab $labRequest, string $newStatus): void
+    private function applyItemStatus(RequestItem $item, RequestLab $labRequest, string $newStatus, array $serialIds = []): void
     {
         $oldStatus = $item->status ?? 'pending';
         $qty = (int) $item->total_request;
@@ -356,6 +406,14 @@ class RequestLabController extends Controller
             $assetLab->total_good_lab -= $qty;
             $assetLab->total_asset_lab = $assetLab->total_good_lab + $assetLab->total_damaged_lab + $assetLab->total_loss_lab;
             $assetLab->save();
+
+            // Reclaim serial numbers back to SPV warehouse
+            \App\Models\AssetSerialNumber::where('request_item_id', $item->id)
+                ->update([
+                    'lab_id' => null,
+                    'request_item_id' => null,
+                    'status' => 'available'
+                ]);
 
             AssetLog::create([
                 'asset_id' => $asset->id,
@@ -397,6 +455,24 @@ class RequestLabController extends Controller
             $assetLab->total_good_lab += $qty;
             $assetLab->total_asset_lab = $assetLab->total_good_lab + $assetLab->total_damaged_lab + $assetLab->total_loss_lab;
             $assetLab->save();
+
+            // Reclaim any currently linked serials for this item first to avoid duplicates
+            \App\Models\AssetSerialNumber::where('request_item_id', $item->id)
+                ->update([
+                    'lab_id' => null,
+                    'request_item_id' => null,
+                    'status' => 'available'
+                ]);
+
+            // Link selected serial numbers to the laboratory and request item
+            if (!empty($serialIds)) {
+                \App\Models\AssetSerialNumber::whereIn('id', $serialIds)
+                    ->update([
+                        'lab_id' => $labRequest->lab_id,
+                        'request_item_id' => $item->id,
+                        'status' => 'available'
+                    ]);
+            }
 
             AssetLog::create([
                 'asset_id' => $asset->id,

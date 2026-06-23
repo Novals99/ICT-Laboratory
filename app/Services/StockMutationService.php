@@ -444,4 +444,243 @@ class StockMutationService
             'notes'  => $notes,
         ]);
     }
+
+    public function processTransferRequestItem(\App\Models\TransferRequestItem $item, string $newStatus): void
+    {
+        if ($item->status !== 'pending') {
+            return;
+        }
+
+        if ($newStatus === 'rejected') {
+            $item->update([
+                'status' => 'rejected',
+                'quantity_approved' => 0
+            ]);
+            return;
+        }
+
+        if ($newStatus === 'approved') {
+            $transferRequest = $item->transferRequest;
+            $qtyApproved = $item->quantity_requested;
+
+            DB::transaction(function () use ($item, $transferRequest, $qtyApproved) {
+                $fromLabStock = AssetLab::where('lab_id', $transferRequest->from_lab_id)
+                    ->where('asset_id', $item->asset_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$fromLabStock || $fromLabStock->total_good_lab < $qtyApproved) {
+                    $available = $fromLabStock?->total_good_lab ?? 0;
+                    throw new \Exception(
+                        "Stok {$item->asset->asset_name} di lab asal tidak mencukupi. " .
+                        "Tersedia: {$available}, Disetujui: {$qtyApproved}."
+                    );
+                }
+
+                $snapFrom = $fromLabStock->total_asset_lab;
+                $fromLabStock->decrement('total_asset_lab', $qtyApproved);
+                $fromLabStock->decrement('total_good_lab', $qtyApproved);
+
+                $toLabStock = AssetLab::where('lab_id', $transferRequest->to_lab_id)
+                    ->where('asset_id', $item->asset_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                $snapTo = $toLabStock?->total_asset_lab ?? 0;
+
+                if ($toLabStock) {
+                    $toLabStock->increment('total_asset_lab', $qtyApproved);
+                    $toLabStock->increment('total_good_lab', $qtyApproved);
+                } else {
+                    AssetLab::create([
+                        'lab_id'            => $transferRequest->to_lab_id,
+                        'asset_id'          => $item->asset_id,
+                        'total_asset_lab'   => $qtyApproved,
+                        'total_good_lab'    => $qtyApproved,
+                        'total_damaged_lab' => 0,
+                        'total_loss_lab'    => 0,
+                    ]);
+                }
+
+                if ($item->serial_number_id) {
+                    $serial = \App\Models\AssetSerialNumber::find($item->serial_number_id);
+                    if ($serial) {
+                        if ($serial->pc_id) {
+                            $pc = \App\Models\Pc::find($serial->pc_id);
+                            if ($pc) {
+                                if ($pc->pc_serial_id === $serial->id) {
+                                    $pc->pc_serial_id = null;
+                                    $pc->asset_id = null;
+                                }
+                                foreach (array_keys(\App\Models\Pc::COMPONENT_SLOTS) as $slot) {
+                                    if ($pc->{$slot . '_serial_id'} === $serial->id) {
+                                        $pc->{$slot} = null;
+                                        $pc->{$slot . '_serial_id'} = null;
+                                    }
+                                }
+                                $pc->save();
+                            }
+                        }
+
+                        $serial->update([
+                            'lab_id' => $transferRequest->to_lab_id,
+                            'status' => 'available',
+                            'pc_id' => null,
+                            'slot' => null
+                        ]);
+                    }
+                }
+
+                $asset = Asset::find($item->asset_id);
+                AssetLog::create([
+                    'asset_id'              => $item->asset_id,
+                    'user_id'               => Auth::id(),
+                    'type'                  => 'transfer',
+                    'quantity'              => $qtyApproved,
+                    'from_lab_id'           => $transferRequest->from_lab_id,
+                    'to_lab_id'             => $transferRequest->to_lab_id,
+                    'before_total_asset'    => $asset->total_asset,
+                    'after_total_asset'     => $asset->total_asset,
+                    'before_total_good'     => $asset->total_good,
+                    'after_total_good'      => $asset->total_good,
+                    'before_total_damaged'  => $asset->total_damaged,
+                    'after_total_damaged'   => $asset->total_damaged,
+                    'before_total_loss'     => $asset->total_loss,
+                    'after_total_loss'      => $asset->total_loss,
+                    'before_from_lab_stock' => $snapFrom,
+                    'after_from_lab_stock'  => $snapFrom - $qtyApproved,
+                    'before_to_lab_stock'   => $snapTo,
+                    'after_to_lab_stock'    => $snapTo + $qtyApproved,
+                    'source'                => "transfer_request:{$transferRequest->request_code}",
+                    'notes'                 => $item->notes,
+                ]);
+
+                $item->update([
+                    'status' => 'approved',
+                    'quantity_approved' => $qtyApproved
+                ]);
+            });
+        }
+    }
+
+    public function processReturnRequestItem(\App\Models\ReturnRequestItem $item, string $newStatus): void
+    {
+        if ($item->status !== 'pending') {
+            return;
+        }
+
+        if ($newStatus === 'rejected') {
+            $item->update([
+                'status' => 'rejected',
+                'quantity_approved' => 0
+            ]);
+            return;
+        }
+
+        if ($newStatus === 'approved') {
+            $returnRequest = $item->returnRequest;
+            $qtyApproved = $item->quantity_requested;
+
+            DB::transaction(function () use ($item, $returnRequest, $qtyApproved) {
+                $assetLab = AssetLab::where('lab_id', $returnRequest->lab_id)
+                    ->where('asset_id', $item->asset_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                $asset = Asset::where('id', $item->asset_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$assetLab || !$asset) {
+                    throw new \Exception("Data stok tidak ditemukan untuk {$item->asset->asset_name}.");
+                }
+
+                $conditionField = match ($item->condition) {
+                    ReturnRequestItem::CONDITION_GOOD    => 'total_good_lab',
+                    ReturnRequestItem::CONDITION_DAMAGED => 'total_damaged_lab',
+                    ReturnRequestItem::CONDITION_LOST    => 'total_loss_lab',
+                    default                              => 'total_good_lab',
+                };
+
+                if ($assetLab->$conditionField < $qtyApproved) {
+                    throw new \Exception(
+                        "Stok {$asset->asset_name} ({$item->condition}) di lab tidak mencukupi. " .
+                        "Tersedia: {$assetLab->$conditionField}, Disetujui: {$qtyApproved}."
+                    );
+                }
+
+                $snap = [
+                    'before_from_lab'     => $assetLab->total_asset_lab,
+                    'before_total_asset'  => $asset->total_asset,
+                    'before_total_good'   => $asset->total_good,
+                    'before_total_damaged'=> $asset->total_damaged,
+                    'before_total_loss'   => $asset->total_loss,
+                ];
+
+                $assetLab->decrement('total_asset_lab', $qtyApproved);
+                $assetLab->decrement($conditionField, $qtyApproved);
+
+                if ($item->condition === ReturnRequestItem::CONDITION_GOOD) {
+                    $asset->increment('total_asset', $qtyApproved);
+                    $asset->increment('total_good', $qtyApproved);
+                } elseif ($item->condition === ReturnRequestItem::CONDITION_DAMAGED) {
+                    $asset->increment('total_asset', $qtyApproved);
+                    $asset->increment('total_damaged', $qtyApproved);
+                } elseif ($item->condition === ReturnRequestItem::CONDITION_LOST) {
+                    $asset->increment('total_loss', $qtyApproved);
+                }
+
+                $assetLab->refresh();
+                $asset->refresh();
+
+                if ($item->serial_number_id) {
+                    $serial = \App\Models\AssetSerialNumber::find($item->serial_number_id);
+                    if ($serial) {
+                        if ($serial->pc_id) {
+                            $pc = \App\Models\Pc::find($serial->pc_id);
+                            if ($pc) {
+                                if ($pc->pc_serial_id === $serial->id) {
+                                    $pc->pc_serial_id = null;
+                                    $pc->asset_id = null;
+                                }
+                                foreach (array_keys(\App\Models\Pc::COMPONENT_SLOTS) as $slot) {
+                                    if ($pc->{$slot . '_serial_id'} === $serial->id) {
+                                        $pc->{$slot} = null;
+                                        $pc->{$slot . '_serial_id'} = null;
+                                    }
+                                }
+                                $pc->save();
+                            }
+                        }
+
+                        $serial->update([
+                            'lab_id' => null,
+                            'status' => 'available',
+                            'pc_id' => null,
+                            'slot' => null,
+                            'condition' => $item->condition
+                        ]);
+                    }
+                }
+
+                $this->writeAssetLog(
+                    assetId:      $item->asset_id,
+                    type:         'return',
+                    quantity:     $qtyApproved,
+                    fromLabId:    $returnRequest->lab_id,
+                    toLabId:      null,
+                    snapBefore:   $snap,
+                    asset:        $asset,
+                    assetLab:     $assetLab,
+                    source:       "return_request:{$returnRequest->request_code}",
+                    notes:        $item->reason,
+                );
+
+                $item->update([
+                    'status' => 'approved',
+                    'quantity_approved' => $qtyApproved
+                ]);
+            });
+        }
+    }
 }
