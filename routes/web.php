@@ -33,7 +33,7 @@ Route::middleware('auth')->group(function () {
 
     // User Management
     Route::get('/users/export/{format}', [UserController::class, 'export'])->name('users.export');
-    
+
     Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
     Route::resource('users', UserController::class);
 
@@ -92,8 +92,8 @@ Route::middleware('auth')->group(function () {
     // System Activity Logs
     Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
     Route::get(
-    '/activity-log/export/{format}',
-    [ActivityLogController::class, 'export']
+        '/activity-log/export/{format}',
+        [ActivityLogController::class, 'export']
     )->name('activity-log.export');
 
     // Return Requests (Retur Lab ke Gudang)
@@ -163,6 +163,14 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('laboratory', LaboratoryController::class)
         ->where(['laboratory' => '[0-9]+']);
-    });
+});
+
+    Route::post('/laboratory/{laboratory}/staff', [LaboratoryController::class, 'assignStaff'])
+        ->name('laboratory.staff.assign')
+        ->middleware(\App\Http\Middleware\EnsureSpv::class);
+
+    Route::delete('/laboratory/{laboratory}/staff/{user}', [LaboratoryController::class, 'removeStaff'])
+        ->name('laboratory.staff.remove')
+        ->middleware(\App\Http\Middleware\EnsureSpv::class);
 
 require __DIR__ . '/auth.php';
