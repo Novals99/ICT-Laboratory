@@ -200,7 +200,7 @@
                     input.name = `items[${index}][${input.dataset.name}]`;
                 });
 
-                item.querySelectorAll('input[name^="items["], textarea[name^="items["]').forEach((input) => {
+                item.querySelectorAll('input[name^="items["], textarea[name^="items["], select[name^="items["]').forEach((input) => {
                     const match = input.name.match(/\]\[(.*?)\]/);
 
                     if (match && match[1]) {

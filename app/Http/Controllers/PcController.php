@@ -108,6 +108,7 @@ class PcController extends Controller
     {
         $rules = [
             'type_pc' => 'required|in:dosen,mahasiswa',
+            'pc_serial_id' => 'nullable|exists:asset_serial_numbers,id',
         ];
         if ($withStatus) {
             $rules['status_pc'] = 'required|in:active,inactive';
@@ -130,6 +131,27 @@ class PcController extends Controller
     {
         $usedIds = [];
 
+        // 1. Handle whole PC serial number
+        $pcSerialId = $validated['pc_serial_id'] ?? null;
+        if ($pcSerialId) {
+            $pcSerial = AssetSerialNumber::with('asset')->findOrFail($pcSerialId);
+            if ($pcSerial->status === 'in_use' && $pcSerial->pc_id !== $pc->id) {
+                abort(422, "PC Serial {$pcSerial->serial_number} sudah terpasang di PC lain.");
+            }
+            $pc->pc_serial_id = $pcSerial->id;
+            $pc->asset_id = $pcSerial->asset_id;
+            $pcSerial->update([
+                'status' => 'in_use',
+                'pc_id'  => $pc->id,
+                'slot'   => 'pc',
+                'lab_id' => $laboratory->id,
+            ]);
+            $usedIds[] = $pcSerialId;
+        } else {
+            $pc->pc_serial_id = null;
+        }
+
+        // 2. Handle component slots
         foreach (self::SLOTS as $slot) {
             $serialId = $validated["{$slot}_serial_id"] ?? null;
 
@@ -185,6 +207,7 @@ class PcController extends Controller
         }
 
         // Kosongkan kolom slot di PC.
+        $pc->pc_serial_id = null;
         foreach (self::SLOTS as $slot) {
             $pc->{$slot} = null;
             $pc->{$slot . '_serial_id'} = null;

@@ -19,11 +19,17 @@ class AssetSerialNumber extends Model
         'pc_id',
         'slot',
         'notes',
+        'request_item_id',
     ];
 
     public function asset(): BelongsTo
     {
         return $this->belongsTo(Asset::class);
+    }
+
+    public function requestItem(): BelongsTo
+    {
+        return $this->belongsTo(RequestItem::class, 'request_item_id');
     }
 
     public function lab(): BelongsTo

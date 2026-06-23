@@ -149,6 +149,8 @@ Route::middleware('auth')->group(function () {
 
     // Serial Number JSON feeds (dropdown S/N: Edit Asset, Asset Lab, Add/Edit PC, Create Lab)
     Route::get('/api/assets/{asset}/serials', [SerialNumberController::class, 'byAsset'])->name('api.assets.serials');
+    Route::get('/api/assets/{asset}/available-serials', [SerialNumberController::class, 'availableSerials'])->name('api.assets.available-serials');
+    Route::get('/api/spv-assets-with-serials', [SerialNumberController::class, 'spvAssets'])->name('api.spv-assets-with-serials');
     Route::get('/api/laboratory/{laboratory}/pc-components', [SerialNumberController::class, 'pcComponents'])->name('api.lab.pc-components');
     Route::get('/api/laboratory/{laboratory}/assets/{asset}/serials', [SerialNumberController::class, 'byAssetInLab'])->name('api.lab.asset-serials');
     Route::post('/api/laboratory/{laboratory}/assets/{asset}/serials/sync', [SerialNumberController::class, 'syncInLab'])->name('api.lab.asset-serials.sync');

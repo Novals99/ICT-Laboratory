@@ -23,4 +23,8 @@ class RequestItem extends Model
     public function asset() {
         return $this->belongsTo(Asset::class, 'asset_id');
     }
+
+    public function serialNumbers() {
+        return $this->hasMany(AssetSerialNumber::class, 'request_item_id');
+    }
 }
