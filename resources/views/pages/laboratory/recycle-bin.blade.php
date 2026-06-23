@@ -1,92 +1,139 @@
 @extends('panel.content')
+
 @section('title', auth()->user()->role === 'spv inventory' ? 'SPV Dashboard' : 'Staff Dashboard')
 
 @section('content')
-<div class="db-wrap">
-    <div class="db-card bg-white dark:bg-gray-800" style="padding:0; overflow:hidden;">
+    <div class="panel-page-card">
 
-        <div style="padding:24px; border-bottom:1px solid #f3f4f6;">
-            <h2 style="font-size:20px; font-weight:bold; margin:0 0 6px; color:#111827;">Recycle Bin</h2>
-            <p style="color:#6b7280; margin:0; font-size:13px;">
-                Laboratorium yang dihapus muncul di sini. Anda bisa memulihkan, atau menghapus permanen
-                (stok asset otomatis dikembalikan ke inventory).
+        {{-- Header --}}
+        <div class="mb-5 flex flex-col gap-2">
+            <h2 class="panel-page-title">
+                Recycle Bin
+            </h2>
+            <p class="text-sm text-gray-500">
+                Laboratories that have been deleted will appear here. You can restore them or permanently delete them (asset stock will be automatically returned to the inventory).
             </p>
         </div>
 
-        @if(session('success'))
-        <div style="margin:16px 24px 0; background:#dcfce7; color:#166534; border-radius:8px; padding:10px 16px; font-size:13px;">
-            {{ session('success') }}
-        </div>
+        {{-- Alert --}}
+        {{-- @if(session('success'))
+            <div class="mb-4 rounded-lg bg-green-100 text-green-700 px-4 py-2 text-sm">
+                {{ session('success') }}
+            </div>
         @endif
 
         @if(session('error'))
-        <div style="margin:16px 24px 0; background:#fee2e2; color:#991b1b; border-radius:8px; padding:10px 16px; font-size:13px;">
-            {{ session('error') }}
-        </div>
-        @endif
+            <div class="mb-4 rounded-lg bg-red-100 text-red-700 px-4 py-2 text-sm">
+                {{ session('error') }}
+            </div>
+        @endif --}}
 
-        <div style="overflow-x:auto; margin-top:8px;">
-            <table style="width:100%; border-collapse:collapse; font-size:13.5px;">
-                <thead>
-                    <tr style="background:#f9fafb;">
-                        <th style="padding:12px 16px; text-align:left; font-size:12px; font-weight:600; color:#6b7280; border-bottom:1px solid #e5e7eb;">Lab Name</th>
-                        <th style="padding:12px 16px; text-align:left; font-size:12px; font-weight:600; color:#6b7280; border-bottom:1px solid #e5e7eb;">Capacity</th>
-                        <th style="padding:12px 16px; text-align:left; font-size:12px; font-weight:600; color:#6b7280; border-bottom:1px solid #e5e7eb;">Dihapus Pada</th>
-                        <th style="padding:12px 16px; text-align:center; font-size:12px; font-weight:600; color:#6b7280; border-bottom:1px solid #e5e7eb;">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($trashedLabs as $lab)
-                    <tr style="border-bottom:1px solid #f3f4f6;">
-                        <td style="padding:13px 16px; font-weight:600; color:#111827;">{{ $lab->lab_name }}</td>
-                        <td style="padding:13px 16px; color:#374151;">{{ $lab->capacity }} PC</td>
-                        <td style="padding:13px 16px; color:#374151;">{{ $lab->deleted_at?->format('d M Y H:i') }}</td>
-                        <td style="padding:13px 16px; text-align:center;">
-                            <div style="display:inline-flex; gap:8px;">
-                                <form method="POST" action="{{ route('laboratory.restore', $lab->id) }}"
-                                      onsubmit="return confirm('Pulihkan lab {{ addslashes($lab->lab_name) }}?')">
+        {{-- Table --}}
+        <x-table.index>
+            <thead>
+                <tr>
+                    <x-table.th>Lab Name</x-table.th>
+                    <x-table.th>Capacity</x-table.th>
+                    <x-table.th>Deleted at</x-table.th>
+                    <x-table.th align="center">Action</x-table.th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @forelse($trashedLabs as $lab)
+                    <tr class="panel-table-row">
+                        <x-table.td class="font-semibold">
+                            {{ $lab->lab_name }}
+                        </x-table.td>
+
+                        <x-table.td>
+                            {{ $lab->capacity }} PC
+                        </x-table.td>
+
+                        <x-table.td>
+                            {{ $lab->deleted_at?->format('d M Y H:i') }}
+                        </x-table.td>
+
+                        <x-table.td align="center">
+                            <div class="flex items-center justify-center gap-2">
+
+                                {{-- Restore --}}
+                                <form method="POST" action="{{ route('laboratory.restore', $lab->id) }}">
                                     @csrf
-                                    <button type="submit" style="border:1px solid #16a34a; background:#fff; color:#16a34a; border-radius:6px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;">
-                                        Restore
-                                    </button>
+                                        <x-table.action
+                                            type="button"
+                                            variant="restore"
+                                            title="Restore"
+                                            onclick="window.dispatchEvent(new CustomEvent('open-confirm', {
+                                                detail: {
+                                                    title: 'Restore Laboratory?',
+                                                    message: 'Restore {{ $lab->lab_name }}?',
+                                                    form: this.closest('form'),
+                                                    type: 'restore'
+                                                }
+                                            }))"
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                                <path d="M3 3v5h5"/>
+                                            </svg>
+                                        </x-table.action>
                                 </form>
-                                <form method="POST" action="{{ route('laboratory.forceDestroy', $lab->id) }}"
-                                      onsubmit="return confirm('Hapus permanen lab {{ addslashes($lab->lab_name) }}? Tindakan ini tidak bisa dibatalkan. Stok asset akan dikembalikan ke inventory.')">
+
+                                {{-- Delete Permanently --}}
+                                <form method="POST" action="{{ route('laboratory.forceDestroy', $lab->id) }}">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" style="border:1px solid #dc2626; background:#fff; color:#dc2626; border-radius:6px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;">
-                                        Delete Permanently
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="4" style="text-align:center; padding:32px; color:#9ca3af; font-size:13px;">
-                            Belum ada laboratorium di recycle bin.
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
 
-        @if($trashedLabs->hasPages())
-        <div style="padding:16px 24px; border-top:1px solid #f3f4f6;">
+                                        <x-table.action
+                                            type="button"
+                                            variant="delete"
+                                            title="Delete Permanently"
+                                            onclick="window.dispatchEvent(new CustomEvent('open-confirm', {
+                                                detail: {
+                                                    title: 'Delete Permanently?',
+                                                    message: 'Permanently delete {{ $lab->lab_name }}?',
+                                                    form: this.closest('form'),
+                                                    type: 'delete'
+                                                }
+                                            }))"
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="3 6 5 6 21 6"/>
+                                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                                <path d="M10 11v6M14 11v6"/>
+                                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                            </svg>
+                                        </x-table.action>
+                                </form>
+
+                            </div>
+                        </x-table.td>
+                    </tr>
+                @empty
+                    <x-table.empty colspan="4" message="No laboratories in the recycle bin." />
+                @endforelse
+            </tbody>
+        </x-table.index>
+
+        {{-- Pagination --}}
+        <div class="mt-5">
             {{ $trashedLabs->links() }}
         </div>
-        @endif
 
-        <div style="padding:16px 24px; border-top:1px solid #f3f4f6;">
+        {{-- Back Button --}}
+        <div class="mt-4">
             <a href="{{ route('laboratory.index') }}"
-               style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:9px 20px; font-size:13px; text-decoration:none; color:#374151; font-weight:500; display:inline-flex; align-items:center; gap:6px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-                    <polyline points="15 18 9 12 15 6"/>
+                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6" />
                 </svg>
                 Back to Laboratory
             </a>
         </div>
+
     </div>
-</div>
 @endsection

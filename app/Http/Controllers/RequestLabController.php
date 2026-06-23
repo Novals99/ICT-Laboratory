@@ -54,12 +54,21 @@ class RequestLabController extends Controller
             $query->whereDate('request_date', $request->date_to);
         }
 
+        if ($request->filled('lab_id')) {
+            $query->where('lab_id', $request->lab_id);
+        }
+
         $requests = $query
             ->orderBy('id', request('sort') === 'oldest' ? 'asc' : 'desc')
             ->paginate(11)
             ->withQueryString();
 
-        $laboratories = Laboratory::orderBy('lab_name')->get();
+        $user = auth()->user();
+        if (in_array($user->role, ['admin', 'spv inventory'])) {
+            $laboratories = Laboratory::orderBy('lab_name')->get();
+        } else {
+            $laboratories = $user->labs()->orderBy('lab_name')->get();
+        }
         $assets = Asset::orderBy('asset_name')->get();
 
         return view('pages.requestlab.index', compact('requests', 'laboratories', 'assets'));
@@ -243,20 +252,27 @@ class RequestLabController extends Controller
     {
         abort_unless(auth()->user()->role === 'spv inventory', 403);
 
-        $requestLab = RequestLab::findOrFail($id);
+        DB::beginTransaction();
+        try {
+            $requestLab = RequestLab::findOrFail($id);
 
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'activity' => 'Deleted laboratory request: REQ-' .
-                str_pad($requestLab->id, 3, '0', STR_PAD_LEFT),
-        ]);
+            ActivityLog::create([
+                'user_id' => auth()->id(),
+                'activity' => 'Deleted laboratory request: REQ-' .
+                    str_pad($requestLab->id, 3, '0', STR_PAD_LEFT),
+            ]);
 
-        DB::transaction(function () use ($id) {
-            RequestLab::findOrFail($id)->delete();
-        });
+            $requestLab->delete();
+            
+            DB::commit();
 
-        return redirect()->route('requestlab.index')
-            ->with('success', 'Request berhasil dihapus.');
+            return redirect()->route('requestlab.index')
+                ->with('success', 'Request berhasil dihapus.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('requestlab.index')
+                ->with('error', 'Request gagal dihapus.');
+        }
     }
 
     public function edit($id)
@@ -266,6 +282,7 @@ class RequestLabController extends Controller
 
     public function update(Request $request, $id)
     {
+
         return redirect()->route('requestlab.index')
             ->with('error', 'Edit request lab dilakukan melalui status item di popup detail.');
     }

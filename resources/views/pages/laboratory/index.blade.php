@@ -187,7 +187,7 @@ $wizardComponents = \App\Models\Asset::where('asset_category', 'component-pc')
                 @empty
                     <x-table.empty
                         colspan="7"
-                        message="Belum ada laboratorium."
+                        message="Laboratory data not found."
                     />
                 @endforelse
             </tbody>

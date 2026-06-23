@@ -15,31 +15,12 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 <div class="db-wrap">
 
             {{-- ── HEADER ── --}}
-            <div class="db-card bg-white dark:bg-gray-800 flex items-start justify-between flex-wrap gap-4" style="flex:1; min-width:0;">
-                <div style="flex:1; min-width:0;">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1.5">{{ $laboratory->lab_name }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3.5">
-                        Capacity: <strong class="text-gray-900 dark:text-white">{{ $laboratory->capacity }} PC</strong> &nbsp;·&nbsp;
-                        Active: <strong class="text-green-600 dark:text-green-400">{{ $totalActive }}</strong>
-                    </p>
-            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:8px;">
-                @php
-                    $staffUsers = $laboratory->users->where('role', 'staff')->values();
-                @endphp
-                @forelse($staffUsers as $staff)
-                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px;">
-                    <p style="font-size:11px; color:#9ca3af; font-weight:600; margin:0 0 3px; text-transform:uppercase; letter-spacing:.5px;">Staff</p>
-                    <p style="font-size:13px; font-weight:600; color:#374151; margin:0;">{{ $staff->name }}</p>
-                </div>
-                @empty
-                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px;">
-                    <p style="font-size:11px; color:#9ca3af; font-weight:600; margin:0 0 3px; text-transform:uppercase; letter-spacing:.5px;">Staff</p>
-                    <p style="font-size:13px; color:#9ca3af; margin:0;">-</p>
-                </div>
-                @endforelse
-            </div>
-        </div>
-    </div>
+    @include('pages.laboratory.header', [
+        'laboratory'    => $laboratory,
+        'totalActive'   => $totalActive,
+        'totalInactive' => $totalInactive,
+        'isSPV'         => $isSPV,
+    ])
 
     @if(session('success'))
     <div style="background:#dcfce7; color:#166534; border-radius:8px; padding:10px 16px; font-size:13px;">

@@ -22,7 +22,6 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 Route::middleware('auth')->group(function () {
-
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Profile Management
@@ -34,6 +33,8 @@ Route::middleware('auth')->group(function () {
 
     // User Management
     Route::get('/users/export/{format}', [UserController::class, 'export'])->name('users.export');
+
+    Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
     Route::resource('users', UserController::class);
 
     // Laboratory Management
@@ -91,8 +92,8 @@ Route::middleware('auth')->group(function () {
     // System Activity Logs
     Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
     Route::get(
-    '/activity-log/export/{format}',
-    [ActivityLogController::class, 'export']
+        '/activity-log/export/{format}',
+        [ActivityLogController::class, 'export']
     )->name('activity-log.export');
 
     // Return Requests (Retur Lab ke Gudang)
@@ -152,13 +153,24 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/laboratory/{laboratory}/assets/{asset}/serials', [SerialNumberController::class, 'byAssetInLab'])->name('api.lab.asset-serials');
     Route::post('/api/laboratory/{laboratory}/assets/{asset}/serials/sync', [SerialNumberController::class, 'syncInLab'])->name('api.lab.asset-serials.sync');
 
-    // ── SUPERVISOR ONLY (Laboratory Recycle Bin) ────────────────────────────────
+    // ── SUPERVISOR ONLY (Laboratory Recycle Bin) ──
     Route::middleware(\App\Http\Middleware\EnsureSpv::class)->group(function () {
         Route::get('/laboratory/recycle-bin', [LaboratoryController::class, 'recycleBin'])->name('laboratory.recycle-bin');
         Route::post('/laboratory/{id}/restore', [LaboratoryController::class, 'restore'])->name('laboratory.restore');
         Route::delete('/laboratory/{id}/force-delete', [LaboratoryController::class, 'forceDestroy'])->name('laboratory.forceDestroy');
     });
 
+
+    Route::resource('laboratory', LaboratoryController::class)
+        ->where(['laboratory' => '[0-9]+']);
 });
+
+    Route::post('/laboratory/{laboratory}/staff', [LaboratoryController::class, 'assignStaff'])
+        ->name('laboratory.staff.assign')
+        ->middleware(\App\Http\Middleware\EnsureSpv::class);
+
+    Route::delete('/laboratory/{laboratory}/staff/{user}', [LaboratoryController::class, 'removeStaff'])
+        ->name('laboratory.staff.remove')
+        ->middleware(\App\Http\Middleware\EnsureSpv::class);
 
 require __DIR__ . '/auth.php';

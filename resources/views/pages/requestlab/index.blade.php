@@ -1,6 +1,6 @@
 @extends('panel.content')
 
-@section('title', 'spv Dashboard')
+@section('title', 'SPV Dashboard')
 
 @php
     $role = auth()->user()->role;
@@ -93,6 +93,16 @@
                         @endforeach
                     </div>
                 @endif
+
+                <div class="filter-section">
+                    <div class="filter-section-title">Laboratory</div>
+                    <select name="lab_id" class="w-full rounded-lg border px-3 py-2 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary);">
+                        <option value="">All Labs</option>
+                        @foreach ($laboratories as $lab)
+                            <option value="{{ $lab->id }}" {{ request('lab_id') == $lab->id ? 'selected' : '' }}>{{ $lab->lab_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </x-button.filter>
 
             @if ($isSpv)
@@ -103,6 +113,7 @@
                     csvUrl="{{ route('requestlab.export', 'csv') }}"
                 />
             @endif
+
 
             @if ($canCreateRequest)
                 <x-button.add type="button" onclick="openPanelModal('addRequestModal')">
@@ -116,6 +127,9 @@
         <table class="w-full text-sm">
             <thead>
                 <tr style="background:var(--bg-table-header); color:var(--text-secondary);">
+                    <th class="w-12 px-4 py-3 text-left">
+                        <x-table.checkbox id="checkAll" />
+                    </th>
                     <th class="px-4 py-3 text-left font-medium">ID Request</th>
                     <th class="px-4 py-3 text-left font-medium">Name</th>
                     <th class="px-4 py-3 text-left font-medium">Laboratory</th>
@@ -128,6 +142,9 @@
             <tbody>
                 @forelse ($requests as $request)
                     <tr style="border-bottom:1px solid var(--border-color);" class="transition-colors">
+                        <td class="px-4 py-3">
+                            <x-table.checkbox class="row-check" value="{{ $request->id }}" />
+                        </td>
                         <td class="px-4 py-3" style="color:var(--text-secondary);">
                             REQ-{{ str_pad($request->id, 3, '0', STR_PAD_LEFT) }}
                         </td>
@@ -204,7 +221,7 @@
                 @empty
                     <tr>
                         <td colspan="7" class="px-4 py-10 text-center text-gray-400">
-                            Tidak ada data request.
+                            Request data not found.
                         </td>
                     </tr>
                 @endforelse
@@ -415,6 +432,17 @@
     const assets = @json($assetGroups);
     const canReviewRequest = @json($canReviewRequest);
 
+    document.addEventListener('DOMContentLoaded', () => {
+        const checkAll = document.getElementById('checkAll');
+        if (checkAll) {
+            checkAll.addEventListener('change', function () {
+                document.querySelectorAll('.row-check').forEach((checkbox) => {
+                    checkbox.checked = this.checked;
+                });
+            });
+        }
+    });
+
     window.openPanelModal = function(id) {
         const modal = document.getElementById(id);
         if (!modal) return;
@@ -477,12 +505,14 @@
             </div>
         `;
         document.getElementById('requestItemList').appendChild(div);
+        if (typeof validateAddRequestForm === 'function') validateAddRequestForm();
     }
 
     function removeItemRow(btn) {
         const list = btn.closest('#requestItemList');
         if (list && list.querySelectorAll('.item-row').length === 1) return;
         btn.closest('.item-row').remove();
+        if (typeof validateAddRequestForm === 'function') validateAddRequestForm();
     }
 
     function openRequestModal(requestId) {
@@ -685,6 +715,49 @@
             });
             document.body.style.overflow = '';
         }
+    });
+
+    function validateAddRequestForm() {
+        const form = document.querySelector('#addRequestModal form');
+        if (!form) return;
+
+        const date = form.querySelector('[name="request_date"]');
+        const lab = form.querySelector('[name="lab_id"]');
+        
+        let hasValidItem = false;
+        const itemRows = form.querySelectorAll('.item-row');
+        itemRows.forEach(row => {
+            const assetSelect = row.querySelector('select[name*="[asset_id]"]');
+            const qtyInput = row.querySelector('input[name*="[total_request]"]');
+            if (assetSelect && assetSelect.value && qtyInput && qtyInput.value > 0) {
+                hasValidItem = true;
+            }
+        });
+
+        const submitBtn = form.querySelector('.panel-btn-submit');
+        if (submitBtn) {
+            if (date && date.value && lab && lab.value && hasValidItem) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.style.cursor = 'not-allowed';
+            }
+        }
+    }
+
+    document.addEventListener('input', function(e) {
+        if (e.target.closest('#addRequestModal')) validateAddRequestForm();
+    });
+    document.addEventListener('change', function(e) {
+        if (e.target.closest('#addRequestModal')) validateAddRequestForm();
+    });
+    
+    // Initial validation check
+    document.addEventListener('DOMContentLoaded', () => {
+        validateAddRequestForm();
     });
 </script>
 @endpush
