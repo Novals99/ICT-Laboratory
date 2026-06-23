@@ -55,7 +55,7 @@ class RequestLabController extends Controller
         }
 
         $requests = $query
-            ->latest()
+            ->orderBy('id', request('sort') === 'oldest' ? 'asc' : 'desc')
             ->paginate(11)
             ->withQueryString();
 

@@ -80,6 +80,18 @@
                         <input type="date" name="date_to" value="{{ request('date_to') }}"
                             class="w-full rounded-lg border px-3 py-2 text-sm">
                     </div>
+
+                    <div class="filter-section">
+                        <div class="filter-section-title">Sort</div>
+                        @foreach (['newest' => 'Newest to Oldest', 'oldest' => 'Oldest to Newest'] as $val => $label)
+                            <label class="filter-checkbox-row">
+                                <input type="radio" name="sort" value="{{ $val }}"
+                                    {{ request('sort', 'newest') === $val ? 'checked' : '' }}
+                                    style="accent-color: #111B4C;">
+                                <span>{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
                 @endif
             </x-button.filter>
 
@@ -344,6 +356,7 @@
                     <option value="electronic">Electronic</option>
                     <option value="non-electronic">Non-Electronic</option>
                     <option value="component-pc">PC Component</option>
+                    <option value="pc">PC</option>
                 </select>
             </div>
             <div style="margin-bottom:8px;">
@@ -447,6 +460,7 @@
                     <option value="electronic">Electronic</option>
                     <option value="non-electronic">Non-Electronic</option>
                     <option value="component-pc">PC Component</option>
+                    <option value="pc">PC</option>
                 </select>
             </div>
             <div style="margin-bottom:8px;">

@@ -12,17 +12,25 @@ use Illuminate\Support\Facades\Schema;
  * keterangan "unit fisik mana (S/N berapa)" yang dipasang di slot itu.
  *
  * Tambahan slot RAM kedua (ram2) karena 1 PC bisa pakai 2 keping RAM.
- * ram2 & semua *_serial_id NULLABLE → boleh kosong.
+ *
+ * CATATAN: migration ini IDEMPOTENT — tiap kolom dicek dulu sebelum dibuat,
+ * jadi aman dijalankan ulang walau sebagian kolom sudah terlanjur ada
+ * (mis. 'ram2' dari percobaan migrate sebelumnya).
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('pcs', function (Blueprint $table) {
-            // Slot RAM kedua (nullable) — mirror kolom string lama.
-            $table->string('ram2')->nullable()->after('ram');
+        // 1) Tambah kolom string ram2 dulu (kalau belum ada), commit terpisah
+        //    agar bisa dipakai sebagai anchor ->after('ram2') di langkah berikutnya.
+        if (! Schema::hasColumn('pcs', 'ram2')) {
+            Schema::table('pcs', function (Blueprint $table) {
+                $table->string('ram2')->nullable()->after('ram');
+            });
+        }
 
-            // Link tiap slot ke unit serial number.
+        // 2) Tambah kolom *_serial_id (FK) hanya yang belum ada.
+        Schema::table('pcs', function (Blueprint $table) {
             foreach ([
                 'processor_serial_id'   => 'processor',
                 'ram_serial_id'         => 'ram',
@@ -33,11 +41,17 @@ return new class extends Migration
                 'cpu_fan_serial_id'     => 'cpu_fan',
                 'powersupply_serial_id' => 'powersupply',
             ] as $column => $after) {
-                $table->foreignId($column)
-                      ->nullable()
-                      ->after($after)
-                      ->constrained('asset_serial_numbers')
-                      ->nullOnDelete();
+                if (Schema::hasColumn('pcs', $column)) {
+                    continue;
+                }
+
+                $definition = $table->foreignId($column)->nullable();
+
+                if (Schema::hasColumn('pcs', $after)) {
+                    $definition->after($after);
+                }
+
+                $definition->constrained('asset_serial_numbers')->nullOnDelete();
             }
         });
     }
@@ -55,9 +69,14 @@ return new class extends Migration
                 'cpu_fan_serial_id',
                 'powersupply_serial_id',
             ] as $column) {
-                $table->dropConstrainedForeignId($column);
+                if (Schema::hasColumn('pcs', $column)) {
+                    $table->dropConstrainedForeignId($column);
+                }
             }
-            $table->dropColumn('ram2');
+
+            if (Schema::hasColumn('pcs', 'ram2')) {
+                $table->dropColumn('ram2');
+            }
         });
     }
 };

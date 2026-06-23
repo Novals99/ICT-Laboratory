@@ -465,8 +465,6 @@
         if (!item.status) {
             if (item.quantity_approved == 0) {
                 return '<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Rejected</span>';
-            } else if (item.quantity_approved < item.quantity) {
-                return '<span style="background:#2563eb;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Partial</span>';
             } else if (item.quantity_approved == item.quantity) {
                 return '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Approved</span>';
             }
@@ -525,6 +523,7 @@
         document.querySelectorAll('[data-return-item-id]').forEach(input => {
             input.value = input.getAttribute('max');
         });
+        alert('Semua item di-set ke qty penuh. Klik Save untuk menyimpan.');
     };
 
     window.rejectAllReturn = function() {

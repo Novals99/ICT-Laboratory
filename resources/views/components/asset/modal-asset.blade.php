@@ -41,6 +41,7 @@
         <option value="electronic">Electronic</option>
         <option value="non-electronic">Non-Electronic</option>
         <option value="component-pc">PC Component</option>
+        <option value="pc">PC</option>
     </select>
 
     <div class="asset-create-heading" style="justify-content:flex-end;">
@@ -104,6 +105,7 @@
                             <option value="electronic" {{ old('items.0.asset_category') === 'electronic' ? 'selected' : '' }}>Electronic</option>
                             <option value="non-electronic" {{ old('items.0.asset_category') === 'non-electronic' ? 'selected' : '' }}>Non-Electronic</option>
                             <option value="component-pc" {{ old('items.0.asset_category') === 'component-pc' ? 'selected' : '' }}>PC Component</option>
+                            <option value="pc" {{ old('items.0.asset_category') === 'pc' ? 'selected' : '' }}>PC</option>
                         </select>
 
                         @error('items.0.asset_category')
@@ -269,6 +271,7 @@
                             <option value="electronic">Electronic</option>
                             <option value="non-electronic">Non-Electronic</option>
                             <option value="component-pc">PC Component</option>
+                            <option value="pc">PC</option>
                         </select>
                     </div>
 
@@ -376,6 +379,7 @@
                         'electronic' => 'Electronic',
                         'non-electronic' => 'Non-Electronic',
                         'component-pc' => 'PC Component',
+                        'pc' => 'PC',
                     ] as $value => $label)
                         @php
                             $categoryId = $modalId . '-category-' . $value;
@@ -456,7 +460,7 @@
 
         {{-- (#16) Serial Number — untuk Electronic & PC Component (PC = electronic) --}}
         <div class="panel-form-row js-edit-serial"
-             style="{{ in_array($asset->asset_category ?? '', ['electronic', 'component-pc']) ? '' : 'display:none;' }}">
+             style="{{ in_array($asset->asset_category ?? '', ['electronic', 'component-pc', 'pc']) ? '' : 'display:none;' }}">
             <label class="panel-form-label">Serial Number:</label>
             <div class="panel-form-field">
                 <div class="js-serial-list" data-asset-id="{{ $asset->id ?? '' }}"
@@ -660,7 +664,7 @@
                     const ct = card.querySelector('.js-component-type-field');
                     const sr = card.querySelector('.js-serial-field');
                     if (ct) ct.style.display = isComp ? '' : 'none';
-                    if (sr) sr.style.display = (isComp || isElec) ? '' : 'none';
+                    if (sr) sr.style.display = (isComp || isElec || cat === 'pc') ? '' : 'none';
                 }
 
                 // EDIT: tampil/sembunyi per form.
@@ -669,7 +673,7 @@
                     const isComp = cat === 'component-pc';
                     const isElec = cat === 'electronic';
                     form.querySelectorAll('.js-edit-component-type').forEach(el => el.style.display = isComp ? '' : 'none');
-                    form.querySelectorAll('.js-edit-serial').forEach(el => el.style.display = (isComp || isElec) ? '' : 'none');
+                    form.querySelectorAll('.js-edit-serial').forEach(el => el.style.display = (isComp || isElec || cat === 'pc') ? '' : 'none');
                 }
 
                 document.addEventListener('change', function (e) {

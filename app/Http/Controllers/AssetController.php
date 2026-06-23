@@ -52,12 +52,12 @@ class AssetController extends Controller
         // (#17) Category kini bisa per-item (dropdown di dalam Asset Information).
         // Tetap menerima asset_category top-level agar form lama tidak rusak.
         $validated = $request->validate([
-            'asset_category' => ['nullable', Rule::in(['electronic', 'non-electronic', 'component-pc'])],
+            'asset_category' => ['nullable', Rule::in(['electronic', 'non-electronic', 'component-pc', 'pc'])],
 
             'items' => ['required', 'array', 'min:1'],
 
             'items.*.asset_name'     => ['required', 'string', 'max:255'],
-            'items.*.asset_category' => ['nullable', Rule::in(['electronic', 'non-electronic', 'component-pc'])],
+            'items.*.asset_category' => ['nullable', Rule::in(['electronic', 'non-electronic', 'component-pc', 'pc'])],
             'items.*.component_type' => ['nullable', Rule::in(self::COMPONENT_TYPES)],
             'items.*.total_asset'    => ['required', 'integer', 'min:0'],
             'items.*.total_good'     => ['required', 'integer', 'min:0'],
@@ -127,7 +127,7 @@ class AssetController extends Controller
     {
         $validated = $request->validate([
             'asset_name'     => ['required', 'string', 'max:255'],
-            'asset_category' => ['required', Rule::in(['electronic', 'non-electronic', 'component-pc'])],
+            'asset_category' => ['required', Rule::in(['electronic', 'non-electronic', 'component-pc', 'pc'])],
             'component_type' => ['nullable', Rule::in(self::COMPONENT_TYPES)],
             'total_asset'    => ['required', 'integer', 'min:0'],
             'total_good'     => ['required', 'integer', 'min:0'],
