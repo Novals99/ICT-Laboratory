@@ -99,7 +99,7 @@
 
         <div class="panel-form-field">
             <div class="user-role-options" data-role-group>
-                @foreach (['spv inventory', 'staff'] as $role)
+                @foreach (['spv inventory', 'pic', 'staff'] as $role)
                     @php
                         $roleId = $modalId . '-role-' . str_replace(' ', '-', $role);
                     @endphp
@@ -113,13 +113,13 @@
                             type="radio"
                             name="role"
                             value="{{ $role }}"
-                            class="hidden"
+                            class="hidden js-user-role"
                             data-progress-field
                             {{ $selectedRole === $role ? 'checked' : '' }}
                             required
                         >
 
-                        <span>{{ ucwords($role) }}</span>
+                        <span>{{ strtoupper($role) === 'PIC' ? 'PIC' : ucwords($role) }}</span>
                     </label>
                 @endforeach
             </div>
@@ -137,7 +137,7 @@
         </label>
 
         <div class="panel-form-field">
-            <div class="user-lab-options">
+            <div class="user-lab-options" data-lab-group>
                 @forelse ($laboratories as $lab)
                     @php
                         $labId = $modalId . '-lab-' . $lab->id;
@@ -152,7 +152,7 @@
                             type="checkbox"
                             name="lab_ids[]"
                             value="{{ $lab->id }}"
-                            class="hidden"
+                            class="hidden js-user-lab"
                             data-progress-field
                             {{ in_array($lab->id, $selectedLabs) ? 'checked' : '' }}
                         >
@@ -167,7 +167,7 @@
             </div>
 
             <p class="panel-form-help">
-                Staff must select 1 lab. SPV can be left blank.
+                Staff selects exactly 1 lab. PIC can select more than 1. SPV can be left blank.
             </p>
 
             @error('lab_ids')
@@ -309,3 +309,81 @@
         </div>
     </div>
 </x-modal.index>
+
+@once
+    @push('scripts')
+        <script>
+            // (#6) Aturan Role → Laboratory di modal Create/Edit User.
+            //  - SPV Inventory : lab dinonaktifkan & dikosongkan.
+            //  - Staff         : hanya boleh pilih 1 lab (checkbox bersifat single-select).
+            //  - PIC           : boleh pilih banyak lab.
+            (function () {
+                function setLabState(form, role) {
+                    const wrap = form.querySelector('[data-lab-group]');
+                    if (!wrap) return;
+                    const boxes = wrap.querySelectorAll('.js-user-lab');
+
+                    if (role === 'spv inventory') {
+                        boxes.forEach(cb => {
+                            cb.checked = false;
+                            cb.disabled = true;
+                            cb.closest('.user-lab-option')?.classList.remove('is-selected');
+                        });
+                        wrap.style.opacity = '0.45';
+                        wrap.style.pointerEvents = 'none';
+                        return;
+                    }
+
+                    wrap.style.opacity = '1';
+                    wrap.style.pointerEvents = 'auto';
+                    boxes.forEach(cb => cb.disabled = false);
+
+                    if (role === 'staff') {
+                        // sisakan hanya 1 lab tercentang
+                        let kept = false;
+                        boxes.forEach(cb => {
+                            if (cb.checked) {
+                                if (kept) {
+                                    cb.checked = false;
+                                    cb.closest('.user-lab-option')?.classList.remove('is-selected');
+                                } else {
+                                    kept = true;
+                                }
+                            }
+                        });
+                    }
+                }
+
+                document.addEventListener('change', function (e) {
+                    // Ganti role
+                    if (e.target.classList && e.target.classList.contains('js-user-role')) {
+                        const form = e.target.closest('form');
+                        if (form) setLabState(form, e.target.value);
+                        return;
+                    }
+                    // Centang lab saat role = staff → single select
+                    if (e.target.classList && e.target.classList.contains('js-user-lab')) {
+                        const form = e.target.closest('form');
+                        if (!form) return;
+                        const role = form.querySelector('.js-user-role:checked');
+                        if (role && role.value === 'staff' && e.target.checked) {
+                            form.querySelectorAll('.js-user-lab').forEach(cb => {
+                                if (cb !== e.target) {
+                                    cb.checked = false;
+                                    cb.closest('.user-lab-option')?.classList.remove('is-selected');
+                                }
+                            });
+                        }
+                    }
+                });
+
+                // Init untuk modal Edit (role sudah terpilih).
+                document.addEventListener('DOMContentLoaded', function () {
+                    document.querySelectorAll('form .js-user-role:checked').forEach(r => {
+                        setLabState(r.closest('form'), r.value);
+                    });
+                });
+            })();
+        </script>
+    @endpush
+@endonce

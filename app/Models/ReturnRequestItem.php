@@ -18,6 +18,8 @@ class ReturnRequestItem extends Model
     protected $fillable = [
         'return_request_id',
         'asset_id',
+        'serial_number_id',
+        'status',
         'quantity_requested',
         'quantity_approved',
         'condition',
@@ -32,6 +34,11 @@ class ReturnRequestItem extends Model
     public function asset(): BelongsTo
     {
         return $this->belongsTo(Asset::class);
+    }
+
+    public function serialNumber(): BelongsTo
+    {
+        return $this->belongsTo(AssetSerialNumber::class, 'serial_number_id');
     }
 
     public function isGoodCondition(): bool

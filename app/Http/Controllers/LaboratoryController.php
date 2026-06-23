@@ -242,6 +242,39 @@ class LaboratoryController extends Controller
      */
     private function linkPcSerials(Pc $pc, array $pcData, int $labId): void
     {
+        // Handle whole PC serial
+        $pcSerialId = $pcData['pc_serial_id'] ?? null;
+        if ($pcSerialId) {
+            $pcSerial = AssetSerialNumber::with('asset')->find($pcSerialId);
+            if ($pcSerial && $pcSerial->status !== 'in_use') {
+                $pc->pc_serial_id = $pcSerial->id;
+                $pc->asset_id     = $pcSerial->asset_id;
+                
+                $pcSerial->update([
+                    'status' => 'in_use',
+                    'lab_id' => $labId,
+                    'pc_id'  => $pc->id,
+                    'slot'   => 'pc',
+                ]);
+                
+                // Kurangi stok gudang (Inventory & Stock / Asset SPV).
+                if ($pcSerial->asset) {
+                    $pcSerial->asset->decrement('total_good');
+                    $pcSerial->asset->refresh();
+                    $pcSerial->asset->update([
+                        'total_asset' => $pcSerial->asset->total_good
+                            + $pcSerial->asset->total_damaged
+                            + $pcSerial->asset->total_loss,
+                    ]);
+                }
+                
+                // Catat kepemilikan di asset_lab.
+                $al = AssetLab::firstOrNew(['lab_id' => $labId, 'asset_id' => $pcSerial->asset_id]);
+                $al->total_good_lab = (int) ($al->total_good_lab ?? 0) + 1;
+                $al->save();
+            }
+        }
+
         // PENTING: COMPONENT_SLOTS itu array asosiatif (slot => label),
         // jadi pakai array_keys agar $slot = 'processor', bukan 'Processor'.
         foreach (array_keys(Pc::COMPONENT_SLOTS) as $slot) {

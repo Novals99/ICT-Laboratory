@@ -27,6 +27,7 @@ class Pc extends Model
         'cpu_fan',
         'powersupply',
         // serial links
+        'pc_serial_id',
         'processor_serial_id',
         'ram_serial_id',
         'ram2_serial_id',
@@ -76,9 +77,10 @@ class Pc extends Model
         return $this->hasMany(ReturnRequest::class);
     }
 
-    /* ─────────────────────────────────────────────
-       SERIAL NUMBER tiap slot
-       ───────────────────────────────────────────── */
+     /* ─────────────────────────────────────────────
+        SERIAL NUMBER tiap slot
+        ───────────────────────────────────────────── */
+    public function pcSerial(): BelongsTo           { return $this->belongsTo(AssetSerialNumber::class, 'pc_serial_id'); }
     public function processorSerial(): BelongsTo   { return $this->belongsTo(AssetSerialNumber::class, 'processor_serial_id'); }
     public function ramSerial(): BelongsTo          { return $this->belongsTo(AssetSerialNumber::class, 'ram_serial_id'); }
     public function ram2Serial(): BelongsTo         { return $this->belongsTo(AssetSerialNumber::class, 'ram2_serial_id'); }
@@ -92,6 +94,7 @@ class Pc extends Model
     public function usedSerialIds(): array
     {
         return array_filter([
+            $this->pc_serial_id,
             $this->processor_serial_id,
             $this->ram_serial_id,
             $this->ram2_serial_id,

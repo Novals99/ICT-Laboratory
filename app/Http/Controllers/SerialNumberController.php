@@ -20,6 +20,44 @@ use Illuminate\Http\Request;
 class SerialNumberController extends Controller
 {
     /**
+     * Daftar asset SPV yang punya serial number available (untuk dropdown di modal Add Asset).
+     * GET /api/spv-assets-with-serials
+     *
+     * Balikan: [ { id, asset_name, asset_category, component_type, available_count } ]
+     */
+    public function spvAssets()
+    {
+        $assets = Asset::whereIn('asset_category', ['electronic', 'component-pc', 'pc'])
+            ->whereHas('serialNumbers', fn ($q) => $q->where('status', 'available'))
+            ->withCount(['serialNumbers as available_count' => fn ($q) => $q->where('status', 'available')])
+            ->orderBy('asset_name')
+            ->get(['id', 'asset_name', 'asset_category', 'component_type']);
+
+        return response()->json($assets);
+    }
+
+    /**
+     * S/N yang available milik satu asset SPV (untuk dropdown serial di modal Add Asset).
+     * GET /api/assets/{asset}/available-serials
+     */
+    public function availableSerials(Asset $asset)
+    {
+        return response()->json([
+            'asset_id'   => $asset->id,
+            'asset_name' => $asset->asset_name,
+            'serials'    => $asset->serialNumbers()
+                ->where('status', 'available')
+                ->orderBy('serial_number')
+                ->get(['id', 'serial_number', 'condition'])
+                ->map(fn ($s) => [
+                    'id'            => $s->id,
+                    'serial_number' => $s->serial_number,
+                    'condition'     => $s->condition,
+                ]),
+        ]);
+    }
+
+    /**
      * Semua S/N milik satu asset (untuk modal Edit Asset / Asset Information).
      * GET /api/assets/{asset}/serials
      */

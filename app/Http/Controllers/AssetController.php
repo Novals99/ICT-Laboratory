@@ -69,6 +69,8 @@ class AssetController extends Controller
             // (#17) serial number opsional (array string) untuk kategori ber-S/N.
             'items.*.serials'        => ['nullable', 'array'],
             'items.*.serials.*'      => ['nullable', 'string', 'max:100'],
+            // Serial Number dari SPV Inventory (referensi asset_serial_numbers.id).
+            'items.*.spv_serial_id'  => ['nullable', 'integer', 'exists:asset_serial_numbers,id'],
         ]);
 
         DB::transaction(function () use ($validated, $request) {
@@ -77,6 +79,15 @@ class AssetController extends Controller
                 $good     = (int) $item['total_good'];
                 $damaged  = (int) ($item['total_damaged'] ?? 0);
                 $loss     = (int) ($item['total_loss'] ?? 0);
+
+                // Jika ada spv_serial_id, ambil serial number-nya untuk referensi.
+                $spvSerialNumber = null;
+                if (!empty($item['spv_serial_id'])) {
+                    $spvSerial = AssetSerialNumber::find($item['spv_serial_id']);
+                    if ($spvSerial) {
+                        $spvSerialNumber = $spvSerial->serial_number;
+                    }
+                }
 
                 $asset = Asset::create([
                     'asset_name'     => $item['asset_name'],
@@ -88,7 +99,12 @@ class AssetController extends Controller
                 ]);
 
                 // (#16/#17) Buat unit serial number untuk kategori ber-S/N.
-                $this->generateSerials($asset, $good, $item['serials'] ?? []);
+                // Jika ada referensi S/N dari SPV, sisipkan ke depan daftar manual.
+                $manualSerials = $item['serials'] ?? [];
+                if ($spvSerialNumber) {
+                    array_unshift($manualSerials, $spvSerialNumber);
+                }
+                $this->generateSerials($asset, $good, $manualSerials);
 
                 AssetLog::create([
                     'asset_id' => $asset->id,
@@ -105,7 +121,8 @@ class AssetController extends Controller
 
                 ActivityLog::create([
                     'user_id'  => auth()->id(),
-                    'activity' => 'Created asset: ' . $asset->asset_name,
+                    'activity' => 'Created asset: ' . $asset->asset_name
+                        . ($spvSerialNumber ? ' (S/N from SPV: ' . $spvSerialNumber . ')' : ''),
                 ]);
             }
         });

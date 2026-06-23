@@ -144,6 +144,20 @@
                         @enderror
                     </div>
 
+                    {{-- Serial Number (from SPV Inventory) — dropdown asset + serial number --}}
+                    <div class="asset-field js-spv-serial-field" style="display:none;">
+                        <label class="asset-field-label">Serial Number (SPV):</label>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <select class="panel-form-input js-spv-asset-select" data-progress-field>
+                                <option value="">— Pilih Asset SPV —</option>
+                            </select>
+                            <select name="items[0][spv_serial_id]" class="panel-form-input js-spv-serial-select" data-progress-field>
+                                <option value="">— Serial Number —</option>
+                            </select>
+                        </div>
+                        <p class="panel-form-help" style="margin-top:4px;">Pilih asset dari Inventory SPV, lalu pilih S/N yang available.</p>
+                    </div>
+
                     {{-- (#17) Serial Number — tampil untuk Electronic & PC Component (nullable) --}}
                     <div class="asset-field js-serial-field" style="display:none;">
                         <label class="asset-field-label">Serial Number:</label>
@@ -299,6 +313,20 @@
                             class="panel-form-input"
                             data-progress-field
                         >
+                    </div>
+
+                    {{-- Serial Number (from SPV Inventory) — dropdown asset + serial number --}}
+                    <div class="asset-field js-spv-serial-field" style="display:none;">
+                        <label class="asset-field-label">Serial Number (SPV):</label>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <select class="panel-form-input js-spv-asset-select" data-progress-field>
+                                <option value="">— Pilih Asset SPV —</option>
+                            </select>
+                            <select data-name="spv_serial_id" class="panel-form-input js-spv-serial-select" data-progress-field>
+                                <option value="">— Serial Number —</option>
+                            </select>
+                        </div>
+                        <p class="panel-form-help" style="margin-top:4px;">Pilih asset dari Inventory SPV, lalu pilih S/N yang available.</p>
                     </div>
 
                     {{-- (#17) Serial Number — tampil untuk Electronic & PC Component (nullable) --}}
@@ -633,6 +661,64 @@
             // (#16/#17) Logika serial number & component_type untuk modal Asset.
             // Dibuat DELEGATIF berbasis `name`, jadi TIDAK menyentuh JS cloning (addAssetItem) milikmu.
             (function () {
+                /* ─── Cache daftar asset SPV ─── */
+                let spvAssetsCache = null;
+
+                async function fetchSpvAssets() {
+                    if (spvAssetsCache) return spvAssetsCache;
+                    try {
+                        const res = await fetch('/api/spv-assets-with-serials');
+                        spvAssetsCache = await res.json();
+                    } catch (e) {
+                        spvAssetsCache = [];
+                    }
+                    return spvAssetsCache;
+                }
+
+                /* ─── Populate dropdown asset SPV ─── */
+                async function populateSpvAssetDropdown(selectEl) {
+                    if (selectEl.dataset.spvLoaded) return;
+                    selectEl.dataset.spvLoaded = '1';
+
+                    const assets = await fetchSpvAssets();
+                    assets.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = `${a.asset_name} (${a.available_count} available)`;
+                        selectEl.appendChild(opt);
+                    });
+                }
+
+                /* ─── Populate dropdown serial number berdasarkan asset yang dipilih ─── */
+                async function populateSpvSerialDropdown(serialSelect, assetId) {
+                    serialSelect.innerHTML = '<option value="">— Serial Number —</option>';
+                    if (!assetId) return;
+
+                    try {
+                        const res = await fetch(`/api/assets/${assetId}/available-serials`);
+                        const data = await res.json();
+                        (data.serials || []).forEach(s => {
+                            const opt = document.createElement('option');
+                            opt.value = s.id;
+                            opt.textContent = s.serial_number;
+                            serialSelect.appendChild(opt);
+                        });
+                    } catch (e) { /* silent */ }
+                }
+
+                /* ─── Init SPV picker untuk satu card ─── */
+                function initSpvPicker(card) {
+                    const assetSel = card.querySelector('.js-spv-asset-select');
+                    const serialSel = card.querySelector('.js-spv-serial-select');
+                    if (!assetSel || !serialSel) return;
+
+                    populateSpvAssetDropdown(assetSel);
+
+                    assetSel.addEventListener('change', () => {
+                        populateSpvSerialDropdown(serialSel, assetSel.value);
+                    });
+                }
+
                 function addSerialInput(list, name, value, locked) {
                     const row = document.createElement('div');
                     row.style.cssText = 'display:flex; gap:6px; align-items:center;';
@@ -657,14 +743,20 @@
                     list.appendChild(row);
                 }
 
-                // CREATE: tampil/sembunyi component_type & serial per kartu.
+                // CREATE: tampil/sembunyi component_type & serial & spv_serial per kartu.
                 function toggleCard(card, cat) {
                     const isComp = cat === 'component-pc';
                     const isElec = cat === 'electronic';
+                    const showSerial = isComp || isElec || cat === 'pc';
                     const ct = card.querySelector('.js-component-type-field');
                     const sr = card.querySelector('.js-serial-field');
+                    const spv = card.querySelector('.js-spv-serial-field');
                     if (ct) ct.style.display = isComp ? '' : 'none';
-                    if (sr) sr.style.display = (isComp || isElec || cat === 'pc') ? '' : 'none';
+                    if (sr) sr.style.display = showSerial ? '' : 'none';
+                    if (spv) {
+                        spv.style.display = showSerial ? '' : 'none';
+                        if (showSerial) initSpvPicker(card);
+                    }
                 }
 
                 // EDIT: tampil/sembunyi per form.
