@@ -162,8 +162,8 @@ class PcController extends Controller
                 'slot'   => $slot,
                 'lab_id' => $laboratory->id,
             ]);
-
-            $this->decrementLabStock($laboratory, $serial->asset_id);
+            // Tidak mengubah asset_lab: unit tetap dimiliki lab, hanya berubah
+            // jadi "terpasang". Stok lab = total dimiliki (terpasang + bebas).
         }
 
         $pc->save();
@@ -175,12 +175,13 @@ class PcController extends Controller
         $serials = AssetSerialNumber::where('pc_id', $pc->id)->get();
 
         foreach ($serials as $serial) {
+            // Lepas dari PC tapi TETAP milik lab (lab_id dipertahankan) →
+            // jadi unit "bebas" di lab, siap dipasang ulang / diretur / ditransfer.
             $serial->update([
                 'status' => 'available',
                 'pc_id'  => null,
                 'slot'   => null,
             ]);
-            $this->incrementLabStock($laboratory, $serial->asset_id);
         }
 
         // Kosongkan kolom slot di PC.

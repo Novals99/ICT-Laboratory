@@ -15,6 +15,7 @@ class TransferRequest extends Model
     const STATUS_APPROVED  = 'approved';
     const STATUS_REJECTED  = 'rejected';
     const STATUS_COMPLETED = 'completed';
+    const STATUS_PARTIAL   = 'partial';
 
     protected $fillable = [
         'request_code',
@@ -71,10 +72,11 @@ class TransferRequest extends Model
     public function getStatusBadge(): array
     {
         return match ($this->status) {
-            self::STATUS_PENDING   => ['Menunggu',  'bg-yellow-100 text-yellow-700'],
-            self::STATUS_APPROVED  => ['Disetujui', 'bg-blue-100 text-blue-700'],
-            self::STATUS_COMPLETED => ['Selesai',   'bg-green-100 text-green-700'],
-            self::STATUS_REJECTED  => ['Ditolak',   'bg-red-100 text-red-700'],
+            self::STATUS_PENDING   => ['Pending',   'bg-yellow-100 text-yellow-700'],
+            self::STATUS_PARTIAL   => ['Partial',   'bg-blue-100 text-blue-700'],
+            self::STATUS_APPROVED  => ['Approved',  'bg-indigo-100 text-indigo-700'],
+            self::STATUS_COMPLETED => ['Completed', 'bg-green-100 text-green-700'],
+            self::STATUS_REJECTED  => ['Rejected',  'bg-red-100 text-red-700'],
             default                => ['Unknown',   'bg-gray-100 text-gray-700'],
         };
     }

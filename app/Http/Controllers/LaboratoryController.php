@@ -242,7 +242,9 @@ class LaboratoryController extends Controller
      */
     private function linkPcSerials(Pc $pc, array $pcData, int $labId): void
     {
-        foreach (Pc::COMPONENT_SLOTS as $slot) {
+        // PENTING: COMPONENT_SLOTS itu array asosiatif (slot => label),
+        // jadi pakai array_keys agar $slot = 'processor', bukan 'Processor'.
+        foreach (array_keys(Pc::COMPONENT_SLOTS) as $slot) {
             $serialId = $pcData[$slot . '_serial_id'] ?? null;
             if (! $serialId) {
                 continue;
@@ -253,15 +255,33 @@ class LaboratoryController extends Controller
                 continue;
             }
 
-            $pc->{$slot}             = $serial->asset->asset_name ?? null;
+            $pc->{$slot}                = $serial->asset->asset_name ?? null;
             $pc->{$slot . '_serial_id'} = $serial->id;
 
+            // Unit dipindah dari GUDANG → dipasang di PC lab ini.
             $serial->update([
                 'status' => 'in_use',
                 'lab_id' => $labId,
                 'pc_id'  => $pc->id,
                 'slot'   => $slot,
             ]);
+
+            // (1) Kurangi stok gudang (Inventory & Stock / Asset SPV).
+            if ($serial->asset) {
+                $serial->asset->decrement('total_good');
+                $serial->asset->refresh();
+                $serial->asset->update([
+                    'total_asset' => $serial->asset->total_good
+                        + $serial->asset->total_damaged
+                        + $serial->asset->total_loss,
+                ]);
+            }
+
+            // (2) Catat kepemilikan di asset_lab → muncul di Asset Information,
+            //     bisa diretur (Return to Warehouse) & ditransfer (Asset Transfer).
+            $al = AssetLab::firstOrNew(['lab_id' => $labId, 'asset_id' => $serial->asset_id]);
+            $al->total_good_lab = (int) ($al->total_good_lab ?? 0) + 1;
+            $al->save(); // total_asset_lab dihitung otomatis di model AssetLab
         }
 
         $pc->save();
