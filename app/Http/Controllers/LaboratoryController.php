@@ -103,6 +103,48 @@ class LaboratoryController extends Controller
         ));
     }
 
+    /**
+     * Assign satu atau lebih staff ke lab.
+     * POST /laboratory/{laboratory}/staff
+     */
+    public function assignStaff(Request $request, Laboratory $laboratory)
+    {
+        $validated = $request->validate([
+            'user_ids'   => 'required|array|min:1',
+            'user_ids.*' => 'required|exists:users,id',
+        ]);
+
+        // syncWithoutDetaching supaya staff lama tidak dicopot
+        $laboratory->users()->syncWithoutDetaching(
+            collect($validated['user_ids'])->filter()->unique()->toArray()
+        );
+
+        ActivityLog::create([
+            'user_id'  => auth()->id(),
+            'activity' => 'Assigned staff to laboratory: ' . $laboratory->lab_name,
+        ]);
+
+        return redirect()->route('laboratory.show', $laboratory)
+            ->with('success', 'Staff berhasil ditambahkan ke lab.');
+    }
+
+    /**
+     * Hapus satu staff dari lab.
+     * DELETE /laboratory/{laboratory}/staff/{user}
+     */
+    public function removeStaff(Laboratory $laboratory, \App\Models\User $user)
+    {
+        $laboratory->users()->detach($user->id);
+
+        ActivityLog::create([
+            'user_id'  => auth()->id(),
+            'activity' => "Removed staff {$user->name} from laboratory: " . $laboratory->lab_name,
+        ]);
+
+        return redirect()->route('laboratory.show', $laboratory)
+            ->with('success', "{$user->name} berhasil dihapus dari lab.");
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -389,17 +431,17 @@ class LaboratoryController extends Controller
     }
 
     public function restore($id)
-{
-    $laboratory = Laboratory::onlyTrashed()->findOrFail($id);
-    $laboratory->restore();
-    ActivityLog::create([
-        'user_id' => auth()->id(),
-        'activity' => 'Restored laboratory: ' . $laboratory->lab_name,
-    ]);
+    {
+        $laboratory = Laboratory::onlyTrashed()->findOrFail($id);
+        $laboratory->restore();
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'activity' => 'Restored laboratory: ' . $laboratory->lab_name,
+        ]);
 
-    return redirect()->route('laboratory.recycle-bin')
-        ->with('success', "{$laboratory->lab_name} has been successfully restored.");
-}
+        return redirect()->route('laboratory.recycle-bin')
+            ->with('success', "{$laboratory->lab_name} has been successfully restored.");
+    }
 
     public function forceDestroy($id)
     {
@@ -414,8 +456,13 @@ class LaboratoryController extends Controller
                 // 1. Kembalikan component PC ke stok asset_lab
                 foreach ($laboratory->pcs as $pc) {
                     $components = array_filter([
-                        $pc->processor, $pc->ram, $pc->ssd, $pc->motherboard,
-                        $pc->vga, $pc->cpu_fan, $pc->powersupply,
+                        $pc->processor,
+                        $pc->ram,
+                        $pc->ssd,
+                        $pc->motherboard,
+                        $pc->vga,
+                        $pc->cpu_fan,
+                        $pc->powersupply,
                     ]);
 
                     foreach ($components as $name) {
