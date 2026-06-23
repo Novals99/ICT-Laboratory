@@ -106,7 +106,7 @@ $wizardComponents = \App\Models\Asset::where('asset_category', 'component-pc')
 
                         <x-table.td>
                             @forelse($staffUsers as $s)
-                                <span class="m-0.5 inline-block rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                                <span class="m-0.5 inline-block rounded-md bg-indigo-600 px-2 py-0.5 text-xs font-semibold text-white dark:bg-indigo-500 dark:text-white">
                                     {{ $s->name }}
                                 </span>
                             @empty
