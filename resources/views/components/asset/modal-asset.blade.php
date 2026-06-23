@@ -145,8 +145,8 @@
                     </div>
 
 
-                    {{-- (#17) Kode Inventaris — tampil untuk Electronic & PC Component (nullable) --}}
-                    <div class="asset-field js-serial-field" style="display:none;">
+                    {{-- Kode Inventaris — tampil untuk semua kategori --}}
+                    <div class="asset-field js-serial-field">
                         <label class="asset-field-label">Kode Inventaris:</label>
                         <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
                         <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Tambah Kode</button>
@@ -303,8 +303,8 @@
                     </div>
 
 
-                    {{-- (#17) Kode Inventaris — tampil untuk Electronic & PC Component (nullable) --}}
-                    <div class="asset-field js-serial-field" style="display:none;">
+                    {{-- Kode Inventaris — tampil untuk semua kategori --}}
+                    <div class="asset-field js-serial-field">
                         <label class="asset-field-label">Kode Inventaris:</label>
                         <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
                         <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Tambah Kode</button>
@@ -460,9 +460,8 @@
             </div>
         </div>
 
-        {{-- (#16) Kode Inventaris — untuk Electronic & PC Component (PC = electronic) --}}
-        <div class="panel-form-row js-edit-serial"
-             style="{{ in_array($asset->asset_category ?? '', ['electronic', 'component-pc', 'pc']) ? '' : 'display:none;' }}">
+        {{-- Kode Inventaris — tampil untuk semua kategori --}}
+        <div class="panel-form-row js-edit-serial">
             <label class="panel-form-label">Kode Inventaris:</label>
             <div class="panel-form-field">
                 <div class="js-serial-list" data-asset-id="{{ $asset->id ?? '' }}"
@@ -717,29 +716,24 @@
                     list.appendChild(row);
                 }
 
-                // CREATE: tampil/sembunyi component_type & serial & spv_serial per kartu.
+                // CREATE: tampil/sembunyi component_type per kartu; kode inventaris selalu tampil.
                 function toggleCard(card, cat) {
                     const isComp = cat === 'component-pc';
-                    const isElec = cat === 'electronic';
-                    const showSerial = isComp || isElec || cat === 'pc';
-                    const ct = card.querySelector('.js-component-type-field');
-                    const sr = card.querySelector('.js-serial-field');
+                    const ct  = card.querySelector('.js-component-type-field');
                     const spv = card.querySelector('.js-spv-serial-field');
                     if (ct) ct.style.display = isComp ? '' : 'none';
-                    if (sr) sr.style.display = showSerial ? '' : 'none';
                     if (spv) {
-                        spv.style.display = showSerial ? '' : 'none';
-                        if (showSerial) initSpvPicker(card);
+                        spv.style.display = '';
+                        initSpvPicker(card);
                     }
                 }
 
-                // EDIT: tampil/sembunyi per form.
+                // EDIT: tampil/sembunyi per form; kode inventaris selalu tampil.
                 function toggleEdit(form, cat) {
                     if (!form) return;
                     const isComp = cat === 'component-pc';
-                    const isElec = cat === 'electronic';
                     form.querySelectorAll('.js-edit-component-type').forEach(el => el.style.display = isComp ? '' : 'none');
-                    form.querySelectorAll('.js-edit-serial').forEach(el => el.style.display = (isComp || isElec || cat === 'pc') ? '' : 'none');
+                    // js-edit-serial selalu tampil (semua kategori punya kode inventaris)
                 }
 
                 document.addEventListener('change', function (e) {

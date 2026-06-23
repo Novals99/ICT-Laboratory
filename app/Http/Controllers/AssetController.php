@@ -14,8 +14,8 @@ use App\Exports\AssetExport;
 
 class AssetController extends Controller
 {
-    /** Kategori yang memakai serial number per unit. */
-    private const SERIAL_CATEGORIES = ['electronic', 'component-pc', 'pc'];
+    /** Kategori yang memakai kode inventaris per unit. */
+    private const SERIAL_CATEGORIES = ['electronic', 'component-pc', 'pc', 'non-electronic'];
 
     /** Sub-tipe komponen yang valid (untuk PC Component). */
     private const COMPONENT_TYPES = ['processor', 'ram', 'ssd', 'motherboard', 'vga', 'cpu_fan', 'powersupply'];
@@ -234,7 +234,7 @@ class AssetController extends Controller
     /** Buat $count unit serial number. Pakai S/N manual bila ada, sisanya auto. */
     private function generateSerials(Asset $asset, int $count, array $manual = []): void
     {
-        if (! in_array($asset->asset_category, self::SERIAL_CATEGORIES, true) || $count <= 0) {
+        if ($count <= 0) {
             return;
         }
 
@@ -283,9 +283,7 @@ class AssetController extends Controller
      */
     private function reconcileSerials(Asset $asset, ?array $submitted, int $targetGood): void
     {
-        if (! in_array($asset->asset_category, self::SERIAL_CATEGORIES, true)) {
-            return;
-        }
+        // (semua kategori kini memiliki kode inventaris)
 
         // Mode jumlah: form tidak mengirim daftar serial.
         if ($submitted === null) {
