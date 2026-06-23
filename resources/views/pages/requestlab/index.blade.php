@@ -50,7 +50,7 @@
                 @endif
 
                 @if (in_array($role, ['admin', 'spv inventory']))
-                    <div class="filter-section">
+                    {{-- <div class="filter-section">
                         <div class="filter-section-title">User Role</div>
                         @foreach (['' => 'All', 'admin' => 'Admin', 'assistant' => 'Assistant'] as $filterRole => $label)
                             <label class="filter-checkbox-row">
@@ -60,7 +60,7 @@
                                 <span>{{ $label }}</span>
                             </label>
                         @endforeach
-                    </div>
+                    </div> --}}
 
                     <div class="filter-section">
                         <div class="filter-section-title">Sort</div>
