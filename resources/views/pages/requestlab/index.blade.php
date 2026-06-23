@@ -1,6 +1,6 @@
 @extends('panel.content')
 
-@section('title', 'SPV Dashboard')
+@section('title', 'Request Lab')
 
 @php
     $role = auth()->user()->role;
@@ -39,12 +39,17 @@
                 </div>
             </form>
 
-            <x-button.filter :action="route('requestlab.index')">
+            <x-button.filter menuId="requestLabFilterMenu" formId="requestLabFilterForm" activeCount="{{
+                (request()->filled('status') ? 1 : 0) +
+                (request()->filled('date_to') ? 1 : 0) +
+                (request()->filled('lab_id') ? 1 : 0) +
+                (request('sort') === 'asc' ? 1 : 0)
+            }}">
                 @if (request('search'))
                     <input type="hidden" name="search" value="{{ request('search') }}">
                 @endif
 
-                @if ($role === 'admin')
+                @if (in_array($role, ['admin', 'spv inventory']))
                     <div class="filter-section">
                         <div class="filter-section-title">User Role</div>
                         @foreach (['' => 'All', 'admin' => 'Admin', 'assistant' => 'Assistant'] as $filterRole => $label)
@@ -55,6 +60,18 @@
                                 <span>{{ $label }}</span>
                             </label>
                         @endforeach
+                    </div>
+
+                    <div class="filter-section">
+                        <div class="filter-section-title">Sort</div>
+                        <label class="filter-checkbox-row" style="cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <input type="radio" name="sort" value="desc" {{ request('sort', 'desc') === 'desc' ? 'checked' : '' }} style="accent-color: #111B4C; cursor: pointer;">
+                            <span style="font-size: 13px; color: var(--text-secondary);">Newest to Oldest</span>
+                        </label>
+                        <label class="filter-checkbox-row" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" name="sort" value="asc" {{ request('sort') === 'asc' ? 'checked' : '' }} style="accent-color: #111B4C; cursor: pointer;">
+                            <span style="font-size: 13px; color: var(--text-secondary);">Oldest to Newest</span>
+                        </label>
                     </div>
                 @endif
 
@@ -115,9 +132,11 @@
         <table class="w-full text-sm">
             <thead>
                 <tr style="background:var(--bg-table-header); color:var(--text-secondary);">
-                    <th class="w-12 px-4 py-3 text-left">
-                        <x-table.checkbox id="checkAll" />
-                    </th>
+                    @if ($isSpv)
+                        <th class="w-12 px-4 py-3 text-left">
+                            <x-table.checkbox id="checkAll" />
+                        </th>
+                    @endif
                     <th class="px-4 py-3 text-left font-medium">ID Request</th>
                     <th class="px-4 py-3 text-left font-medium">Name</th>
                     <th class="px-4 py-3 text-left font-medium">Laboratory</th>
@@ -130,9 +149,11 @@
             <tbody>
                 @forelse ($requests as $request)
                     <tr style="border-bottom:1px solid var(--border-color);" class="transition-colors">
-                        <td class="px-4 py-3">
-                            <x-table.checkbox class="row-check" value="{{ $request->id }}" />
-                        </td>
+                        @if ($isSpv)
+                            <td class="px-4 py-3">
+                                <x-table.checkbox class="row-check" value="{{ $request->id }}" />
+                            </td>
+                        @endif
                         <td class="px-4 py-3" style="color:var(--text-secondary);">
                             REQ-{{ str_pad($request->id, 3, '0', STR_PAD_LEFT) }}
                         </td>

@@ -58,17 +58,18 @@ class RequestLabController extends Controller
             $query->where('lab_id', $request->lab_id);
         }
 
+        if ($request->sort === 'asc') {
+            $query->oldest();
+        } else {
+            $query->latest();
+        }
+
         $requests = $query
-            ->latest()
             ->paginate(11)
             ->withQueryString();
 
         $user = auth()->user();
-        if (in_array($user->role, ['admin', 'spv inventory'])) {
-            $laboratories = Laboratory::orderBy('lab_name')->get();
-        } else {
-            $laboratories = $user->labs()->orderBy('lab_name')->get();
-        }
+        $laboratories = Laboratory::orderBy('lab_name')->get();
         $assets = Asset::orderBy('asset_name')->get();
 
         return view('pages.requestlab.index', compact('requests', 'laboratories', 'assets'));
