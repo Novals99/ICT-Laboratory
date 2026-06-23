@@ -16,7 +16,7 @@
         </div>
 
         {{-- Alert --}}
-        @if(session('success'))
+        {{-- @if(session('success'))
             <div class="mb-4 rounded-lg bg-green-100 text-green-700 px-4 py-2 text-sm">
                 {{ session('success') }}
             </div>
@@ -26,7 +26,7 @@
             <div class="mb-4 rounded-lg bg-red-100 text-red-700 px-4 py-2 text-sm">
                 {{ session('error') }}
             </div>
-        @endif
+        @endif --}}
 
         {{-- Table --}}
         <x-table.index>
