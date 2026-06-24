@@ -276,7 +276,7 @@
         </div>
         <div>
             <div class="sc-header-title">Scan Code</div>
-            <div class="sc-header-sub">Scan barcode atau QR Code untuk melihat detail barang inventaris</div>
+            <div class="sc-header-sub">Scan QR Code untuk melihat detail barang inventaris</div>
         </div>
     </div>
 
@@ -310,7 +310,7 @@
 
             <div class="sc-scanning-badge" id="scanningBadge">
                 <div class="sc-scanning-dot"></div>
-                Kamera aktif — arahkan barcode ke kamera
+                Kamera aktif — arahkan QR Code ke kamera
             </div>
 
             <div class="sc-cam-controls">
@@ -333,7 +333,7 @@
 
             <div class="sc-or">atau ketik manual</div>
 
-            <label class="sc-manual-label" for="manualInputCamera">Masukkan Barcode / SKU / Serial Number</label>
+            <label class="sc-manual-label" for="manualInputCamera">Masukkan Data QR Code / SKU / Serial Number</label>
             <div class="sc-manual-row">
                 <input id="manualInputCamera" class="sc-manual-input" type="text"
                     placeholder="Contoh: ELC-0001 atau SN-ABC123"
@@ -364,8 +364,8 @@
                     <line x1="12" y1="12" x2="12" y2="21" />
                     <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
                 </svg>
-                <div class="sc-upload-title">Klik atau drag & drop gambar barcode</div>
-                <div class="sc-upload-sub">Mendukung JPG, PNG, GIF, WebP — QR Code, Code128, EAN, UPC, dll.</div>
+                <div class="sc-upload-title">Klik atau drag & drop gambar QR Code</div>
+                <div class="sc-upload-sub">Mendukung JPG, PNG, GIF, WebP — Pastikan gambar QR Code terlihat jelas.</div>
                 <img id="uploadPreview" class="sc-upload-preview" alt="Preview">
             </div>
             <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="onFileSelected(event)">
@@ -389,7 +389,7 @@
 
             <div class="sc-or">atau ketik manual</div>
 
-            <label class="sc-manual-label" for="manualInputUpload">Masukkan Barcode / SKU / Serial Number</label>
+            <label class="sc-manual-label" for="manualInputUpload">Masukkan Data QR Code / SKU / Serial Number</label>
             <div class="sc-manual-row">
                 <input id="manualInputUpload" class="sc-manual-input" type="text"
                     placeholder="Contoh: ELC-0001 atau SN-ABC123"
@@ -412,8 +412,9 @@
 @endsection
 
 @push('scripts')
-{{-- html5-qrcode library --}}
+{{-- html5-qrcode library for camera, jsQR for robust image upload scanning --}}
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
     /* ── state ── */
     let html5QrCode = null;
@@ -542,24 +543,55 @@
 
     async function scanUploadedFile(file) {
         if (!file) return;
-        const scanner = new Html5Qrcode('__tmp_reader__' + Date.now());
-        // create temp div
-        const tmpId = 'tmpReader_' + Date.now();
-        const tmpDiv = document.createElement('div');
-        tmpDiv.id = tmpId;
-        tmpDiv.style.display = 'none';
-        document.body.appendChild(tmpDiv);
 
-        const tmpScanner = new Html5Qrcode(tmpId);
-        try {
-            const result = await tmpScanner.scanFile(file, true);
-            doLookup(result);
-        } catch(e) {
-            showResult('upload', null, 'Barcode tidak terdeteksi pada gambar. Coba gambar yang lebih jelas atau ketik manual.');
-        } finally {
-            try { await tmpScanner.clear(); } catch(_) {}
-            tmpDiv.remove();
-        }
+        showLoading('resultUpload', 'Memproses gambar...');
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                // Draw to offscreen canvas
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+                // Maximum width/height for performance while maintaining readability
+                const MAX_DIMENSION = 1200;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                    const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const imageData = ctx.getImageData(0, 0, width, height);
+                // Use jsQR to decode the image data
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+
+                if (code) {
+                    doLookup(code.data);
+                } else {
+                    // Try to invert colors in case of weird QR
+                    const codeInverted = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "invertFirst",
+                    });
+                    if (codeInverted) {
+                        doLookup(codeInverted.data);
+                    } else {
+                        showResult('upload', null, 'QR Code tidak terdeteksi pada gambar. Coba gambar yang lebih jelas atau pastikan gambar berisi QR Code.');
+                    }
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
     }
 
     function clearUpload() {
@@ -642,7 +674,7 @@
         }
 
         if (!data.found) {
-            el.innerHTML = notFoundHtml(data.message || 'Barcode tidak ditemukan.', '');
+            el.innerHTML = notFoundHtml(data.message || 'QR Code tidak sesuai.', '');
             el.classList.add('show');
             return;
         }
@@ -760,7 +792,7 @@
                     <line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
                 <div>
-                    <div class="sc-result-notfound-title">Barang Tidak Ditemukan</div>
+                    <div class="sc-result-notfound-title">QR Code Tidak Sesuai</div>
                     <div class="sc-result-notfound-msg">${escHtml(msg)}</div>
                 </div>
             </div>`;

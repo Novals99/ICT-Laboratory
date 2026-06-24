@@ -88,7 +88,7 @@ class ScanCodeController extends Controller
             'type'    => null,
             'asset'   => null,
             'serial'  => null,
-            'message' => "Barcode \"{$barcode}\" tidak ditemukan dalam sistem.",
+            'message' => "QR Code \"{$barcode}\" tidak sesuai atau tidak ditemukan dalam sistem.",
         ]);
     }
 }

@@ -16,12 +16,17 @@ use App\Http\Controllers\ReturnRequestController;
 use App\Http\Controllers\TransferRequestController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ScanCodeController;
+use App\Http\Controllers\QrCodeController;
 use Illuminate\Support\Facades\Route;
 
 // ── PUBLIC ROUTES ────────────────────────────────────────────────────
 Route::get('/', function () {
     return redirect()->route('login');
 });
+
+// ── QR Code generator (public — accessed as <img> src) ───────────────
+Route::get('/qr', [QrCodeController::class, 'generate'])->name('qr.generate');
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
