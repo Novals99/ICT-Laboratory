@@ -90,7 +90,7 @@ class AssetLabController extends Controller
         if ($assetLab) {
             $asset = Asset::find($assetId);
             if ($asset) {
-                $isSerialized = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc']);
+                $isSerialized = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc', 'non-electronic']);
                 if ($isSerialized) {
                     $labSerials = \App\Models\AssetSerialNumber::where('asset_id', $assetId)
                         ->where('lab_id', $laboratory->id)

@@ -5,7 +5,7 @@
 @php
     $role = auth()->user()->role;
     $isSpv = $role === 'spv inventory';
-    $canCreateRequest = $role === 'staff';
+    $canCreateRequest = in_array($role, ['staff', 'pic']);
 @endphp
 
 @section('content')
@@ -222,7 +222,8 @@
                         <tr style="background:var(--bg-table-header);">
                             <th style="padding:8px 14px; text-align:left;">Asset Name</th>
                             <th style="padding:8px 14px; text-align:left;">Serial Number</th>
-                            <th style="padding:8px 14px; text-align:center;">Qty</th>
+                            <th style="padding:8px 14px; text-align:center;">Qty Diajukan</th>
+                            <th style="padding:8px 14px; text-align:center;">Qty Disetujui</th>
                             <th style="padding:8px 14px; text-align:center;">Condition</th>
                             <th style="padding:8px 14px; text-align:center;">Status / Action</th>
                         </tr>
@@ -259,13 +260,41 @@
             <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
                 Laboratory <span class="text-red-500">*</span>
             </label>
-            <select name="lab_id" id="rr_modal_lab_id"
-                style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
-                onchange="handleRRModalLabChange()">
-                <option value="">-- Choose Laboratory --</option>
-                @foreach($userLabs as $lab)
-                    <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
-                @endforeach
+            @if(auth()->user()->role === 'staff')
+                <div style="padding:10px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input); font-weight:600;">
+                    {{ $userLabs->first()?->lab_name ?? '-' }}
+                </div>
+                <input type="hidden" name="lab_id" id="rr_modal_lab_id" value="{{ $userLabs->first()?->id }}">
+            @else
+                <select name="lab_id" id="rr_modal_lab_id"
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
+                    onchange="handleRRModalLabChange()">
+                    <option value="">-- Choose Laboratory --</option>
+                    @foreach($userLabs as $lab)
+                        <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
+                    @endforeach
+                </select>
+            @endif
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
+                Choose Category <span class="text-red-500">*</span>
+            </label>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;" id="rr_category_buttons">
+                <button type="button" data-value="electronic" class="rr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">Electronic</button>
+                <button type="button" data-value="component-pc" class="rr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">PC Component</button>
+                <button type="button" data-value="pc" class="rr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">PC</button>
+                <button type="button" data-value="non-electronic" class="rr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">Non-Electronic</button>
+            </div>
+        </div>
+
+        <div style="margin-bottom:16px;" id="rr_pc_row">
+            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
+                Choose PC <span style="color:var(--text-muted);">(optional)</span>
+            </label>
+            <select id="rr_modal_pc_id" style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);" onchange="handleRRPcChange()">
+                <option value="">-- All PCs / No PC --</option>
             </select>
         </div>
 
@@ -304,6 +333,11 @@
 @push('styles')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
+        .rr-cat-btn.is-active {
+            background: #111B4C !important;
+            color: #ffffff !important;
+            border-color: #111B4C !important;
+        }
         .return-create-modal {
             max-height: calc(100vh - 48px);
             min-height: auto;
@@ -329,6 +363,8 @@
 <script>
     let rrUserLabs = @json($userLabs->map(fn($l) => ['id' => $l->id, 'name' => $l->lab_name]));
     let rrLabAssets = [];
+    let rrLabPcs = [];
+    let rrPcComponents = [];
     let rrItemIndex = 1;
     let currentReturnRequestId = null;
 
@@ -350,24 +386,106 @@
         if (event.target.id === id) closePanelModal(id);
     };
 
-    function handleRRModalLabChange() {
+    async function handleRRModalLabChange() {
         const labId = document.getElementById('rr_modal_lab_id').value;
 
         document.getElementById('rr_modal_no_lab').style.display = labId ? 'none' : 'block';
-        document.getElementById('rr_modal_loading').style.display = 'none';
+        document.getElementById('rr_modal_loading').style.display = labId ? 'block' : 'none';
         document.getElementById('rr_modal_no_assets').style.display = 'none';
+        document.getElementById('rr_modal_items').style.display = 'none';
+        document.getElementById('rr_modal_add_btn').style.display = 'none';
         
-        if (!labId) {
-            document.getElementById('rr_modal_items').style.display = 'none';
-            document.getElementById('rr_modal_add_btn').style.display = 'none';
+        if (!labId) return;
+
+        try {
+            // Fetch all assets for this lab (without category query, to cache them)
+            const assetsRes = await fetch(`/api/labs/${labId}/assets`);
+            rrLabAssets = await assetsRes.json();
+            
+            // Fetch PCs in this lab
+            const pcsRes = await fetch(`/api/labs/${labId}/pcs`);
+            rrLabPcs = await pcsRes.json();
+            
+            // Populate PC dropdown
+            const pcSelect = document.getElementById('rr_modal_pc_id');
+            pcSelect.innerHTML = '<option value="">-- All PCs / No PC --</option>' +
+                rrLabPcs.map(pc => `<option value="${pc.id}">${pc.sku} (${ucFirst(pc.type_pc)})</option>`).join('');
+            
+            // Reset PC components
+            rrPcComponents = [];
+            
+            // Reset active categories (remove active class from all buttons)
+            document.querySelectorAll('.rr-cat-btn').forEach(btn => btn.classList.remove('is-active'));
+            
+            document.getElementById('rr_modal_loading').style.display = 'none';
+            
+            if (rrLabAssets.length === 0) {
+                document.getElementById('rr_modal_no_assets').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('rr_modal_items').innerHTML = '';
+            rrItemIndex = 1;
+            addRRModalItem();
+            document.getElementById('rr_modal_items').style.display = 'block';
+            document.getElementById('rr_modal_add_btn').style.display = 'block';
+        } catch (e) {
+            alert('Failed to load laboratory data.');
+            document.getElementById('rr_modal_loading').style.display = 'none';
+        }
+    }
+
+    function ucFirst(str) {
+        if (!str) return '';
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    async function handleRRPcChange() {
+        const pcId = document.getElementById('rr_modal_pc_id').value;
+        if (!pcId) {
+            rrPcComponents = [];
+            updateRrAssetDropdowns();
             return;
         }
+        
+        try {
+            const res = await fetch(`/api/pcs/${pcId}/components`);
+            rrPcComponents = await res.json();
+            updateRrAssetDropdowns();
+        } catch (e) {
+            alert('Failed to load PC components.');
+        }
+    }
 
-        document.getElementById('rr_modal_items').innerHTML = '';
-        rrItemIndex = 1;
-        addRRModalItem();
-        document.getElementById('rr_modal_items').style.display = 'block';
-        document.getElementById('rr_modal_add_btn').style.display = 'block';
+    function updateRrAssetDropdowns() {
+        const activeCategories = Array.from(document.querySelectorAll('.rr-cat-btn.is-active')).map(btn => btn.dataset.value);
+        
+        // Filter by active categories
+        let filtered = rrLabAssets.filter(a => activeCategories.length === 0 || activeCategories.includes(a.category));
+        
+        // Filter by PC components if PC is chosen
+        const pcId = document.getElementById('rr_modal_pc_id').value;
+        if (pcId) {
+            const componentAssetIds = rrPcComponents.map(c => c.asset_id);
+            filtered = filtered.filter(a => componentAssetIds.includes(a.asset_id));
+        }
+        
+        // Populate all asset selects in item rows
+        const selects = document.querySelectorAll('[id^="rr_asset_"]');
+        selects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">-- Select Asset --</option>' +
+                filtered.map(a => `<option value="${a.asset_id}" data-category="${a.category}">${a.name}</option>`).join('');
+            
+            // Restore selected value if it's still in the filtered list
+            if (currentValue && filtered.some(a => String(a.asset_id) === String(currentValue))) {
+                select.value = currentValue;
+            } else {
+                select.value = '';
+                // Trigger change event to reset serial numbers or quantities
+                select.dispatchEvent(new Event('change'));
+            }
+        });
     }
 
     function getRRItemRowHtml(idx) {
@@ -377,27 +495,13 @@
                 <button type="button" onclick="removeRRModalItem(this)"
                     style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:16px;">&times;</button>
                 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
-                    <div>
-                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Category</label>
-                        <select id="rr_category_${idx}"
-                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
-                            onchange="handleRRCategoryChange(${idx})" required>
-                            <option value="">-- Choose Category --</option>
-                            <option value="electronic">Electronic</option>
-                            <option value="component-pc">PC Component</option>
-                            <option value="pc">PC</option>
-                            <option value="non-electronic">Non-Electronic</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
-                        <select name="items[${idx}][asset_id]" id="rr_asset_${idx}" required disabled
-                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
-                            onchange="handleRRModalAssetChange(${idx})">
-                            <option value="">-- Select Asset --</option>
-                        </select>
-                    </div>
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name <span class="text-red-500">*</span></label>
+                    <select name="items[${idx}][asset_id]" id="rr_asset_${idx}" required
+                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
+                        onchange="handleRRModalAssetChange(${idx})">
+                        <option value="">-- Select Asset --</option>
+                    </select>
                 </div>
 
                 <div id="rr_serial_container_${idx}" style="display:none; margin-bottom:8px;">
@@ -412,17 +516,16 @@
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
                     <div>
-                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
+                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity <span class="text-red-500">*</span></label>
                         <input type="number" name="items[${idx}][quantity]" id="rr_qty_${idx}" min="1" value="1" required
                             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     </div>
                     <div>
-                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Condition:</label>
+                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Condition <span class="text-red-500">*</span></label>
                         <select name="items[${idx}][condition]" id="rr_condition_${idx}"
                             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                             <option value="good">Good</option>
                             <option value="damaged">Damaged</option>
-                            <option value="lost">Lost</option>
                         </select>
                     </div>
                 </div>
@@ -444,6 +547,17 @@
         
         if (serials.length === 0) return;
         
+        const pcId = document.getElementById('rr_modal_pc_id').value;
+        let filteredSerials = serials;
+        if (pcId) {
+            filteredSerials = serials.filter(s => String(s.pc_id) === String(pcId));
+        }
+
+        if (filteredSerials.length === 0) {
+            alert('No serial numbers for this asset are installed on the selected PC.');
+            return;
+        }
+
         const rowId = Date.now() + Math.random().toString(36).substr(2, 5);
         
         const row = document.createElement('div');
@@ -456,7 +570,7 @@
         select.style.cssText = 'flex:1; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);';
         select.required = true;
         select.innerHTML = '<option value="">-- Choose Serial Number --</option>' +
-            serials.map(s => {
+            filteredSerials.map(s => {
                 const pcLabel = s.pc_sku ? ` - (PC: ${s.pc_sku})` : '';
                 return `<option value="${s.id}">${s.serial_number}${pcLabel}</option>`;
             }).join('');
@@ -517,38 +631,6 @@
         });
     };
 
-    function handleRRCategoryChange(idx) {
-        const labId = document.getElementById('rr_modal_lab_id').value;
-        const category = document.getElementById(`rr_category_${idx}`).value;
-        const assetSelect = document.getElementById(`rr_asset_${idx}`);
-        const serialContainer = document.getElementById(`rr_serial_container_${idx}`);
-        const serialList = document.getElementById(`rr_serial_list_${idx}`);
-        const qtyInput = document.getElementById(`rr_qty_${idx}`);
-
-        assetSelect.innerHTML = '<option value="">-- Choose Asset --</option>';
-        assetSelect.disabled = true;
-        serialContainer.style.display = 'none';
-        if (serialList) serialList.innerHTML = '';
-        qtyInput.value = 1;
-        qtyInput.readOnly = false;
-
-        if (!labId || !category) return;
-
-        fetch(`/api/labs/${labId}/assets?category=${category}`)
-            .then(res => res.json())
-            .then(data => {
-                assetSelect.dataset.assetsJson = JSON.stringify(data);
-                if (data.length === 0) {
-                    assetSelect.innerHTML = '<option value="">No assets in this category</option>';
-                    return;
-                }
-                assetSelect.innerHTML = '<option value="">-- Choose Asset --</option>' + 
-                    data.map(a => `<option value="${a.asset_id}" data-category="${a.category}">${a.name}</option>`).join('');
-                assetSelect.disabled = false;
-            })
-            .catch(() => alert('Failed to load assets by category.'));
-    }
-
     function handleRRModalAssetChange(idx) {
         const labId = document.getElementById('rr_modal_lab_id').value;
         const assetSelect = document.getElementById(`rr_asset_${idx}`);
@@ -564,12 +646,11 @@
 
         if (!labId || !assetId) return;
 
-        const assets = JSON.parse(assetSelect.dataset.assetsJson || '[]');
-        const asset = assets.find(a => a.asset_id == assetId);
+        const asset = rrLabAssets.find(a => a.asset_id == assetId);
         if (!asset) return;
 
         const category = asset.category;
-        const usesSerial = ['electronic', 'component-pc', 'pc'].includes(category);
+        const usesSerial = ['electronic', 'pc', 'non-electronic'].includes(category);
 
         if (usesSerial) {
             serialContainer.style.display = 'block';
@@ -595,7 +676,13 @@
 
     function addRRModalItem() {
         const container = document.getElementById('rr_modal_items');
-        container.innerHTML += getRRItemRowHtml(rrItemIndex++);
+        const idx = rrItemIndex++;
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = getRRItemRowHtml(idx);
+        container.appendChild(tempDiv.firstElementChild);
+        
+        updateRrAssetDropdowns();
     }
 
     function removeRRModalItem(btn) {
@@ -603,6 +690,22 @@
         if (list.querySelectorAll('.item-row').length === 1) return;
         btn.closest('.item-row').remove();
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Setup category button toggle listeners
+        document.querySelectorAll('.rr-cat-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.classList.toggle('is-active');
+                updateRrAssetDropdowns();
+            });
+        });
+        
+        // If lab is pre-selected (hidden input for staff)
+        const labIdInput = document.getElementById('rr_modal_lab_id');
+        if (labIdInput && labIdInput.value) {
+            handleRRModalLabChange();
+        }
+    });
 
     let rrItemStates = {};
     let rrItemsList = [];
@@ -687,11 +790,32 @@
                 }
             }
             
+            let qtyApprovedHtml = '';
+            if (item.status !== 'pending') {
+                qtyApprovedHtml = `<span style="font-weight:600; color:var(--text-primary);">${item.quantity_approved ?? 0}</span>`;
+            } else {
+                if (isSpv) {
+                    const curState = rrItemStates[item.id];
+                    const isRejected = curState === 'rejected';
+                    qtyApprovedHtml = `
+                        <input type="number" id="qty_approved_${item.id}" 
+                               value="${rrItemStates[item.id + '_qty'] !== undefined ? rrItemStates[item.id + '_qty'] : (isRejected ? 0 : item.quantity)}" 
+                               min="0" max="${item.quantity}" 
+                               ${isRejected ? 'disabled' : ''}
+                               oninput="rrItemStates[${item.id} + '_qty'] = this.value"
+                               style="width:70px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:6px; padding:4px 8px; text-align:center;">
+                    `;
+                } else {
+                    qtyApprovedHtml = `<span style="color:var(--text-muted);">-</span>`;
+                }
+            }
+            
             return `
                 <tr style="border-top:1px solid var(--border-color);">
                     <td style="padding:10px 14px;color:var(--text-primary);">${item.asset_name}</td>
                     <td style="padding:10px 14px;color:var(--text-secondary);font-family:monospace;">${item.serial_number ?? '-'}</td>
                     <td style="padding:10px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.quantity}</td>
+                    <td style="padding:10px 14px;text-align:center;">${qtyApprovedHtml}</td>
                     <td style="padding:10px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.condition}</td>
                     <td style="padding:10px 14px;text-align:center;">${actionHtml}</td>
                 </tr>
@@ -702,6 +826,14 @@
     function setRrRowState(itemId, state) {
         if (rrItemStates[itemId] !== undefined) {
             rrItemStates[itemId] = state;
+            if (state === 'rejected') {
+                rrItemStates[itemId + '_qty'] = 0;
+            } else if (state === 'approved') {
+                if (rrItemStates[itemId + '_qty'] === 0) {
+                    const item = rrItemsList.find(i => i.id === itemId);
+                    if (item) rrItemStates[itemId + '_qty'] = item.quantity;
+                }
+            }
             renderReturnRows();
         }
     }
@@ -718,10 +850,18 @@
             return;
         }
 
-        const items = Object.keys(rrItemStates).map(id => ({
-            id: parseInt(id),
-            status: rrItemStates[id]
-        }));
+        const items = Object.keys(rrItemStates)
+            .filter(key => !key.endsWith('_qty'))
+            .map(id => {
+                const qtyVal = rrItemStates[id + '_qty'];
+                const itemObj = rrItemsList.find(i => String(i.id) === String(id));
+                const defaultQty = itemObj ? itemObj.quantity : 0;
+                return {
+                    id: parseInt(id),
+                    status: rrItemStates[id],
+                    quantity_approved: qtyVal !== undefined ? parseInt(qtyVal) : (rrItemStates[id] === 'rejected' ? 0 : defaultQty)
+                };
+            });
 
         try {
             const response = await fetch(`/return-requests/${currentReturnRequestId}/approve`, {

@@ -268,9 +268,22 @@ class StockMutationService
                 );
             }
 
+            $hasDebt = false;
+            foreach ($returnRequest->items as $item) {
+                $qtyApproved = $item->quantity_approved ?? $item->quantity_requested;
+                if ($qtyApproved < $item->quantity_requested) {
+                    $hasDebt = true;
+                }
+                $item->update([
+                    'status' => 'approved',
+                    'quantity_approved' => $qtyApproved
+                ]);
+            }
+
             // Update status request → COMPLETED
+            $status = $hasDebt ? ReturnRequest::STATUS_PARTIAL : ReturnRequest::STATUS_COMPLETED;
             $returnRequest->update([
-                'status'      => ReturnRequest::STATUS_COMPLETED,
+                'status'      => $status,
                 'approved_by' => Auth::id(),
                 'approved_at' => now(),
             ]);
@@ -382,9 +395,22 @@ class StockMutationService
                 ]);
             }
 
+            $hasDebt = false;
+            foreach ($transferRequest->items as $item) {
+                $qtyApproved = $item->quantity_approved ?? $item->quantity_requested;
+                if ($qtyApproved < $item->quantity_requested) {
+                    $hasDebt = true;
+                }
+                $item->update([
+                    'status' => 'approved',
+                    'quantity_approved' => $qtyApproved
+                ]);
+            }
+
             // Update status request
+            $status = $hasDebt ? TransferRequest::STATUS_PARTIAL : TransferRequest::STATUS_COMPLETED;
             $transferRequest->update([
-                'status'      => TransferRequest::STATUS_COMPLETED,
+                'status'      => $status,
                 'approved_by' => Auth::id(),
                 'approved_at' => now(),
             ]);
@@ -445,7 +471,7 @@ class StockMutationService
         ]);
     }
 
-    public function processTransferRequestItem(\App\Models\TransferRequestItem $item, string $newStatus): void
+    public function processTransferRequestItem(\App\Models\TransferRequestItem $item, string $newStatus, int $customQtyApproved = null): void
     {
         if ($item->status !== 'pending') {
             return;
@@ -461,7 +487,7 @@ class StockMutationService
 
         if ($newStatus === 'approved') {
             $transferRequest = $item->transferRequest;
-            $qtyApproved = $item->quantity_requested;
+            $qtyApproved = $customQtyApproved ?? $item->quantity_requested;
 
             DB::transaction(function () use ($item, $transferRequest, $qtyApproved) {
                 $fromLabStock = AssetLab::where('lab_id', $transferRequest->from_lab_id)
@@ -563,7 +589,7 @@ class StockMutationService
         }
     }
 
-    public function processReturnRequestItem(\App\Models\ReturnRequestItem $item, string $newStatus): void
+    public function processReturnRequestItem(\App\Models\ReturnRequestItem $item, string $newStatus, int $customQtyApproved = null): void
     {
         if ($item->status !== 'pending') {
             return;
@@ -579,7 +605,7 @@ class StockMutationService
 
         if ($newStatus === 'approved') {
             $returnRequest = $item->returnRequest;
-            $qtyApproved = $item->quantity_requested;
+            $qtyApproved = $customQtyApproved ?? $item->quantity_requested;
 
             DB::transaction(function () use ($item, $returnRequest, $qtyApproved) {
                 $assetLab = AssetLab::where('lab_id', $returnRequest->lab_id)

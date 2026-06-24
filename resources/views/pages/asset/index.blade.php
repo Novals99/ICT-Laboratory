@@ -70,7 +70,7 @@
                                 </x-table.td>
 
                                 <x-table.td>
-                                    {{ $asset->asset_name }}
+                                    {{ $asset->asset_name }}{{ $asset->specification ? ' - ' . $asset->specification : '' }}
                                 </x-table.td>
 
                                 <x-table.td>

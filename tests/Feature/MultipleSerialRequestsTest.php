@@ -11,12 +11,12 @@ use App\Models\TransferRequest;
 use App\Models\TransferRequestItem;
 use App\Models\ReturnRequest;
 use App\Models\ReturnRequestItem;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class MultipleSerialRequestsTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     private User $staffUser;
     private Laboratory $labA;
@@ -50,8 +50,8 @@ class MultipleSerialRequestsTest extends TestCase
         // 3. Create a serial-tracked asset
         $this->serialAsset = Asset::create([
             'asset_name' => 'Test GPU RTX 4080',
-            'asset_category' => 'component-pc',
-            'component_type' => 'vga',
+            'asset_category' => 'electronic',
+            'component_type' => null,
             'total_good' => 10,
             'total_damaged' => 0,
             'total_loss' => 0,

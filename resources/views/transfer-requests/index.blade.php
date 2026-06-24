@@ -179,14 +179,21 @@
                     <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
                         Origin Lab <span class="text-red-500">*</span>
                     </label>
-                    <select name="from_lab_id" id="tr_from_lab_id"
-                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
-                        onchange="handleTrFromLabChange()">
-                        <option value="">-- Select Origin Lab --</option>
-                        @foreach($userLabs as $lab)
-                            <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
-                        @endforeach
-                    </select>
+                    @if(auth()->user()->role === 'staff')
+                        <div style="padding:10px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input); font-weight:600;">
+                            {{ $userLabs->first()?->lab_name ?? '-' }}
+                        </div>
+                        <input type="hidden" name="from_lab_id" id="tr_from_lab_id" value="{{ $userLabs->first()?->id }}">
+                    @else
+                        <select name="from_lab_id" id="tr_from_lab_id"
+                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
+                            onchange="handleTrFromLabChange()">
+                            <option value="">-- Select Origin Lab --</option>
+                            @foreach($userLabs as $lab)
+                                <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
+                            @endforeach
+                        </select>
+                    @endif
                 </div>
                 <div>
                     <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
@@ -201,6 +208,27 @@
                     </select>
                 </div>
             </div>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
+                Choose Category <span class="text-red-500">*</span>
+            </label>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;" id="tr_category_buttons">
+                <button type="button" data-value="electronic" class="tr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">Electronic</button>
+                <button type="button" data-value="component-pc" class="tr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">PC Component</button>
+                <button type="button" data-value="pc" class="tr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">PC</button>
+                <button type="button" data-value="non-electronic" class="tr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">Non-Electronic</button>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 16px;" id="tr_pc_row">
+            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
+                Choose PC <span style="color:var(--text-muted);">(optional)</span>
+            </label>
+            <select id="tr_modal_pc_id" style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);" onchange="handleTrPcChange()">
+                <option value="">-- All PCs / No PC --</option>
+            </select>
         </div>
 
         <div style="margin-bottom: 16px;">
@@ -295,8 +323,9 @@
                     <thead>
                         <tr style="background:var(--bg-table-header);">
                             <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                            <th style="padding:8px 14px; text-align:left;">Serial Number</th>
-                            <th style="padding:8px 14px; text-align:center;">Qty</th>
+                            <th style="padding:8px 14px; text-align:left;">Kode Inventaris</th>
+                            <th style="padding:8px 14px; text-align:center;">Qty Diajukan</th>
+                            <th style="padding:8px 14px; text-align:center;">Qty Disetujui</th>
                             <th style="padding:8px 14px; text-align:center;">Status / Action</th>
                         </tr>
                     </thead>
@@ -329,6 +358,11 @@
 @push('styles')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
+        .tr-cat-btn.is-active {
+            background: #111B4C !important;
+            color: #ffffff !important;
+            border-color: #111B4C !important;
+        }
         .transfer-create-modal {
             max-height: calc(100vh - 48px);
             min-height: auto;
@@ -350,6 +384,8 @@
 @push('scripts')
 <script>
 let trLabAssets = [];
+let trLabPcs = [];
+let trPcComponents = [];
 let trItemIndex = 1;
 let currentTransferRequestId = null;
 
@@ -371,7 +407,7 @@ window.closePanelModalOnBackdrop = function(event, id) {
     if (event.target.id === id) closePanelModal(id);
 }
 
-function handleTrFromLabChange() {
+async function handleTrFromLabChange() {
     const labId = document.getElementById('tr_from_lab_id').value;
     if (!labId) {
         document.getElementById('tr_no_lab').style.display = 'block';
@@ -383,13 +419,92 @@ function handleTrFromLabChange() {
     }
 
     document.getElementById('tr_no_lab').style.display = 'none';
-    document.getElementById('tr_loading').style.display = 'none';
+    document.getElementById('tr_loading').style.display = 'block';
     document.getElementById('tr_no_assets').style.display = 'none';
-    document.getElementById('tr_items').innerHTML = '';
-    trItemIndex = 1;
-    addTrModalItem();
-    document.getElementById('tr_items').style.display = 'block';
-    document.getElementById('tr_add_btn').style.display = 'block';
+    document.getElementById('tr_items').style.display = 'none';
+    document.getElementById('tr_add_btn').style.display = 'none';
+
+    try {
+        const assetsRes = await fetch(`/api/labs/${labId}/assets`);
+        trLabAssets = await assetsRes.json();
+        
+        const pcsRes = await fetch(`/api/labs/${labId}/pcs`);
+        trLabPcs = await pcsRes.json();
+        
+        const pcSelect = document.getElementById('tr_modal_pc_id');
+        pcSelect.innerHTML = '<option value="">-- All PCs / No PC --</option>' +
+            trLabPcs.map(pc => `<option value="${pc.id}">${pc.sku} (${ucFirst(pc.type_pc)})</option>`).join('');
+            
+        trPcComponents = [];
+        
+        document.querySelectorAll('.tr-cat-btn').forEach(btn => btn.classList.remove('is-active'));
+        
+        document.getElementById('tr_loading').style.display = 'none';
+        
+        if (trLabAssets.length === 0) {
+            document.getElementById('tr_no_assets').style.display = 'block';
+            return;
+        }
+        
+        document.getElementById('tr_items').innerHTML = '';
+        trItemIndex = 1;
+        addTrModalItem();
+        document.getElementById('tr_items').style.display = 'block';
+        document.getElementById('tr_add_btn').style.display = 'block';
+    } catch (e) {
+        alert('Failed to load laboratory data.');
+        document.getElementById('tr_loading').style.display = 'none';
+    }
+}
+
+function ucFirst(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+async function handleTrPcChange() {
+    const pcId = document.getElementById('tr_modal_pc_id').value;
+    if (!pcId) {
+        trPcComponents = [];
+        updateTrAssetDropdowns();
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/pcs/${pcId}/components`);
+        trPcComponents = await res.json();
+        updateTrAssetDropdowns();
+    } catch (e) {
+        alert('Failed to load PC components.');
+    }
+}
+
+function updateTrAssetDropdowns() {
+    const activeCategories = Array.from(document.querySelectorAll('.tr-cat-btn.is-active')).map(btn => btn.dataset.value);
+    
+    // Filter by active categories
+    let filtered = trLabAssets.filter(a => activeCategories.length === 0 || activeCategories.includes(a.category));
+    
+    // Filter by PC components if PC is chosen
+    const pcId = document.getElementById('tr_modal_pc_id').value;
+    if (pcId) {
+        const componentAssetIds = trPcComponents.map(c => c.asset_id);
+        filtered = filtered.filter(a => componentAssetIds.includes(a.asset_id));
+    }
+    
+    const selects = document.querySelectorAll('[id^="tr_asset_"]');
+    selects.forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">-- Choose Asset --</option>' +
+            filtered.map(a => `<option value="${a.asset_id}" data-category="${a.category}">${a.name}</option>`).join('');
+        
+        if (currentValue && filtered.some(a => String(a.asset_id) === String(currentValue))) {
+            select.value = currentValue;
+        } else {
+            select.value = '';
+            select.dispatchEvent(new Event('change'));
+        }
+    });
 }
 
 function getTrModalItemRowHtml(index) {
@@ -399,36 +514,22 @@ function getTrModalItemRowHtml(index) {
             <button type="button" onclick="removeTrModalItem(this)"
                 style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:16px;">&times;</button>
             
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
-                <div>
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Category</label>
-                    <select id="tr_category_${index}"
-                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
-                        onchange="handleTrCategoryChange(${index})" required>
-                        <option value="">-- Choose Category --</option>
-                        <option value="electronic">Electronic</option>
-                        <option value="component-pc">PC Component</option>
-                        <option value="pc">PC</option>
-                        <option value="non-electronic">Non-Electronic</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset / Item</label>
-                    <select name="items[${index}][asset_id]" id="tr_asset_${index}"
-                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
-                        onchange="handleTrModalAssetChange(${index})" required disabled>
-                        <option value="">-- Choose Asset --</option>
-                    </select>
-                </div>
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name <span class="text-red-500">*</span></label>
+                <select name="items[${index}][asset_id]" id="tr_asset_${index}" required
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
+                    onchange="handleTrModalAssetChange(${index})">
+                    <option value="">-- Choose Asset --</option>
+                </select>
             </div>
 
             <div id="tr_serial_container_${index}" style="display:none; margin-bottom:8px;">
-                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Serial Numbers</label>
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Kode Inventaris</label>
                 <div id="tr_serial_list_${index}" style="display:flex; flex-direction:column; gap:6px; margin-bottom:6px;">
                 </div>
                 <button type="button" onclick="addTrSerialSelect(${index})"
                     class="rounded-lg bg-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-300 transition" style="border:none; cursor:pointer;">
-                    + Add Serial Number
+                    + Add Kode Inventaris
                 </button>
             </div>
 
@@ -464,6 +565,17 @@ window.addTrSerialSelect = function(index, preselectedValue = null) {
     
     if (serials.length === 0) return;
     
+    const pcId = document.getElementById('tr_modal_pc_id').value;
+    let filteredSerials = serials;
+    if (pcId) {
+        filteredSerials = serials.filter(s => String(s.pc_id) === String(pcId));
+    }
+
+    if (filteredSerials.length === 0) {
+        alert('No serial numbers for this asset are installed on the selected PC.');
+        return;
+    }
+    
     const rowId = Date.now() + Math.random().toString(36).substr(2, 5);
     
     const row = document.createElement('div');
@@ -475,8 +587,8 @@ window.addTrSerialSelect = function(index, preselectedValue = null) {
     select.className = `tr-serial-select-${index}`;
     select.style.cssText = 'flex:1; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);';
     select.required = true;
-    select.innerHTML = '<option value="">-- Choose Serial Number --</option>' +
-        serials.map(s => {
+    select.innerHTML = '<option value="">-- Choose Kode Inventaris --</option>' +
+        filteredSerials.map(s => {
             const pcLabel = s.pc_sku ? ` - (PC: ${s.pc_sku})` : '';
             return `<option value="${s.id}">${s.serial_number}${pcLabel}</option>`;
         }).join('');
@@ -537,44 +649,13 @@ window.validateTrUniqueSerials = function(index) {
     });
 };
 
-function handleTrCategoryChange(index) {
-    const labId = document.getElementById('tr_from_lab_id').value;
-    const category = document.getElementById(`tr_category_${index}`).value;
-    const assetSelect = document.getElementById(`tr_asset_${index}`);
-    const serialContainer = document.getElementById(`tr_serial_container_${index}`);
-    const serialList = document.getElementById(`tr_serial_list_${index}`);
-    const stockInput = document.getElementById(`tr_stock_${index}`);
-    const qtyInput = document.getElementById(`tr_qty_${index}`);
-
-    // Reset fields
-    assetSelect.innerHTML = '<option value="">-- Choose Asset --</option>';
-    assetSelect.disabled = true;
-    serialContainer.style.display = 'none';
-    if (serialList) serialList.innerHTML = '';
-    stockInput.value = '';
-    qtyInput.value = 1;
-    qtyInput.readOnly = false;
-
-    if (!labId || !category) return;
-
-    fetch(`/api/labs/${labId}/assets?category=${category}`)
-        .then(res => res.json())
-        .then(data => {
-            assetSelect.dataset.assetsJson = JSON.stringify(data);
-            if (data.length === 0) {
-                assetSelect.innerHTML = '<option value="">No assets in this category</option>';
-                return;
-            }
-            assetSelect.innerHTML = '<option value="">-- Choose Asset --</option>' + 
-                data.map(a => `<option value="${a.asset_id}" data-category="${a.category}">${a.name}</option>`).join('');
-            assetSelect.disabled = false;
-        })
-        .catch(() => alert('Failed to load assets by category.'));
-}
-
 function addTrModalItem() {
     const container = document.getElementById('tr_items');
-    container.innerHTML += getTrModalItemRowHtml(trItemIndex++);
+    const idx = trItemIndex++;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = getTrModalItemRowHtml(idx);
+    container.appendChild(tempDiv.firstElementChild);
+    updateTrAssetDropdowns();
 }
 
 function removeTrModalItem(btn) {
@@ -600,8 +681,7 @@ function handleTrModalAssetChange(index) {
 
     if (!labId || !assetId) return;
 
-    const assets = JSON.parse(assetSelect.dataset.assetsJson || '[]');
-    const asset = assets.find(a => a.asset_id == assetId);
+    const asset = trLabAssets.find(a => a.asset_id == assetId);
     if (!asset) return;
 
     const category = asset.category;
@@ -638,8 +718,7 @@ function handleTrModalQtyChange(index) {
     const assetSelect = document.getElementById(`tr_asset_${index}`);
     const assetId = assetSelect.value;
     if (!assetId) return;
-    const assets = JSON.parse(assetSelect.dataset.assetsJson || '[]');
-    const asset = assets.find(a => a.asset_id == assetId);
+    const asset = trLabAssets.find(a => a.asset_id == assetId);
     if (!asset) return;
     const qty = parseInt(document.getElementById(`tr_qty_${index}`).value);
     updateTrModalStockStyle(index, asset.stock, qty);
@@ -658,6 +737,20 @@ function updateTrModalStockStyle(index, stock, qty) {
         qtyEl.style.borderColor = 'var(--border-color)';
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.tr-cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.classList.toggle('is-active');
+            updateTrAssetDropdowns();
+        });
+    });
+    
+    const labIdInput = document.getElementById('tr_from_lab_id');
+    if (labIdInput && labIdInput.value) {
+        handleTrFromLabChange();
+    }
+});
 
 let trItemStates = {};
 let trItemsList = [];
@@ -742,41 +835,77 @@ function renderTransferRows() {
                 actionHtml = `<span style="background:rgba(245, 158, 11, 0.2); color:#fbbf24; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600;">Pending</span>`;
             }
         }
+        let qtyApprovedHtml = '';
+            if (item.status !== 'pending') {
+                qtyApprovedHtml = `<span style="font-weight:600; color:var(--text-primary);">${item.quantity_approved ?? 0}</span>`;
+            } else {
+                if (isSpv) {
+                    const curState = trItemStates[item.id];
+                    const isRejected = curState === 'rejected';
+                    qtyApprovedHtml = `
+                        <input type="number" id="qty_approved_${item.id}" 
+                               value="${trItemStates[item.id + '_qty'] !== undefined ? trItemStates[item.id + '_qty'] : (isRejected ? 0 : item.quantity)}" 
+                               min="0" max="${item.quantity}" 
+                               ${isRejected ? 'disabled' : ''}
+                               oninput="trItemStates[${item.id} + '_qty'] = this.value"
+                               style="width:70px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:6px; padding:4px 8px; text-align:center;">
+                    `;
+                } else {
+                    qtyApprovedHtml = `<span style="color:var(--text-muted);">-</span>`;
+                }
+            }
         
-        return `
-            <tr style="border-top:1px solid var(--border-color);">
-                <td style="padding:10px 14px;color:var(--text-primary);">${item.asset_name}</td>
-                <td style="padding:10px 14px;color:var(--text-secondary);font-family:monospace;">${item.serial_number ?? '-'}</td>
-                <td style="padding:10px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.quantity}</td>
-                <td style="padding:10px 14px;text-align:center;">${actionHtml}</td>
-            </tr>
-        `;
-    }).join('');
-}
-
-function setTrRowState(itemId, state) {
-    if (trItemStates[itemId] !== undefined) {
-        trItemStates[itemId] = state;
-        renderTransferRows();
-    }
-}
-
-function closeTransferDetailModal() {
-    currentTransferRequestId = null;
-    document.getElementById('transferDetailModal').style.display = 'none';
-    document.getElementById('transferModalProgress').style.width = '0%';
-}
-
-window.saveTransferStatuses = async function() {
-    if (!currentTransferRequestId) {
-        alert('Please open a request first.');
-        return;
+            return `
+                <tr style="border-top:1px solid var(--border-color);">
+                    <td style="padding:10px 14px;color:var(--text-primary);">${item.asset_name}</td>
+                    <td style="padding:10px 14px;color:var(--text-secondary);font-family:monospace;">${item.serial_number ?? '-'}</td>
+                    <td style="padding:10px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.quantity}</td>
+                    <td style="padding:10px 14px;text-align:center;">${qtyApprovedHtml}</td>
+                    <td style="padding:10px 14px;text-align:center;">${actionHtml}</td>
+                </tr>
+            `;
+        }).join('');
     }
 
-    const items = Object.keys(trItemStates).map(id => ({
-        id: parseInt(id),
-        status: trItemStates[id]
-    }));
+    function setTrRowState(itemId, state) {
+        if (trItemStates[itemId] !== undefined) {
+            trItemStates[itemId] = state;
+            if (state === 'rejected') {
+                trItemStates[itemId + '_qty'] = 0;
+            } else if (state === 'approved') {
+                if (trItemStates[itemId + '_qty'] === 0) {
+                    const item = trItemsList.find(i => i.id === itemId);
+                    if (item) trItemStates[itemId + '_qty'] = item.quantity;
+                }
+            }
+            renderTransferRows();
+        }
+    }
+
+    function closeTransferDetailModal() {
+        currentTransferRequestId = null;
+        document.getElementById('transferDetailModal').style.display = 'none';
+        document.getElementById('transferModalProgress').style.width = '0%';
+    }
+
+    window.saveTransferStatuses = async function() {
+        if (!currentTransferRequestId) {
+            alert('Please open a request first.');
+            return;
+        }
+
+        const items = Object.keys(trItemStates)
+            .filter(key => !key.endsWith('_qty'))
+            .map(id => {
+                const qtyVal = trItemStates[id + '_qty'];
+                const itemObj = trItemsList.find(i => String(i.id) === String(id));
+                const defaultQty = itemObj ? itemObj.quantity : 0;
+                return {
+                    id: parseInt(id),
+                    status: trItemStates[id],
+                    quantity_approved: qtyVal !== undefined ? parseInt(qtyVal) : (trItemStates[id] === 'rejected' ? 0 : defaultQty)
+                };
+            });
 
     try {
         const response = await fetch(`/transfer-requests/${currentTransferRequestId}/approve`, {

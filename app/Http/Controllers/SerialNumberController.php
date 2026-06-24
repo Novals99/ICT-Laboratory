@@ -27,7 +27,7 @@ class SerialNumberController extends Controller
      */
     public function spvAssets()
     {
-        $assets = Asset::whereIn('asset_category', ['electronic', 'component-pc', 'pc'])
+        $assets = Asset::whereIn('asset_category', ['electronic', 'component-pc', 'pc', 'non-electronic'])
             ->whereHas('serialNumbers', fn ($q) => $q->where('status', 'available'))
             ->withCount(['serialNumbers as available_count' => fn ($q) => $q->where('status', 'available')])
             ->orderBy('asset_name')
@@ -107,12 +107,12 @@ class SerialNumberController extends Controller
 
         // Asset komponen/PC yang stok-nya ada di lab ini.
         $componentAssetIds = AssetLab::where('lab_id', $laboratory->id)
-            ->whereHas('asset', fn ($q) => $q->whereIn('asset_category', ['component-pc', 'pc']))
+            ->whereHas('asset', fn ($q) => $q->whereIn('asset_category', ['component-pc', 'pc', 'non-electronic']))
             ->where('total_good_lab', '>', 0)
             ->pluck('asset_id');
 
         $assets = Asset::whereIn('id', $componentAssetIds)
-            ->whereIn('asset_category', ['component-pc', 'pc'])
+            ->whereIn('asset_category', ['component-pc', 'pc', 'non-electronic'])
             ->with(['serialNumbers' => function ($q) use ($laboratory, $keepSerialIds) {
                 $q->where('lab_id', $laboratory->id)
                   ->where(function ($w) use ($keepSerialIds) {
@@ -140,9 +140,10 @@ class SerialNumberController extends Controller
             }
 
             $grouped[$type][] = [
-                'asset_id'   => $asset->id,
-                'asset_name' => $asset->asset_name,
-                'serials'    => $asset->serialNumbers
+                'asset_id'      => $asset->id,
+                'asset_name'    => $asset->asset_name,
+                'specification' => $asset->specification,
+                'serials'       => $asset->serialNumbers
                     ->map(fn ($s) => [
                         'id'            => $s->id,
                         'serial_number' => $s->serial_number,
@@ -213,14 +214,21 @@ class SerialNumberController extends Controller
      * S/N yang available milik asset SPV / SPV warehouse (lab_id is null).
      * GET /api/assets/{asset}/available-spv-serials
      */
-    public function availableSpvSerials(Asset $asset)
+    public function availableSpvSerials(Asset $asset, Request $request)
     {
+        $excludeItem = $request->input('exclude_item');
         return response()->json([
             'asset_id'   => $asset->id,
             'asset_name' => $asset->asset_name,
             'serials'    => $asset->serialNumbers()
                 ->where('status', 'available')
                 ->whereNull('lab_id')
+                ->where(function ($q) use ($excludeItem) {
+                    $q->whereNull('request_item_id');
+                    if ($excludeItem) {
+                        $q->orWhere('request_item_id', $excludeItem);
+                    }
+                })
                 ->orderBy('serial_number')
                 ->get(['id', 'serial_number', 'condition'])
                 ->map(fn ($s) => [

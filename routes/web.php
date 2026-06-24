@@ -146,6 +146,8 @@ Route::middleware('auth')->group(function () {
 
     // AJAX API Endpoints
     Route::get('/api/labs/{labId}/assets', [ReturnRequestController::class, 'getLabAssets'])->name('api.labs.assets');
+    Route::get('/api/labs/{labId}/pcs', [ReturnRequestController::class, 'getLabPcs'])->name('api.labs.pcs');
+    Route::get('/api/pcs/{pc}/components', [ReturnRequestController::class, 'getPcComponents'])->name('api.pcs.components');
 
     // Serial Number JSON feeds (dropdown S/N: Edit Asset, Asset Lab, Add/Edit PC, Create Lab)
     Route::get('/api/assets/{asset}/serials', [SerialNumberController::class, 'byAsset'])->name('api.assets.serials');

@@ -47,7 +47,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
         </div>
 
         <div style="overflow-x:auto;">
-            <table class="db-table" style="min-width:{{ $canEdit ? '1350px' : '1250px' }};">
+            <table class="db-table" style="min-width:{{ $canEdit ? '1450px' : '1350px' }};">
                 <thead>
                     <tr>
                         <th>No PC</th>
@@ -56,6 +56,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                         <th>Processor</th>
                         <th>RAM</th>
                         <th>SSD</th>
+                        <th>HDD</th>
                         <th>Motherboard</th>
                         <th>VGA</th>
                         <th>CPU Fan</th>
@@ -80,6 +81,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                         <td>{{ $pc->processor ?? '-' }}</td>
                         <td>{{ $pc->ram ?? '-' }}</td>
                         <td>{{ $pc->ssd ?? '-' }}</td>
+                        <td>{{ $pc->hdd ?? '-' }}</td>
                         <td>{{ $pc->motherboard ?? '-' }}</td>
                         <td>{{ $pc->vga ?? '-' }}</td>
                         <td>{{ $pc->cpu_fan ?? '-' }}</td>
@@ -217,7 +219,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                 <tbody>
                     @forelse($laboratory->assets as $asset)
                     <tr>
-                        <td style="font-weight:500;">{{ $asset->asset_name }}</td>
+                        <td style="font-weight:500;">{{ $asset->asset_name }}{{ $asset->specification ? ' - ' . $asset->specification : '' }}</td>
                         <td>{{ ucfirst($asset->asset_category) }}</td>
 
                         @if($canEdit)
@@ -288,10 +290,10 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                         @if($canEdit)
                         <td style="text-align:center;">
                             <div class="action-btns" style="justify-content:center;">
-                            @if(in_array($asset->asset_category, ['electronic', 'component-pc']))
+                            @if($asset->asset_category === 'electronic')
                             <button type="button"
                                     onclick="openAssetSerialModal({{ $asset->id }}, '{{ addslashes($asset->asset_name) }}')"
-                                    class="action-btn action-edit" title="{{ $isSPV ? 'Edit Serial' : 'Lihat Serial' }}">
+                                    class="action-btn action-edit" title="{{ $isSPV ? 'Edit Kode Inventaris' : 'Lihat Kode Inventaris' }}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
                                     <rect x="3" y="5" width="18" height="14" rx="2"/>
                                     <path d="M7 9v6M10 9v6M13 9v6M17 9v6"/>
@@ -300,7 +302,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                             @endif
                             @if($isStaffLab)
                             <button type="button"
-                                    onclick='openReturnModal("asset", null, {{ $asset->id }}, "{{ addslashes($asset->asset_name) }}")'
+                                    onclick='openReturnModal("asset", null, {{ $asset->id }}, "{{ addslashes($asset->asset_name . ($asset->specification ? ' - ' . $asset->specification : '')) }}")'
                                     class="action-btn action-delete" title="Retur Aset">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
                                     <polyline points="3 6 5 6 21 6"/>
@@ -441,13 +443,13 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                         style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;" required>
                     <option value="">Choose asset...</option>
                     @foreach($allAssets as $a)
-                    <option value="{{ $a->id }}" data-category="{{ $a->asset_category }}">{{ $a->asset_name }} ({{ ucfirst($a->asset_category) }})</option>
+                    <option value="{{ $a->id }}" data-category="{{ $a->asset_category }}">{{ $a->asset_name }}{{ $a->specification ? ' - ' . $a->specification : '' }} ({{ ucfirst($a->asset_category) }})</option>
                     @endforeach
                 </select>
             </div>
             
             <div id="add-asset-serials-container" style="display:none;">
-                <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Select Serial Number(s) from SPV:</label>
+                <label style="font-size:13px; font-weight:500; color:var(--text-normal); display:block; margin-bottom:6px;">Select Kode Inventaris from SPV:</label>
                 <div id="add-asset-serials-list" style="border:1px solid var(--border-main); border-radius:8px; padding:10px; max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; background:var(--bg-main);">
                     <!-- Checkboxes will be populated here -->
                 </div>
@@ -497,7 +499,6 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                             style="width:100%; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:10px 14px; font-size:13px; outline:none;">
                         <option value="good">Baik</option>
                         <option value="damaged">Rusak</option>
-                        <option value="lost">Hilang</option>
                     </select>
                 </div>
             </div>
@@ -523,14 +524,14 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
     <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:460px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; display:flex; flex-direction:column;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border-light); flex-shrink:0;">
             <h3 style="font-size:16px; font-weight:700; color:var(--text-bold); margin:0;">
-                Serial Number — <span id="asset-serial-title" style="font-weight:600;"></span>
+                Kode Inventaris — <span id="asset-serial-title" style="font-weight:600;"></span>
             </h3>
             <button type="button" onclick="closeAssetSerialModal()" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:22px;">&times;</button>
         </div>
         <div style="overflow-y:auto; flex:1; padding:24px;">
             <div id="asset-serial-list" style="display:flex; flex-direction:column; gap:8px;"></div>
             <p id="asset-serial-empty" style="display:none; text-align:center; color:var(--text-muted); font-size:13px; margin:8px 0 0;">
-                Belum ada serial number untuk aset ini di lab.
+                Belum ada kode inventaris untuk aset ini di lab.
             </p>
         </div>
         @if($isSPV)
@@ -556,7 +557,7 @@ const pcComponents = @json($pcComponents);
 const electronicOptions    = @json($electronicAssets->map(fn($a) => ['id'=>$a->id,'name'=>$a->asset_name])->values());
 const nonElectronicOptions = @json($nonElectronicAssets->map(fn($a) => ['id'=>$a->id,'name'=>$a->asset_name])->values());
 let assetCounter = {{ $laboratory->assets->count() + 100 }};
-const pcFields = ['processor','ram','ssd','motherboard','vga','cpu_fan','powersupply'];
+const pcFields = ['processor','ram','ssd','hdd','motherboard','vga','cpu_fan','powersupply'];
 
 // ── Section Navigation ──
 function showSection(s) {
@@ -772,7 +773,7 @@ document.getElementById('add-asset-select').addEventListener('change', function(
         return;
     }
     
-    const usesSerial = ['electronic', 'component-pc', 'pc'].includes(category);
+    const usesSerial = ['electronic'].includes(category);
     
     if (usesSerial) {
         container.style.display = 'block';

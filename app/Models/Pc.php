@@ -22,6 +22,7 @@ class Pc extends Model
         'ram',
         'ram2',
         'ssd',
+        'hdd',
         'motherboard',
         'vga',
         'cpu_fan',
@@ -32,6 +33,7 @@ class Pc extends Model
         'ram_serial_id',
         'ram2_serial_id',
         'ssd_serial_id',
+        'hdd_serial_id',
         'motherboard_serial_id',
         'vga_serial_id',
         'cpu_fan_serial_id',
@@ -44,6 +46,7 @@ class Pc extends Model
         'ram'         => 'RAM',
         'ram2'        => 'RAM 2',
         'ssd'         => 'SSD',
+        'hdd'         => 'HDD',
         'motherboard' => 'Motherboard',
         'vga'         => 'VGA',
         'cpu_fan'     => 'CPU Fan',
@@ -56,6 +59,7 @@ class Pc extends Model
         'ram'         => 'ram',
         'ram2'        => 'ram',
         'ssd'         => 'ssd',
+        'hdd'         => 'hdd',
         'motherboard' => 'motherboard',
         'vga'         => 'vga',
         'cpu_fan'     => 'cpu_fan',
@@ -85,6 +89,7 @@ class Pc extends Model
     public function ramSerial(): BelongsTo          { return $this->belongsTo(AssetSerialNumber::class, 'ram_serial_id'); }
     public function ram2Serial(): BelongsTo         { return $this->belongsTo(AssetSerialNumber::class, 'ram2_serial_id'); }
     public function ssdSerial(): BelongsTo          { return $this->belongsTo(AssetSerialNumber::class, 'ssd_serial_id'); }
+    public function hddSerial(): BelongsTo          { return $this->belongsTo(AssetSerialNumber::class, 'hdd_serial_id'); }
     public function motherboardSerial(): BelongsTo  { return $this->belongsTo(AssetSerialNumber::class, 'motherboard_serial_id'); }
     public function vgaSerial(): BelongsTo          { return $this->belongsTo(AssetSerialNumber::class, 'vga_serial_id'); }
     public function cpuFanSerial(): BelongsTo       { return $this->belongsTo(AssetSerialNumber::class, 'cpu_fan_serial_id'); }
@@ -99,6 +104,7 @@ class Pc extends Model
             $this->ram_serial_id,
             $this->ram2_serial_id,
             $this->ssd_serial_id,
+            $this->hdd_serial_id,
             $this->motherboard_serial_id,
             $this->vga_serial_id,
             $this->cpu_fan_serial_id,

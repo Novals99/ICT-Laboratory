@@ -6,15 +6,16 @@
 @php
     // Slot komponen → component_type asset. RAM 2 nullable & berbagi pool 'ram'.
     $slots = [
-        'pc'          => ['label' => 'PC Serial Number', 'type' => 'pc',         'required' => false],
-        'processor'   => ['label' => 'Processor',    'type' => 'processor',   'required' => false],
-        'ram'         => ['label' => 'RAM',          'type' => 'ram',         'required' => false],
-        'ram2'        => ['label' => 'RAM 2 (opsional)', 'type' => 'ram',     'required' => false],
-        'ssd'         => ['label' => 'SSD',          'type' => 'ssd',         'required' => false],
-        'motherboard' => ['label' => 'Motherboard',  'type' => 'motherboard', 'required' => false],
-        'vga'         => ['label' => 'VGA',          'type' => 'vga',         'required' => false],
-        'cpu_fan'     => ['label' => 'CPU Fan',      'type' => 'cpu_fan',     'required' => false],
-        'powersupply' => ['label' => 'Power Supply', 'type' => 'powersupply', 'required' => false],
+        'pc'          => ['label' => 'PC Kode Inventaris', 'type' => 'pc',         'required' => false],
+        'processor'   => ['label' => 'Processor',          'type' => 'processor',   'required' => false],
+        'ram'         => ['label' => 'RAM',                'type' => 'ram',         'required' => false],
+        'ram2'        => ['label' => 'RAM 2 (opsional)',   'type' => 'ram',         'required' => false],
+        'ssd'         => ['label' => 'SSD',                'type' => 'ssd',         'required' => false],
+        'hdd'         => ['label' => 'HDD',                'type' => 'hdd',         'required' => false],
+        'motherboard' => ['label' => 'Motherboard',        'type' => 'motherboard', 'required' => false],
+        'vga'         => ['label' => 'VGA',                'type' => 'vga',         'required' => false],
+        'cpu_fan'     => ['label' => 'CPU Fan',            'type' => 'cpu_fan',     'required' => false],
+        'powersupply' => ['label' => 'Power Supply',       'type' => 'powersupply', 'required' => false],
     ];
 
     $excludePc = $pc?->id;
@@ -29,22 +30,31 @@
         <div class="pc-comp-row" data-slot="{{ $slot }}" data-type="{{ $cfg['type'] }}">
             <label style="font-size:13px; font-weight:500; color:#374151; display:block; margin-bottom:6px;">
                 {{ $cfg['label'] }}
-            </label>
+            </label>            @if ($slot === 'pc')
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    {{-- Pilih asset komponen --}}
+                    <select class="pc-comp-asset"
+                            style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 12px; font-size:13px;">
+                        <option value="">— Pilih komponen —</option>
+                    </select>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                {{-- Pilih asset komponen (difilter component_type; tidak dikirim ke server) --}}
-                <select class="pc-comp-asset"
-                        style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 12px; font-size:13px;">
-                    <option value="">— Pilih komponen —</option>
-                </select>
-
-                {{-- Pilih serial number unit (INI yang dikirim ke server) --}}
-                <select name="{{ $slot }}_serial_id" class="pc-comp-serial"
-                        data-current="{{ $pc?->{$slot . '_serial_id'} }}"
-                        style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 12px; font-size:13px;">
-                    <option value="">— Serial Number —</option>
-                </select>
-            </div>
+                    {{-- Pilih serial number unit (INI yang dikirim ke server) untuk PC Box --}}
+                    <select name="pc_serial_id" class="pc-comp-serial"
+                            data-current="{{ $pc?->pc_serial_id }}"
+                            style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 12px; font-size:13px;">
+                        <option value="">— Kode Inventaris —</option>
+                    </select>
+                </div>
+            @else
+                <div style="display:block;">
+                    {{-- Dropdown komponen + spesifikasi --}}
+                    <select name="{{ $slot }}" class="pc-comp-asset"
+                            data-current="{{ $pc?->{$slot} }}"
+                            style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 12px; font-size:13px;">
+                        <option value="">— Pilih komponen —</option>
+                    </select>
+                </div>
+            @endif
         </div>
     @endforeach
 </div>
@@ -73,32 +83,56 @@
                     const rows = picker.querySelectorAll('.pc-comp-row');
 
                     rows.forEach(row => {
+                        const slot = row.dataset.slot;
                         const type = row.dataset.type;
                         const assetSel = row.querySelector('.pc-comp-asset');
-                        const serialSel = row.querySelector('.pc-comp-serial');
-                        const current = serialSel.dataset.current;
                         const assets = data[type] || [];
 
-                        // Isi dropdown asset.
-                        assets.forEach(a => {
-                            const opt = document.createElement('option');
-                            opt.value = a.asset_id;
-                            opt.textContent = a.asset_name;
-                            assetSel.appendChild(opt);
-                        });
+                        if (slot === 'pc') {
+                            // Isi dropdown asset.
+                            assets.forEach(a => {
+                                const opt = document.createElement('option');
+                                opt.value = a.asset_id;
+                                opt.textContent = a.asset_name;
+                                assetSel.appendChild(opt);
+                            });
 
-                        // Saat asset dipilih → isi serial-nya.
-                        assetSel.addEventListener('change', () => {
-                            fillSerials(serialSel, assets, assetSel.value, null);
-                            refreshDisabledSerials(picker);
-                        });
+                            const serialSel = row.querySelector('.pc-comp-serial');
+                            const current = serialSel.dataset.current;
 
-                        // Preselect (mode edit): cari asset yang memuat serial current.
-                        if (current) {
-                            const owner = assets.find(a => a.serials.some(s => String(s.id) === String(current)));
-                            if (owner) {
-                                assetSel.value = owner.asset_id;
-                                fillSerials(serialSel, assets, owner.asset_id, current);
+                            // Saat asset dipilih → isi serial-nya.
+                            assetSel.addEventListener('change', () => {
+                                fillSerials(serialSel, assets, assetSel.value, null);
+                                refreshDisabledSerials(picker);
+                            });
+
+                            // Preselect (mode edit): cari asset yang memuat serial current.
+                            if (current) {
+                                const owner = assets.find(a => a.serials.some(s => String(s.id) === String(current)));
+                                if (owner) {
+                                    assetSel.value = owner.asset_id;
+                                    fillSerials(serialSel, assets, owner.asset_id, current);
+                                }
+                            }
+                        } else {
+                            // Isi dropdown asset dengan kombinasi name + spec.
+                            assets.forEach(a => {
+                                const opt = document.createElement('option');
+                                const val = a.asset_name + (a.specification ? ' - ' + a.specification : '');
+                                opt.value = val;
+                                opt.textContent = val;
+                                assetSel.appendChild(opt);
+                            });
+
+                            const current = assetSel.dataset.current;
+                            if (current) {
+                                let matchedOpt = [...assetSel.options].find(opt => opt.value === current);
+                                if (!matchedOpt) {
+                                    matchedOpt = [...assetSel.options].find(opt => opt.value.includes(current) || current.includes(opt.value));
+                                }
+                                if (matchedOpt) {
+                                    assetSel.value = matchedOpt.value;
+                                }
                             }
                         }
                     });
@@ -111,7 +145,7 @@
                 }
 
                 function fillSerials(serialSel, assets, assetId, selectId) {
-                    serialSel.innerHTML = '<option value="">— Serial Number —</option>';
+                    serialSel.innerHTML = '<option value="">— Kode Inventaris —</option>';
                     const asset = assets.find(a => String(a.asset_id) === String(assetId));
                     if (!asset) return;
                     asset.serials.forEach(s => {

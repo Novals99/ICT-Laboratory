@@ -14,7 +14,7 @@ class PcController extends Controller
 {
     /** Slot komponen + label (RAM 2 nullable). */
     private const SLOTS = [
-        'processor', 'ram', 'ram2', 'ssd',
+        'processor', 'ram', 'ram2', 'ssd', 'hdd',
         'motherboard', 'vga', 'cpu_fan', 'powersupply',
     ];
 
@@ -114,7 +114,8 @@ class PcController extends Controller
             $rules['status_pc'] = 'required|in:active,inactive';
         }
         foreach (self::SLOTS as $slot) {
-            // tiap slot pilih SATU serial number (boleh kosong).
+            // tiap slot pilih SATU serial number (boleh kosong), dan/atau input spesifikasi.
+            $rules[$slot] = 'nullable|string|max:255';
             $rules["{$slot}_serial_id"] = 'nullable|exists:asset_serial_numbers,id';
         }
 
@@ -156,7 +157,7 @@ class PcController extends Controller
             $serialId = $validated["{$slot}_serial_id"] ?? null;
 
             if (! $serialId) {
-                $pc->{$slot} = null;
+                $pc->{$slot} = $validated[$slot] ?? null;
                 $pc->{$slot . '_serial_id'} = null;
                 continue;
             }

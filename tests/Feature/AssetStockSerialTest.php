@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 class AssetStockSerialTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     private User $spvUser;
 
@@ -28,12 +28,12 @@ class AssetStockSerialTest extends TestCase
     public function test_create_stock_without_manual_serials_auto_generates_serials(): void
     {
         $payload = [
-            'asset_category' => 'component-pc',
+            'asset_category' => 'electronic',
             'items' => [
                 [
                     'asset_name' => 'Gigabyte RTX 4060',
-                    'asset_category' => 'component-pc',
-                    'component_type' => 'vga',
+                    'asset_category' => 'electronic',
+                    'component_type' => null,
                     'total_asset' => 15,
                     'total_good' => 15,
                     'total_damaged' => 0,
@@ -64,8 +64,8 @@ class AssetStockSerialTest extends TestCase
         // 1. Create asset
         $asset = Asset::create([
             'asset_name' => 'Intel Core i5-12400F',
-            'asset_category' => 'component-pc',
-            'component_type' => 'processor',
+            'asset_category' => 'electronic',
+            'component_type' => null,
             'total_good' => 2,
             'total_damaged' => 0,
             'total_loss' => 0,
@@ -93,8 +93,8 @@ class AssetStockSerialTest extends TestCase
 
         $payload = [
             'asset_name' => 'Intel Core i5-12400F',
-            'asset_category' => 'component-pc',
-            'component_type' => 'processor',
+            'asset_category' => 'electronic',
+            'component_type' => null,
             'total_asset' => 10,
             'total_good' => 10,
             'total_damaged' => 0,

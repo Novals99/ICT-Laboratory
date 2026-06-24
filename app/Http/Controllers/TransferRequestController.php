@@ -322,6 +322,7 @@ class TransferRequestController extends Controller
             'items' => 'nullable|array',
             'items.*.id' => 'required|exists:transfer_request_items,id',
             'items.*.status' => 'required|in:approved,rejected,pending',
+            'items.*.quantity_approved' => 'nullable|integer|min:0',
         ]);
 
         try {
@@ -331,7 +332,8 @@ class TransferRequestController extends Controller
                         ->where('transfer_request_id', $transferRequest->id)
                         ->first();
                     if ($item && $item->status === 'pending') {
-                        $this->mutationService->processTransferRequestItem($item, $itemData['status']);
+                        $qtyApp = ($itemData['status'] === 'approved') ? ($itemData['quantity_approved'] ?? $item->quantity_requested) : 0;
+                        $this->mutationService->processTransferRequestItem($item, $itemData['status'], $qtyApp);
                     }
                 }
 
@@ -342,7 +344,14 @@ class TransferRequestController extends Controller
                 $approvedCount = $allItems->where('status', 'approved')->count();
                 $rejectedCount = $allItems->where('status', 'rejected')->count();
 
-                if ($pendingCount > 0) {
+                $hasDebt = false;
+                foreach ($allItems as $item) {
+                    if ($item->status === 'approved' && $item->quantity_approved < $item->quantity_requested) {
+                        $hasDebt = true;
+                    }
+                }
+
+                if ($pendingCount > 0 || $hasDebt) {
                     $transferRequest->update([
                         'status' => 'partial',
                         'approved_by' => Auth::id(),

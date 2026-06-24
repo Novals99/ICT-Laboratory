@@ -20,6 +20,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Ubah ENUM di MySQL untuk tambah nilai 'return'
         // (di MySQL, ALTER TABLE MODIFY adalah cara untuk update ENUM)
         DB::statement("
@@ -39,6 +43,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Rollback: hapus 'return' dari enum
         // PERHATIAN: Pastikan tidak ada data dengan type='return' sebelum rollback
         DB::statement("

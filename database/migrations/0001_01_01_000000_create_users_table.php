@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
 
             $table->string('nim')->unique();
-            $table->enum('role', ['spv inventory', 'pic', 'admin', 'assistant']);
+            $table->enum('role', ['spv inventory', 'pic', 'admin', 'assistant', 'staff']);
             $table->string('username')->unique();
             $table->string('password');
             $table->boolean('status_user')->default(true);

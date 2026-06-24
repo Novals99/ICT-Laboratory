@@ -177,13 +177,9 @@
                                                         x-model="item.condition">
                                                     <option value="good">Baik</option>
                                                     <option value="damaged">Rusak</option>
-                                                    <option value="lost">Hilang</option>
                                                 </select>
                                                 <p x-show="item.condition === 'damaged'" class="text-yellow-600 text-xs mt-0.5">
                                                     Tidak kembali ke stok baik
-                                                </p>
-                                                <p x-show="item.condition === 'lost'" class="text-red-500 text-xs mt-0.5">
-                                                    Tidak kembali ke gudang
                                                 </p>
                                             </td>
                                             <td class="px-4 py-3">
