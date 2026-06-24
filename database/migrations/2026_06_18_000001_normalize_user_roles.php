@@ -7,6 +7,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement("UPDATE users SET role = 'staff' WHERE role IN ('admin','pic','assistant')");
+            return;
+        }
+
         // Step 1: Expand enum to include 'staff' while keeping old values
         DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('spv inventory','pic','admin','assistant','staff') NOT NULL");
 
@@ -19,6 +24,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Revert enum to previous values (best-effort)
         DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('spv inventory','pic','admin','assistant') NOT NULL");
         // Note: we do NOT revert mapped data automatically

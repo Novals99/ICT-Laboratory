@@ -15,10 +15,10 @@ use App\Exports\AssetExport;
 class AssetController extends Controller
 {
     /** Kategori yang memakai kode inventaris per unit. */
-    private const SERIAL_CATEGORIES = ['electronic', 'component-pc', 'pc', 'non-electronic'];
+    private const SERIAL_CATEGORIES = ['electronic', 'pc', 'non-electronic'];
 
     /** Sub-tipe komponen yang valid (untuk PC Component). */
-    private const COMPONENT_TYPES = ['processor', 'ram', 'ssd', 'motherboard', 'vga', 'cpu_fan', 'powersupply'];
+    private const COMPONENT_TYPES = ['processor', 'ram', 'ssd', 'motherboard', 'vga', 'cpu_fan', 'powersupply', 'hdd'];
 
     public function index()
     {
@@ -59,6 +59,7 @@ class AssetController extends Controller
             'items.*.asset_name'     => ['required', 'string', 'max:255'],
             'items.*.asset_category' => ['nullable', Rule::in(['electronic', 'non-electronic', 'component-pc', 'pc'])],
             'items.*.component_type' => ['nullable', Rule::in(self::COMPONENT_TYPES)],
+            'items.*.specification'  => ['nullable', 'string', 'max:255'],
             'items.*.total_asset'    => ['required', 'integer', 'min:0'],
             'items.*.total_good'     => ['required', 'integer', 'min:0'],
             // (#17) damaged & loss tidak lagi diinput → default 0.
@@ -93,6 +94,7 @@ class AssetController extends Controller
                     'asset_name'     => $item['asset_name'],
                     'asset_category' => $category,
                     'component_type' => $category === 'component-pc' ? ($item['component_type'] ?? null) : null,
+                    'specification'  => $category === 'component-pc' ? ($item['specification'] ?? null) : null,
                     'total_good'     => $good,
                     'total_damaged'  => $damaged,
                     'total_loss'     => $loss,
@@ -146,6 +148,7 @@ class AssetController extends Controller
             'asset_name'     => ['required', 'string', 'max:255'],
             'asset_category' => ['required', Rule::in(['electronic', 'non-electronic', 'component-pc', 'pc'])],
             'component_type' => ['nullable', Rule::in(self::COMPONENT_TYPES)],
+            'specification'  => ['nullable', 'string', 'max:255'],
             'total_asset'    => ['required', 'integer', 'min:0'],
             'total_good'     => ['required', 'integer', 'min:0'],
             'total_damaged'  => ['required', 'integer', 'min:0'],
@@ -169,6 +172,7 @@ class AssetController extends Controller
                 'asset_name'     => $validated['asset_name'],
                 'asset_category' => $validated['asset_category'],
                 'component_type' => $validated['asset_category'] === 'component-pc' ? ($validated['component_type'] ?? null) : null,
+                'specification'  => $validated['asset_category'] === 'component-pc' ? ($validated['specification'] ?? null) : null,
                 'total_good'     => $validated['total_good'],
                 'total_damaged'  => $validated['total_damaged'],
                 'total_loss'     => $validated['total_loss'],
@@ -255,7 +259,12 @@ class AssetController extends Controller
             $autoCount = 0;
             $index = 1;
             while ($autoCount < $diff) {
-                $serial = $asset->sku . '-' . str_pad($index, 3, '0', STR_PAD_LEFT);
+                if ($asset->asset_category === 'component-pc' && !empty($asset->specification)) {
+                    $cleanSpec = substr(trim($asset->specification), 0, 80);
+                    $serial = $cleanSpec . '-' . str_pad($index, 3, '0', STR_PAD_LEFT);
+                } else {
+                    $serial = $asset->sku . '-' . str_pad($index, 3, '0', STR_PAD_LEFT);
+                }
                 $exists = AssetSerialNumber::where('asset_id', $asset->id)
                     ->where('serial_number', $serial)
                     ->exists();
@@ -328,7 +337,12 @@ class AssetController extends Controller
             $autoCount = 0;
             $index = 1;
             while ($autoCount < $diff) {
-                $serial = $asset->sku . '-' . str_pad($index, 3, '0', STR_PAD_LEFT);
+                if ($asset->asset_category === 'component-pc' && !empty($asset->specification)) {
+                    $cleanSpec = substr(trim($asset->specification), 0, 80);
+                    $serial = $cleanSpec . '-' . str_pad($index, 3, '0', STR_PAD_LEFT);
+                } else {
+                    $serial = $asset->sku . '-' . str_pad($index, 3, '0', STR_PAD_LEFT);
+                }
                 $exists = AssetSerialNumber::where('asset_id', $asset->id)
                     ->where('serial_number', $serial)
                     ->exists();

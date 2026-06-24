@@ -121,11 +121,24 @@
                             <option value="processor" {{ old('items.0.component_type') === 'processor' ? 'selected' : '' }}>Processor</option>
                             <option value="ram" {{ old('items.0.component_type') === 'ram' ? 'selected' : '' }}>RAM</option>
                             <option value="ssd" {{ old('items.0.component_type') === 'ssd' ? 'selected' : '' }}>SSD</option>
+                            <option value="hdd" {{ old('items.0.component_type') === 'hdd' ? 'selected' : '' }}>HDD</option>
                             <option value="vga" {{ old('items.0.component_type') === 'vga' ? 'selected' : '' }}>VGA</option>
                             <option value="powersupply" {{ old('items.0.component_type') === 'powersupply' ? 'selected' : '' }}>Power Supply</option>
                             <option value="motherboard" {{ old('items.0.component_type') === 'motherboard' ? 'selected' : '' }}>Motherboard</option>
                             <option value="cpu_fan" {{ old('items.0.component_type') === 'cpu_fan' ? 'selected' : '' }}>CPU Fan</option>
                         </select>
+                    </div>
+
+                    {{-- Spesifikasi — tampil hanya untuk PC Component --}}
+                    <div class="asset-field js-spec-field" style="display:none;">
+                        <label class="asset-field-label">Spesifikasi:</label>
+                        <input
+                            type="text"
+                            name="items[0][specification]"
+                            value="{{ old('items.0.specification') }}"
+                            placeholder="Contoh: Intel Core i5-12400F, 16GB DDR4..."
+                            class="panel-form-input"
+                        >
                     </div>
 
                     <div class="asset-field asset-field-source">
@@ -145,7 +158,7 @@
                     </div>
 
 
-                    {{-- Kode Inventaris — tampil untuk semua kategori --}}
+                    {{-- Kode Inventaris — disembunyikan untuk PC Component, tampil untuk kategori lain --}}
                     <div class="asset-field js-serial-field">
                         <label class="asset-field-label">Kode Inventaris:</label>
                         <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
@@ -284,11 +297,23 @@
                             <option value="processor">Processor</option>
                             <option value="ram">RAM</option>
                             <option value="ssd">SSD</option>
+                            <option value="hdd">HDD</option>
                             <option value="vga">VGA</option>
                             <option value="powersupply">Power Supply</option>
                             <option value="motherboard">Motherboard</option>
                             <option value="cpu_fan">CPU Fan</option>
                         </select>
+                    </div>
+
+                    {{-- Spesifikasi — tampil hanya untuk PC Component --}}
+                    <div class="asset-field js-spec-field" style="display:none;">
+                        <label class="asset-field-label">Spesifikasi:</label>
+                        <input
+                            type="text"
+                            data-name="specification"
+                            placeholder="Contoh: Intel Core i5-12400F, 16GB DDR4..."
+                            class="panel-form-input"
+                        >
                     </div>
 
                     <div class="asset-field asset-field-source">
@@ -303,7 +328,7 @@
                     </div>
 
 
-                    {{-- Kode Inventaris — tampil untuk semua kategori --}}
+                    {{-- Kode Inventaris — disembunyikan untuk PC Component --}}
                     <div class="asset-field js-serial-field">
                         <label class="asset-field-label">Kode Inventaris:</label>
                         <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
@@ -370,72 +395,50 @@
     </template>
 
     @else
+        @php
+            $categoryLabels = [
+                'electronic'     => 'Electronic',
+                'non-electronic' => 'Non-Electronic',
+                'component-pc'   => 'PC Component',
+                'pc'             => 'PC',
+            ];
+            $componentTypeLabels = [
+                'processor'   => 'Processor',
+                'ram'         => 'RAM',
+                'ssd'         => 'SSD',
+                'hdd'         => 'HDD',
+                'vga'         => 'VGA',
+                'powersupply' => 'Power Supply',
+                'motherboard' => 'Motherboard',
+                'cpu_fan'     => 'CPU Fan',
+            ];
+            $currentCategory      = $asset->asset_category ?? '';
+            $currentComponentType = $asset->component_type ?? '';
+            $isComponentPc        = $currentCategory === 'component-pc';
+        @endphp
+
+        {{-- Category: tampilkan hanya nilai yang dimiliki asset (read-only, tidak bisa diubah) --}}
         <div class="panel-form-row">
-            <label class="panel-form-label">
-                Category:
-            </label>
-
+            <label class="panel-form-label">Category:</label>
             <div class="panel-form-field">
-                <div class="asset-category-options" data-asset-category-group>
-                    @foreach ([
-                        'electronic' => 'Electronic',
-                        'non-electronic' => 'Non-Electronic',
-                        'component-pc' => 'PC Component',
-                        'pc' => 'PC',
-                    ] as $value => $label)
-                        @php
-                            $categoryId = $modalId . '-category-' . $value;
-                        @endphp
-
-                        <label
-                            for="{{ $categoryId }}"
-                            class="asset-category-option {{ $selectedCategory === $value ? 'is-selected' : '' }}"
-                        >
-                            <input
-                                id="{{ $categoryId }}"
-                                type="radio"
-                                name="asset_category"
-                                value="{{ $value }}"
-                                class="hidden"
-                                data-progress-field
-                                {{ $selectedCategory === $value ? 'checked' : '' }}
-                                required
-                            >
-
-                            <span>{{ $label }}</span>
-                        </label>
-                    @endforeach
-                </div>
-
+                <input type="text" class="panel-form-input" value="{{ $categoryLabels[$currentCategory] ?? ucfirst($currentCategory) }}" readonly style="background:#f3f4f6; cursor:not-allowed; opacity:0.8;">
+                <input type="hidden" name="asset_category" value="{{ $currentCategory }}">
                 @error('asset_category')
                     <p class="panel-form-error">{{ $message }}</p>
                 @enderror
             </div>
         </div>
 
-        {{-- (#16) Component Type — hanya untuk PC Component (gaya tombol sama dgn Category) --}}
-        <div class="panel-form-row js-edit-component-type" style="{{ ($asset->asset_category ?? '') === 'component-pc' ? '' : 'display:none;' }}">
+        {{-- Component Type — hanya untuk PC Component; tampilkan hanya tipe yang dimiliki asset --}}
+        @if ($isComponentPc)
+        <div class="panel-form-row">
             <label class="panel-form-label">Component Type:</label>
             <div class="panel-form-field">
-                <div class="asset-category-options">
-                    @foreach ([
-                        'processor' => 'Processor',
-                        'ram' => 'RAM',
-                        'ssd' => 'SSD',
-                        'vga' => 'VGA',
-                        'powersupply' => 'Power Supply',
-                    ] as $value => $label)
-                        @php $ctId = $modalId . '-ctype-' . $value; @endphp
-                        <label for="{{ $ctId }}"
-                               class="asset-category-option {{ ($asset->component_type ?? '') === $value ? 'is-selected' : '' }}">
-                            <input id="{{ $ctId }}" type="radio" name="component_type" value="{{ $value }}" class="hidden"
-                                {{ ($asset->component_type ?? '') === $value ? 'checked' : '' }}>
-                            <span>{{ $label }}</span>
-                        </label>
-                    @endforeach
-                </div>
+                <input type="text" class="panel-form-input" value="{{ $componentTypeLabels[$currentComponentType] ?? ucfirst($currentComponentType) }}" readonly style="background:#f3f4f6; cursor:not-allowed; opacity:0.8;">
+                <input type="hidden" name="component_type" value="{{ $currentComponentType }}">
             </div>
         </div>
+        @endif
 
         <div class="panel-form-row">
             <label class="panel-form-label" for="{{ $modalId }}-asset-name">
@@ -460,7 +463,31 @@
             </div>
         </div>
 
-        {{-- Kode Inventaris — tampil untuk semua kategori --}}
+        {{-- Spesifikasi — hanya untuk PC Component --}}
+        @if ($isComponentPc)
+        <div class="panel-form-row">
+            <label class="panel-form-label" for="{{ $modalId }}-specification">
+                Spesifikasi:
+            </label>
+            <div class="panel-form-field">
+                <input
+                    id="{{ $modalId }}-specification"
+                    type="text"
+                    name="specification"
+                    value="{{ old('specification', $asset->specification ?? '') }}"
+                    placeholder="Contoh: Intel Core i5-12400F, 16GB DDR4..."
+                    class="panel-form-input"
+                    data-progress-field
+                >
+                @error('specification')
+                    <p class="panel-form-error">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+        @endif
+
+        {{-- Kode Inventaris — disembunyikan untuk PC Component --}}
+        @if (!$isComponentPc)
         <div class="panel-form-row js-edit-serial">
             <label class="panel-form-label">Kode Inventaris:</label>
             <div class="panel-form-field">
@@ -470,6 +497,7 @@
                 <p class="panel-form-help">Jumlah kode inventaris mengikuti Total unit. Kosongkan untuk generate otomatis.</p>
             </div>
         </div>
+        @endif
 
         <div class="panel-form-row">
             <label class="panel-form-label" for="{{ $modalId }}-total-asset">
@@ -664,7 +692,7 @@
 
                 /* ─── Populate dropdown serial number berdasarkan asset yang dipilih ─── */
                 async function populateSpvSerialDropdown(serialSelect, assetId) {
-                    serialSelect.innerHTML = '<option value="">— Serial Number —</option>';
+                    serialSelect.innerHTML = '<option value="">— Kode Inventaris —</option>';
                     if (!assetId) return;
 
                     try {
@@ -716,24 +744,23 @@
                     list.appendChild(row);
                 }
 
-                // CREATE: tampil/sembunyi component_type per kartu; kode inventaris selalu tampil.
+                // CREATE: tampil/sembunyi component_type, spec, dan kode inventaris per kartu.
                 function toggleCard(card, cat) {
                     const isComp = cat === 'component-pc';
-                    const ct  = card.querySelector('.js-component-type-field');
-                    const spv = card.querySelector('.js-spv-serial-field');
-                    if (ct) ct.style.display = isComp ? '' : 'none';
+                    const ct     = card.querySelector('.js-component-type-field');
+                    const spec   = card.querySelector('.js-spec-field');
+                    const serial = card.querySelector('.js-serial-field');
+                    const spv    = card.querySelector('.js-spv-serial-field');
+                    if (ct)     ct.style.display     = isComp ? '' : 'none';
+                    if (spec)   spec.style.display   = isComp ? '' : 'none';
+                    if (serial) serial.style.display = isComp ? 'none' : '';
                     if (spv) {
-                        spv.style.display = '';
-                        initSpvPicker(card);
+                        spv.style.display = isComp ? 'none' : '';
+                        if (!isComp) initSpvPicker(card);
                     }
                 }
 
-                // EDIT: tampil/sembunyi per form; kode inventaris selalu tampil.
                 function toggleEdit(form, cat) {
-                    if (!form) return;
-                    const isComp = cat === 'component-pc';
-                    form.querySelectorAll('.js-edit-component-type').forEach(el => el.style.display = isComp ? '' : 'none');
-                    // js-edit-serial selalu tampil (semua kategori punya kode inventaris)
                 }
 
                 document.addEventListener('change', function (e) {

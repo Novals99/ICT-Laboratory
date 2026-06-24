@@ -13,6 +13,7 @@
         ->map(fn ($items) => $items->map(fn ($asset) => [
             'id' => $asset->id,
             'name' => $asset->asset_name,
+            'specification' => $asset->specification,
         ])->values());
 @endphp
 
@@ -295,7 +296,7 @@
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
                                 <th style="padding:8px 14px; text-align:center;">Qty</th>
-                                <th style="padding:8px 14px; text-align:left;">Serial Numbers</th>
+                                <th style="padding:8px 14px; text-align:left;">Kode Inventaris</th>
                                 <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
                             </tr>
                         </thead>
@@ -324,11 +325,26 @@
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
                                 <th style="padding:8px 14px; text-align:center;">Qty</th>
-                                <th style="padding:8px 14px; text-align:left;">Serial Numbers</th>
+                                <th style="padding:8px 14px; text-align:left;">Spesifikasi</th>
                                 <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
                             </tr>
                         </thead>
                         <tbody id="modal_componentpc"></tbody>
+                    </table>
+                </div>
+
+                <div>
+                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">PC Category</p>
+                    <table style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
+                        <thead>
+                            <tr style="background:var(--bg-table-header);">
+                                <th style="padding:8px 14px; text-align:left;">Asset Name</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty</th>
+                                <th style="padding:8px 14px; text-align:left;">Kode Inventaris</th>
+                                <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal_pc"></tbody>
                     </table>
                 </div>
             </div>
@@ -356,9 +372,9 @@
 <div id="serialPickerModal"
     style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
     <div style="background:var(--bg-modal); border-radius:16px; width:100%; max-width:400px; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.2); border:1px solid var(--border-color);">
-        <h4 style="font-size:16px; font-weight:700; color:var(--text-primary); margin-bottom:12px;">Select Serial Numbers</h4>
+        <h4 style="font-size:16px; font-weight:700; color:var(--text-primary); margin-bottom:12px;">Select Kode Inventaris</h4>
         <p style="font-size:12px; color:var(--text-secondary); margin-bottom:16px;">
-            Choose up to <span id="serial_picker_max_qty" style="font-weight:700; color:#4ade80;">1</span> serial numbers.
+            Choose up to <span id="serial_picker_max_qty" style="font-weight:700; color:#4ade80;">1</span> kode inventaris.
         </p>
         <div id="serial_picker_list" style="max-height:200px; overflow-y:auto; margin-bottom:20px; display:flex; flex-direction:column; gap:8px;">
             <!-- Serial checkbox options will go here -->
@@ -412,13 +428,18 @@
             </div>
             <div style="margin-bottom:8px;">
                 <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
-                <select name="items[0][asset_id]" data-asset-select
+                <select name="items[0][asset_id]" data-asset-select onchange="updateItemSpecification(this)"
                     style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     <option value="">Choose asset...</option>
                     @foreach ($assets->where('asset_category', 'electronic') as $asset)
                         <option value="{{ $asset->id }}">{{ $asset->asset_name }}</option>
                     @endforeach
                 </select>
+            </div>
+            <div class="js-item-spec-container" style="margin-bottom:8px; display:none;">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Spesifikasi:</label>
+                <input type="text" class="js-item-spec-input" readonly
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input); opacity:0.8;">
             </div>
             <div>
                 <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
@@ -505,7 +526,38 @@
         const row = categorySelect.closest('.item-row');
         const assetSelect = row.querySelector('[data-asset-select]');
         assetSelect.innerHTML = assetOptions(categorySelect.value);
+        
+        const specContainer = row.querySelector('.js-item-spec-container');
+        const specInput = row.querySelector('.js-item-spec-input');
+        if (categorySelect.value === 'component-pc') {
+            specContainer.style.display = 'block';
+        } else {
+            specContainer.style.display = 'none';
+        }
+        specInput.value = '';
     }
+
+    window.updateItemSpecification = function(assetSelect) {
+        const row = assetSelect.closest('.item-row');
+        const categorySelect = row.querySelector('select[name*="[category]"]');
+        const specContainer = row.querySelector('.js-item-spec-container');
+        const specInput = row.querySelector('.js-item-spec-input');
+        
+        if (categorySelect.value === 'component-pc') {
+            specContainer.style.display = 'block';
+            const assetId = assetSelect.value;
+            const categoryAssets = assets['component-pc'] ?? [];
+            const asset = categoryAssets.find(a => String(a.id) === String(assetId));
+            if (asset && asset.specification) {
+                specInput.value = asset.specification;
+            } else {
+                specInput.value = '';
+            }
+        } else {
+            specContainer.style.display = 'none';
+            specInput.value = '';
+        }
+    };
 
     function addItem() {
         const idx = requestItemIndex++;
@@ -527,10 +579,15 @@
             </div>
             <div style="margin-bottom:8px;">
                 <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name:</label>
-                <select name="items[${idx}][asset_id]" data-asset-select
+                <select name="items[${idx}][asset_id]" data-asset-select onchange="updateItemSpecification(this)"
                     style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     ${assetOptions('electronic')}
                 </select>
+            </div>
+            <div class="js-item-spec-container" style="margin-bottom:8px; display:none;">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Spesifikasi:</label>
+                <input type="text" class="js-item-spec-input" readonly
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input); opacity:0.8;">
             </div>
             <div>
                 <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
@@ -562,6 +619,7 @@
         document.getElementById('modal_electronic').innerHTML = loading;
         document.getElementById('modal_nonelectronic').innerHTML = '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">Loading...</td></tr>';
         document.getElementById('modal_componentpc').innerHTML = loading;
+        document.getElementById('modal_pc').innerHTML = loading;
 
         requestItemSerials = {};
 
@@ -576,12 +634,14 @@
                 window.currentRequestItemsList = [
                     ...(data.electronic || []),
                     ...(data.non_electronic || []),
-                    ...(data.component_pc || [])
+                    ...(data.component_pc || []),
+                    ...(data.pc || [])
                 ];
 
-                document.getElementById('modal_electronic').innerHTML = rowHtml(data.electronic, true);
-                document.getElementById('modal_nonelectronic').innerHTML = rowHtml(data.non_electronic, false);
-                document.getElementById('modal_componentpc').innerHTML = rowHtml(data.component_pc, true);
+                document.getElementById('modal_electronic').innerHTML = rowHtml(data.electronic, true, false);
+                document.getElementById('modal_nonelectronic').innerHTML = rowHtml(data.non_electronic, false, false);
+                document.getElementById('modal_componentpc').innerHTML = rowHtml(data.component_pc, true, true);
+                document.getElementById('modal_pc').innerHTML = rowHtml(data.pc, true, false);
             })
             .catch(() => {
                 const error = '<tr><td colspan="4" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Failed to load data</td></tr>';
@@ -608,7 +668,7 @@
         return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
     }
 
-    function rowHtml(items, hasSerial = false) {
+    function rowHtml(items, hasSerial = false, isComponentPc = false) {
         if (!(items ?? []).length) {
             return `<tr><td colspan="${hasSerial ? 4 : 3}" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">No data</td></tr>`;
         }
@@ -616,30 +676,38 @@
         return items.map(item => {
             let serialCol = '';
             if (hasSerial) {
-                if (!requestItemSerials[item.item_id]) {
-                    requestItemSerials[item.item_id] = (item.serials ?? []).map(s => s.id);
-                }
-                const currentLabels = (item.serials ?? []).map(s => s.serial_number).join(', ') || 'None';
-                const isSpvPending = canReviewRequest && item.status === 'pending';
-                
-                if (isSpvPending) {
+                if (isComponentPc) {
                     serialCol = `
-                        <td style="padding:8px 14px;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span id="serial_labels_${item.item_id}" style="color:var(--text-secondary); font-family:monospace; font-size:12px;">${currentLabels}</span>
-                                <button type="button" onclick="selectItemSerials(${item.item_id}, ${item.asset_id}, ${item.quantity})"
-                                    style="background:#111B4C; border:none; cursor:pointer; color:#fff; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600;">
-                                    Select S/N
-                                </button>
-                            </div>
+                        <td style="padding:8px 14px; color:var(--text-secondary); font-size:12px;">
+                            ${item.specification || 'None'}
                         </td>
                     `;
                 } else {
-                    serialCol = `
-                        <td style="padding:8px 14px; color:var(--text-secondary); font-family:monospace; font-size:12px;">
-                            ${currentLabels}
-                        </td>
-                    `;
+                    if (!requestItemSerials[item.item_id]) {
+                        requestItemSerials[item.item_id] = (item.serials ?? []).map(s => s.id);
+                    }
+                    const currentLabels = (item.serials ?? []).map(s => s.serial_number).join(', ') || 'None';
+                    const isSpvPending = canReviewRequest && item.status === 'pending';
+                    
+                    if (isSpvPending) {
+                        serialCol = `
+                            <td style="padding:8px 14px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span id="serial_labels_${item.item_id}" style="color:var(--text-secondary); font-family:monospace; font-size:12px;">${currentLabels}</span>
+                                    <button type="button" onclick="selectItemSerials(${item.item_id}, ${item.asset_id}, ${item.quantity})"
+                                        style="background:#111B4C; border:none; cursor:pointer; color:#fff; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600;">
+                                        Select S/N
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                    } else {
+                        serialCol = `
+                            <td style="padding:8px 14px; color:var(--text-secondary); font-family:monospace; font-size:12px;">
+                                ${currentLabels}
+                            </td>
+                        `;
+                    }
                 }
             }
 

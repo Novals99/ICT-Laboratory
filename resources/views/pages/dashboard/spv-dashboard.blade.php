@@ -375,7 +375,7 @@
                         <thead>
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:left;">Serial Number</th>
+                                <th style="padding:8px 14px; text-align:left;">Kode Inventaris</th>
                                 <th style="padding:8px 14px; text-align:center;">Qty</th>
                                 <th style="padding:8px 14px; text-align:center;">Condition</th>
                                 <th style="padding:8px 14px; text-align:center;">Status / Action</th>
@@ -460,7 +460,7 @@
                         <thead>
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:left;">Serial Number</th>
+                                <th style="padding:8px 14px; text-align:left;">Kode Inventaris</th>
                                 <th style="padding:8px 14px; text-align:center;">Qty</th>
                                 <th style="padding:8px 14px; text-align:center;">Status / Action</th>
                             </tr>

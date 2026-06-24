@@ -10,16 +10,17 @@ $nonElectronicAssets = $allAssets->filter(fn($a) => $a->asset_category !== 'elec
 $componentPcAssets    = $allAssets->filter(fn($a) => $a->asset_category === 'component-pc')->values(); // ← tambahan
 
 // (#9) Komponen gudang + serial yang available (belum masuk lab) untuk wizard Create Lab
-$wizardComponents = \App\Models\Asset::where('asset_category', 'component-pc')
+$wizardComponents = \App\Models\Asset::whereIn('asset_category', ['component-pc', 'pc'])
     ->whereHas('serialNumbers', fn($q) => $q->where('status', 'available')->whereNull('lab_id'))
     ->with(['serialNumbers' => fn($q) => $q->where('status', 'available')->whereNull('lab_id')->orderBy('serial_number')])
     ->orderBy('asset_name')
     ->get()
-    ->groupBy('component_type')
+    ->groupBy(fn($a) => $a->asset_category === 'pc' ? 'pc' : $a->component_type)
     ->map(fn($assets) => $assets->map(fn($a) => [
-        'asset_id'   => $a->id,
-        'asset_name' => $a->asset_name,
-        'serials'    => $a->serialNumbers->map(fn($s) => ['id' => $s->id, 'serial_number' => $s->serial_number])->values(),
+        'asset_id'      => $a->id,
+        'asset_name'    => $a->asset_name,
+        'specification' => $a->specification,
+        'serials'       => $a->serialNumbers->map(fn($s) => ['id' => $s->id, 'serial_number' => $s->serial_number])->values(),
     ])->values());
 @endphp
 
@@ -386,20 +387,30 @@ function clabGoStep(step) {
 // (#9) Komponen + serial number untuk wizard Create Lab
 const wizardComponents = @json($wizardComponents);
 const wizSlots = [
-    { slot: 'processor',   label: 'Processor',        type: 'processor' },
-    { slot: 'ram',         label: 'RAM',              type: 'ram' },
-    { slot: 'ram2',        label: 'RAM 2 (opsional)', type: 'ram' },
-    { slot: 'ssd',         label: 'SSD',              type: 'ssd' },
-    { slot: 'motherboard', label: 'Motherboard',      type: 'motherboard' },
-    { slot: 'vga',         label: 'VGA',              type: 'vga' },
-    { slot: 'cpu_fan',     label: 'CPU Fan',          type: 'cpu_fan' },
-    { slot: 'powersupply', label: 'Power Supply',     type: 'powersupply' },
+    { slot: 'pc',          label: 'PC (System Unit/Case)', type: 'pc',          isComponent: false },
+    { slot: 'processor',   label: 'Processor',             type: 'processor',   isComponent: true },
+    { slot: 'ram',         label: 'RAM',                   type: 'ram',         isComponent: true },
+    { slot: 'ram2',        label: 'RAM 2 (opsional)',      type: 'ram',         isComponent: true },
+    { slot: 'ssd',         label: 'SSD',                   type: 'ssd',         isComponent: true },
+    { slot: 'hdd',         label: 'HDD (opsional)',        type: 'hdd',         isComponent: true },
+    { slot: 'motherboard', label: 'Motherboard',           type: 'motherboard', isComponent: true },
+    { slot: 'vga',         label: 'VGA',                   type: 'vga',         isComponent: true },
+    { slot: 'cpu_fan',     label: 'CPU Fan',               type: 'cpu_fan',     isComponent: true },
+    { slot: 'powersupply', label: 'Power Supply',          type: 'powersupply', isComponent: true },
 ];
 
 function wizAssetOptions(type) {
     const list = wizardComponents[type] || [];
-    return '<option value="">— Pilih komponen —</option>' +
-        list.map(a => `<option value="${a.asset_id}">${a.asset_name}</option>`).join('');
+    const label = type === 'pc' ? 'Pilih unit PC' : 'Pilih komponen';
+    return `<option value="">— ${label} —</option>` +
+        list.map(a => {
+            if (type === 'pc') {
+                return `<option value="${a.asset_id}">${a.asset_name}</option>`;
+            } else {
+                const val = a.asset_name + (a.specification ? ' - ' + a.specification : '');
+                return `<option value="${val}">${val}</option>`;
+            }
+        }).join('');
 }
 
 function buildCreatePcList(cap) {
@@ -407,20 +418,35 @@ function buildCreatePcList(cap) {
     c.innerHTML = '';
 
     for (let i = 0; i < cap; i++) {
-        const slotsHtml = wizSlots.map(s => `
-            <div data-slot-row>
-                <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">${s.label}</label>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                    <select class="wiz-asset" data-slot="${s.slot}" data-type="${s.type}"
-                            style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
-                        ${wizAssetOptions(s.type)}
-                    </select>
-                    <select name="pcs[${i}][${s.slot}_serial_id]" class="wiz-serial" data-slot="${s.slot}"
-                            style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
-                        <option value="">— Serial Number —</option>
-                    </select>
-                </div>
-            </div>`).join('');
+        const slotsHtml = wizSlots.map(s => {
+            if (!s.isComponent) {
+                return `
+                <div data-slot-row>
+                    <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">${s.label}</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <select class="wiz-asset" data-slot="${s.slot}" data-type="${s.type}"
+                                style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
+                            ${wizAssetOptions(s.type)}
+                        </select>
+                        <select name="pcs[${i}][pc_serial_id]" class="wiz-serial" data-slot="${s.slot}"
+                                style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;" required>
+                            <option value="">— Kode Inventaris —</option>
+                        </select>
+                    </div>
+                </div>`;
+            } else {
+                return `
+                <div data-slot-row>
+                    <label style="font-size:12px; color:#6b7280; display:block; margin-bottom:4px;">${s.label}</label>
+                    <div style="display:block;">
+                        <select name="pcs[${i}][${s.slot}]" class="wiz-asset" data-slot="${s.slot}" data-type="${s.type}"
+                                style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
+                            ${wizAssetOptions(s.type)}
+                        </select>
+                    </div>
+                </div>`;
+            }
+        }).join('');
 
         c.innerHTML += `
         <details style="border:1px solid #e5e7eb; border-radius:10px; margin-bottom:10px;" ${i === 0 ? 'open' : ''}>
@@ -444,8 +470,14 @@ function buildCreatePcList(cap) {
     c.querySelectorAll('.wiz-asset').forEach(assetSel => {
         assetSel.addEventListener('change', () => {
             const row = assetSel.closest('[data-slot-row]');
-            const serialSel = row.querySelector('.wiz-serial');
-            fillWizSerials(serialSel, assetSel.dataset.type, assetSel.value, null);
+            const slot = assetSel.dataset.slot;
+            const type = assetSel.dataset.type;
+            const assetId = assetSel.value;
+            
+            if (slot === 'pc') {
+                const serialSel = row.querySelector('.wiz-serial');
+                fillWizSerials(serialSel, type, assetId, null);
+            }
         });
     });
     c.querySelectorAll('.wiz-serial').forEach(serialSel => {
@@ -454,7 +486,7 @@ function buildCreatePcList(cap) {
 }
 
 function fillWizSerials(serialSel, type, assetId, selectId) {
-    serialSel.innerHTML = '<option value="">— Serial Number —</option>';
+    serialSel.innerHTML = '<option value="">— Kode Inventaris —</option>';
     const list = wizardComponents[type] || [];
     const asset = list.find(a => String(a.asset_id) === String(assetId));
     if (asset) {
@@ -506,18 +538,79 @@ function addCreateAssetRow(type) {
         <div class="grid grid-cols-2 gap-2.5">
             <div>
                 <label class="block text-xs text-gray-500 dark:text-gray-300 mb-1">Asset Name:</label>
-                <select name="lab_assets[${idx}][asset_id]" class="panel-form-input" style="height:36px; padding:0 10px;">
+                <select name="lab_assets[${idx}][asset_id]" class="js-create-lab-asset-select w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md px-2.5 py-2 text-sm box-border">
                     <option value="">Choose asset...</option>
                     ${options.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
                 </select>
             </div>
             <div>
                 <label class="block text-xs text-gray-500 dark:text-gray-300 mb-1">Quantity:</label>
-                <input type="number" name="lab_assets[${idx}][quantity]" value="0" min="0" class="panel-form-input" style="height:36px; padding:0 10px;">
+                <input type="number" name="lab_assets[${idx}][quantity]" value="0" min="0" readonly
+                    class="js-create-lab-asset-qty w-full border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-md px-2.5 py-2 text-sm box-border">
+            </div>
+        </div>
+        <div class="js-create-lab-serials-container mt-2" style="display:none;">
+            <label class="block text-xs text-gray-500 dark:text-gray-300 mb-1">Kode Inventaris:</label>
+            <div class="js-create-lab-serials-list" style="max-height:120px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:6px; padding:6px 10px; background:#fafafa;">
             </div>
         </div>
     `;
     container.appendChild(div);
+
+    // Event listener for asset selection
+    const assetSelect = div.querySelector('.js-create-lab-asset-select');
+    const qtyInput = div.querySelector('.js-create-lab-asset-qty');
+    const serialsContainer = div.querySelector('.js-create-lab-serials-container');
+    const serialsList = div.querySelector('.js-create-lab-serials-list');
+
+    assetSelect.addEventListener('change', function() {
+        const assetId = this.value;
+        qtyInput.value = 0;
+        if (!assetId) {
+            serialsContainer.style.display = 'none';
+            serialsList.innerHTML = '';
+            return;
+        }
+
+        serialsContainer.style.display = 'block';
+        serialsList.innerHTML = '<p style="font-size:12px;color:#6b7280;padding:4px 0;">Loading serial numbers...</p>';
+
+        fetch(`/api/assets/${assetId}/available-spv-serials`)
+            .then(r => r.json())
+            .then(data => {
+                serialsList.innerHTML = '';
+                if (!data.serials || data.serials.length === 0) {
+                    serialsList.innerHTML = '<p style="font-size:12px;color:#6b7280;padding:4px 0;">No serial numbers available in SPV warehouse.</p>';
+                    return;
+                }
+
+                data.serials.forEach(s => {
+                    const lbl = document.createElement('label');
+                    lbl.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:13px; color:#374151; cursor:pointer; margin:2px 0;';
+
+                    const chk = document.createElement('input');
+                    chk.type = 'checkbox';
+                    chk.name = `lab_assets[${idx}][serial_ids][]`;
+                    chk.value = s.id;
+                    chk.className = 'js-create-lab-serial-checkbox';
+                    chk.style.cssText = 'accent-color: #111B4C;';
+                    chk.addEventListener('change', function() {
+                        const checkedCount = serialsList.querySelectorAll('.js-create-lab-serial-checkbox:checked').length;
+                        qtyInput.value = checkedCount;
+                    });
+
+                    const span = document.createElement('span');
+                    span.textContent = `${s.serial_number} (${s.condition})`;
+
+                    lbl.appendChild(chk);
+                    lbl.appendChild(span);
+                    serialsList.appendChild(lbl);
+                });
+            })
+            .catch(() => {
+                serialsList.innerHTML = '<p style="font-size:12px;color:#f87171;padding:4px 0;">Failed to load serial numbers.</p>';
+            });
+    });
 }
 
 document.getElementById('modal-create').addEventListener('click', e => {

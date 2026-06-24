@@ -152,9 +152,12 @@ class LaboratoryController extends Controller
             'capacity'                  => 'required|integer|min:1',
             'pcs'                       => 'required|array|min:1',
             'pcs.*.type_pc'             => 'required|in:dosen,mahasiswa',
+            'pcs.*.pc_serial_id'        => 'nullable|exists:asset_serial_numbers,id',
             'pcs.*.processor'           => 'nullable|string|max:255',
             'pcs.*.ram'                 => 'nullable|string|max:255',
+            'pcs.*.ram2'                => 'nullable|string|max:255',
             'pcs.*.ssd'                 => 'nullable|string|max:255',
+            'pcs.*.hdd'                 => 'nullable|string|max:255',
             'pcs.*.motherboard'         => 'nullable|string|max:255',
             'pcs.*.vga'                 => 'nullable|string|max:255',
             'pcs.*.cpu_fan'             => 'nullable|string|max:255',
@@ -163,6 +166,7 @@ class LaboratoryController extends Controller
             'pcs.*.ram_serial_id'         => 'nullable|exists:asset_serial_numbers,id',
             'pcs.*.ram2_serial_id'        => 'nullable|exists:asset_serial_numbers,id',
             'pcs.*.ssd_serial_id'         => 'nullable|exists:asset_serial_numbers,id',
+            'pcs.*.hdd_serial_id'         => 'nullable|exists:asset_serial_numbers,id',
             'pcs.*.motherboard_serial_id' => 'nullable|exists:asset_serial_numbers,id',
             'pcs.*.vga_serial_id'         => 'nullable|exists:asset_serial_numbers,id',
             'pcs.*.cpu_fan_serial_id'     => 'nullable|exists:asset_serial_numbers,id',
@@ -170,6 +174,8 @@ class LaboratoryController extends Controller
             'lab_assets'                => 'nullable|array',
             'lab_assets.*.asset_id'     => 'nullable|exists:assets,id',
             'lab_assets.*.quantity'     => 'nullable|integer|min:0',
+            'lab_assets.*.serial_ids'   => 'nullable|array',
+            'lab_assets.*.serial_ids.*' => 'nullable|exists:asset_serial_numbers,id',
         ]);
 
         $lab = DB::transaction(function () use ($validated) {
@@ -201,22 +207,46 @@ class LaboratoryController extends Controller
                     $qty   = $a['quantity'] ?? 0;
 
                     if ($asset && $qty > 0) {
-                        if ($asset->total_good < $qty) {
-                            return back()
-                                ->withInput()
-                                ->withErrors(['lab_assets' => "Stok good untuk {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good})."]);
+                        $isSerialized = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc', 'non-electronic']);
+                        if ($isSerialized) {
+                            $serialIds = $a['serial_ids'] ?? [];
+                            $validSerials = \App\Models\AssetSerialNumber::where('asset_id', $asset->id)
+                                ->whereNull('lab_id')
+                                ->whereIn('id', $serialIds)
+                                ->get();
+                                
+                            $addedCount = $validSerials->count();
+                            if ($addedCount > 0) {
+                                \App\Models\AssetSerialNumber::whereIn('id', $validSerials->pluck('id'))->update([
+                                    'lab_id' => $lab->id,
+                                    'status' => 'available'
+                                ]);
+                                
+                                $asset->decrement('total_good', $addedCount);
+                                $asset->refresh();
+                                $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
+                            }
+                            $qty = $addedCount;
+                        } else {
+                            if ($asset->total_good < $qty) {
+                                return back()
+                                    ->withInput()
+                                    ->withErrors(['lab_assets' => "Stok good untuk {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good})."]);
+                            }
+
+                            $asset->decrement('total_good', $qty);
+                            $asset->refresh();
+                            $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
                         }
 
-                        $asset->decrement('total_good', $qty);
-                        $asset->refresh();
-                        $asset->update(['total_asset' => $asset->total_good + $asset->total_damaged + $asset->total_loss]);
-
-                        $sync[$a['asset_id']] = [
-                            'total_asset_lab'     => $qty,
-                            'total_good_lab'      => $qty,
-                            'total_damaged_lab'   => 0,
-                            'total_loss_lab'      => 0,
-                        ];
+                        if ($qty > 0) {
+                            $sync[$a['asset_id']] = [
+                                'total_asset_lab'     => $qty,
+                                'total_good_lab'      => $qty,
+                                'total_damaged_lab'   => 0,
+                                'total_loss_lab'      => 0,
+                            ];
+                        }
                     }
                 }
             }
@@ -280,6 +310,10 @@ class LaboratoryController extends Controller
         foreach (array_keys(Pc::COMPONENT_SLOTS) as $slot) {
             $serialId = $pcData[$slot . '_serial_id'] ?? null;
             if (! $serialId) {
+                if (isset($pcData[$slot])) {
+                    $pc->{$slot} = $pcData[$slot];
+                    $pc->{$slot . '_serial_id'} = null;
+                }
                 continue;
             }
 
@@ -330,7 +364,9 @@ class LaboratoryController extends Controller
             'pcs.*.status_pc'           => 'required|in:active,inactive',
             'pcs.*.processor'           => 'nullable|string|max:255',
             'pcs.*.ram'                 => 'nullable|string|max:255',
+            'pcs.*.ram2'                => 'nullable|string|max:255',
             'pcs.*.ssd'                 => 'nullable|string|max:255',
+            'pcs.*.hdd'                 => 'nullable|string|max:255',
             'pcs.*.motherboard'         => 'nullable|string|max:255',
             'pcs.*.vga'                 => 'nullable|string|max:255',
             'pcs.*.cpu_fan'             => 'nullable|string|max:255',
@@ -403,7 +439,7 @@ class LaboratoryController extends Controller
                             : 0;
 
                         if ($asset) {
-                            $isSerialized = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc']);
+                            $isSerialized = in_array($asset->asset_category, ['electronic', 'pc', 'non-electronic']);
                             
                             if ($isSerialized) {
                                 $serialIds = $a['serial_ids'] ?? [];
@@ -469,7 +505,7 @@ class LaboratoryController extends Controller
                         if (!in_array($assetId, $newAssetIds)) {
                             $asset = Asset::find($assetId);
                             if ($asset) {
-                                $isSerialized = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc']);
+                                $isSerialized = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc', 'non-electronic']);
                                 if ($isSerialized) {
                                     $labSerials = \App\Models\AssetSerialNumber::where('asset_id', $assetId)
                                         ->where('lab_id', $laboratory->id)
@@ -597,6 +633,7 @@ class LaboratoryController extends Controller
                         $pc->processor,
                         $pc->ram,
                         $pc->ssd,
+                        $pc->hdd,
                         $pc->motherboard,
                         $pc->vga,
                         $pc->cpu_fan,

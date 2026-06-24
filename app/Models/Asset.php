@@ -15,6 +15,7 @@ class Asset extends Model
         'sku',
         'asset_category',
         'component_type',
+        'specification',
         'total_asset',
         'total_good',
         'total_damaged',
@@ -48,6 +49,7 @@ class Asset extends Model
                 'processor'   => 'CPU',
                 'ram'         => 'RAM',
                 'ssd'         => 'SSD',
+                'hdd'         => 'HDD',
                 'motherboard' => 'MBO',
                 'vga'         => 'VGA',
                 'cpu_fan'     => 'FAN',
@@ -94,6 +96,6 @@ class Asset extends Model
      */
     public function usesSerial(): bool
     {
-        return in_array($this->asset_category, ['electronic', 'component-pc', 'pc'], true);
+        return in_array($this->asset_category, ['electronic', 'pc', 'non-electronic'], true);
     }
 }

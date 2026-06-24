@@ -28,21 +28,25 @@ return new class extends Migration
         });
 
         // MySQL: perluas enum untuk menambahkan kategori 'pc'
-        DB::statement("
-            ALTER TABLE assets
-            MODIFY COLUMN asset_category
-            ENUM('electronic', 'non-electronic', 'component-pc', 'pc') NOT NULL
-        ");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("
+                ALTER TABLE assets
+                MODIFY COLUMN asset_category
+                ENUM('electronic', 'non-electronic', 'component-pc', 'pc') NOT NULL
+            ");
+        }
     }
 
     public function down(): void
     {
         // Kembalikan enum ke kondisi semula (pastikan tidak ada row kategori 'pc' tersisa)
-        DB::statement("
-            ALTER TABLE assets
-            MODIFY COLUMN asset_category
-            ENUM('electronic', 'non-electronic', 'component-pc') NOT NULL
-        ");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("
+                ALTER TABLE assets
+                MODIFY COLUMN asset_category
+                ENUM('electronic', 'non-electronic', 'component-pc') NOT NULL
+            ");
+        }
 
         Schema::table('assets', function (Blueprint $table) {
             $table->dropUnique(['sku']);

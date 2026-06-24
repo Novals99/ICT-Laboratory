@@ -114,7 +114,7 @@ class ReturnRequestController extends Controller
 
         $category = $request->query('category');
 
-        $query = AssetLab::with('asset:id,asset_name,asset_category')
+        $query = AssetLab::with('asset:id,asset_name,asset_category,specification')
             ->where('lab_id', $labId)
             ->where('total_asset_lab', '>', 0);
 
@@ -125,7 +125,7 @@ class ReturnRequestController extends Controller
         $assets = $query->get()
             ->map(fn($item) => [
                 'asset_id'      => $item->asset_id,
-                'name'          => $item->asset->asset_name,
+                'name'          => $item->asset->asset_name . ($item->asset->specification ? ' - ' . $item->asset->specification : ''),
                 'category'      => $item->asset->asset_category,
                 'stock'         => $item->total_good_lab,    // default = good (dipakai form Transfer)
                 'stock_good'    => $item->total_good_lab,
@@ -134,6 +134,93 @@ class ReturnRequestController extends Controller
             ]);
 
         return response()->json($assets);
+    }
+
+    public function getLabPcs(int $labId)
+    {
+        // Security: cek akses user ke lab ini
+        if (!$this->isSPV()) {
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
+            if (!$userLabIds->contains($labId)) {
+                return response()->json(['error' => 'Akses ditolak.'], 403);
+            }
+        }
+
+        $pcs = \App\Models\Pc::where('lab_id', $labId)
+            ->get(['id', 'sku', 'type_pc']);
+
+        return response()->json($pcs);
+    }
+
+    public function getPcComponents(int $pcId)
+    {
+        $pc = \App\Models\Pc::findOrFail($pcId);
+
+        // Security check
+        if (!$this->isSPV()) {
+            $userLabIds = Auth::user()->labs()->pluck('laboratories.id');
+            if (!$userLabIds->contains($pc->lab_id)) {
+                return response()->json(['error' => 'Akses ditolak.'], 403);
+            }
+        }
+
+        $components = [];
+
+        // PC unit itself
+        if ($pc->asset_id) {
+            $pcAsset = \App\Models\Asset::find($pc->asset_id);
+            $components[] = [
+                'asset_id' => $pc->asset_id,
+                'name' => $pcAsset ? $pcAsset->asset_name . ($pcAsset->specification ? ' - ' . $pcAsset->specification : '') : 'PC Box',
+                'category' => 'pc',
+                'slot' => 'pc',
+            ];
+        }
+
+        // Other slots
+        $slots = ['processor', 'ram', 'ram2', 'ssd', 'hdd', 'motherboard', 'vga', 'cpu_fan', 'powersupply'];
+        foreach ($slots as $slot) {
+            $val = $pc->{$slot};
+            if (!$val) continue;
+
+            $serialId = $pc->{$slot . '_serial_id'};
+            $assetId = null;
+            $assetName = $val;
+            $category = 'component-pc';
+
+            if ($serialId) {
+                $serial = \App\Models\AssetSerialNumber::with('asset')->find($serialId);
+                if ($serial) {
+                    $assetId = $serial->asset_id;
+                    $assetName = $serial->asset->asset_name . ($serial->asset->specification ? ' - ' . $serial->asset->specification : '');
+                    $category = $serial->asset->asset_category;
+                }
+            } else {
+                // Try to match by text to find the asset id
+                $asset = \App\Models\Asset::where('asset_category', 'component-pc')
+                    ->get()
+                    ->first(function($a) use ($val) {
+                        $combined = $a->asset_name . ($a->specification ? ' - ' . $a->specification : '');
+                        return $combined === $val || $a->asset_name === $val;
+                    });
+                if ($asset) {
+                    $assetId = $asset->id;
+                    $assetName = $asset->asset_name . ($asset->specification ? ' - ' . $asset->specification : '');
+                    $category = $asset->asset_category;
+                }
+            }
+
+            if ($assetId) {
+                $components[] = [
+                    'asset_id' => $assetId,
+                    'name' => $assetName,
+                    'category' => $category,
+                    'slot' => $slot,
+                ];
+            }
+        }
+
+        return response()->json($components);
     }
 
     // ── STORE ─────────────────────────────────────────────────────────────────
@@ -429,6 +516,7 @@ class ReturnRequestController extends Controller
             'items' => 'nullable|array',
             'items.*.id' => 'required|exists:return_request_items,id',
             'items.*.status' => 'required|in:approved,rejected,pending',
+            'items.*.quantity_approved' => 'nullable|integer|min:0',
         ]);
 
         try {
@@ -438,7 +526,8 @@ class ReturnRequestController extends Controller
                         ->where('return_request_id', $returnRequest->id)
                         ->first();
                     if ($item && $item->status === 'pending') {
-                        $this->mutationService->processReturnRequestItem($item, $itemData['status']);
+                        $qtyApp = ($itemData['status'] === 'approved') ? ($itemData['quantity_approved'] ?? $item->quantity_requested) : 0;
+                        $this->mutationService->processReturnRequestItem($item, $itemData['status'], $qtyApp);
                     }
                 }
 
@@ -449,7 +538,14 @@ class ReturnRequestController extends Controller
                 $approvedCount = $allItems->where('status', 'approved')->count();
                 $rejectedCount = $allItems->where('status', 'rejected')->count();
 
-                if ($pendingCount > 0) {
+                $hasDebt = false;
+                foreach ($allItems as $item) {
+                    if ($item->status === 'approved' && $item->quantity_approved < $item->quantity_requested) {
+                        $hasDebt = true;
+                    }
+                }
+
+                if ($pendingCount > 0 || $hasDebt) {
                     $returnRequest->update([
                         'status' => 'partial',
                         'approved_by' => Auth::id(),

@@ -91,6 +91,7 @@ class RequestLabController extends Controller
             'electronic' => $this->itemsForCategory($labRequest, 'electronic'),
             'non_electronic' => $this->itemsForCategory($labRequest, 'non-electronic'),
             'component_pc' => $this->itemsForCategory($labRequest, 'component-pc'),
+            'pc' => $this->itemsForCategory($labRequest, 'pc'),
         ]);
     }
 
@@ -107,6 +108,8 @@ class RequestLabController extends Controller
             'items.*' => ['nullable', 'array'],
             'items.*.asset_id' => ['nullable', 'exists:assets,id'],
             'items.*.total_request' => ['nullable', 'integer', 'min:1'],
+            'items.*.category' => ['nullable', 'string', 'in:electronic,non-electronic,component-pc,pc'],
+            'items.*.serial_id' => ['nullable', 'exists:asset_serial_numbers,id'],
             'items.*.*.asset_id' => ['nullable', 'exists:assets,id'],
             'items.*.*.total_request' => ['nullable', 'integer', 'min:1'],
         ]);
@@ -137,11 +140,17 @@ class RequestLabController extends Controller
             ]);
 
             foreach ($items as $item) {
-                $labRequest->request_items()->create([
+                $reqItem = $labRequest->request_items()->create([
                     'asset_id' => $item['asset_id'],
                     'total_request' => $item['total_request'],
                     'status' => 'pending',
                 ]);
+
+                if (!empty($item['category']) && $item['category'] === 'component-pc' && !empty($item['serial_id'])) {
+                    \App\Models\AssetSerialNumber::where('id', $item['serial_id'])->update([
+                        'request_item_id' => $reqItem->id
+                    ]);
+                }
             }
 
             ActivityLog::create([
@@ -170,30 +179,46 @@ class RequestLabController extends Controller
         $labRequest = RequestLab::findOrFail($item->request_lab_id);
 
         $asset = $item->asset;
-        $usesSerial = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc']);
+        $usesSerial = in_array($asset->asset_category, ['electronic', 'pc', 'non-electronic']);
 
         if ($validated['status'] === 'approved' && $usesSerial) {
-            $serialIds = $validated['serial_ids'] ?? [];
-            if (count($serialIds) > $item->total_request) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Number of selected serial numbers cannot exceed the requested quantity ({$item->total_request})."
-                ], 422);
-            }
-            
-            // Check that they match the asset and are available in SPV warehouse (lab_id is null) or already assigned to this request item
-            $validSerialsCount = \App\Models\AssetSerialNumber::where('asset_id', $item->asset_id)
-                ->where(function($q) use ($item) {
-                    $q->whereNull('lab_id')
-                      ->orWhere('request_item_id', $item->id);
-                })
-                ->whereIn('id', $serialIds)
-                ->count();
-            if ($validSerialsCount !== count($serialIds)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Some selected serial numbers are invalid or no longer available."
-                ], 422);
+            if ($asset->asset_category === 'component-pc') {
+                $serialIds = \App\Models\AssetSerialNumber::where('asset_id', $item->asset_id)
+                    ->whereNull('lab_id')
+                    ->where('status', 'available')
+                    ->limit($item->total_request)
+                    ->pluck('id')
+                    ->toArray();
+                if (count($serialIds) < $item->total_request) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Stok serial number untuk {$asset->asset_name} tidak mencukupi di gudang (butuh {$item->total_request})."
+                    ], 422);
+                }
+                $validated['serial_ids'] = $serialIds;
+            } else {
+                $serialIds = $validated['serial_ids'] ?? [];
+                if (count($serialIds) > $item->total_request) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Number of selected serial numbers cannot exceed the requested quantity ({$item->total_request})."
+                    ], 422);
+                }
+                
+                // Check that they match the asset and are available in SPV warehouse (lab_id is null) or already assigned to this request item
+                $validSerialsCount = \App\Models\AssetSerialNumber::where('asset_id', $item->asset_id)
+                    ->where(function($q) use ($item) {
+                        $q->whereNull('lab_id')
+                          ->orWhere('request_item_id', $item->id);
+                    })
+                    ->whereIn('id', $serialIds)
+                    ->count();
+                if ($validSerialsCount !== count($serialIds)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Some selected serial numbers are invalid or no longer available."
+                    ], 422);
+                }
             }
         }
 
@@ -241,7 +266,7 @@ class RequestLabController extends Controller
                 foreach ($labRequest->request_items as $item) {
                     $serialIds = [];
                     $asset = $item->asset;
-                    $usesSerial = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc']);
+                    $usesSerial = in_array($asset->asset_category, ['electronic', 'pc', 'non-electronic']);
                     if ($validated['status'] === 'approved' && $usesSerial) {
                         $serialIds = \App\Models\AssetSerialNumber::where('asset_id', $item->asset_id)
                             ->whereNull('lab_id')
@@ -361,6 +386,7 @@ class RequestLabController extends Controller
                 'item_id' => $item->id,
                 'asset_id' => $item->asset_id,
                 'asset_name' => $item->asset->asset_name ?? '-',
+                'specification' => $item->asset->specification ?? '-',
                 'quantity' => $item->total_request,
                 'status' => $item->status ?? 'pending',
                 'category' => $category,
