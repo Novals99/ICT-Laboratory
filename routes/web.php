@@ -15,6 +15,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ReturnRequestController;
 use App\Http\Controllers\TransferRequestController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ScanCodeController;
 use Illuminate\Support\Facades\Route;
 
 // ── PUBLIC ROUTES ────────────────────────────────────────────────────
@@ -23,6 +24,10 @@ Route::get('/', function () {
 });
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Scan Code
+    Route::get('/scan-code', [ScanCodeController::class, 'index'])->name('scan-code.index');
+    Route::post('/scan-code/lookup', [ScanCodeController::class, 'lookup'])->name('scan-code.lookup');
 
     // Profile Management
     Route::prefix('profile')->name('profile.')->group(function () {
