@@ -115,6 +115,7 @@
                                         </x-table.action> --}}
 
                                         {{-- qr code --}}
+                                        @if ($asset->asset_category !== 'component-pc')
                                         <x-table.action type="button" variant="view" title="QR Code"
                                             onclick="openQrModal({{ $asset->id }}, '{{ addslashes($asset->asset_name) }}', '{{ $asset->sku }}', '{{ $asset->asset_category }}')"
                                             style="color:#2563eb;">
@@ -129,6 +130,7 @@
                                                 <path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/>
                                             </svg>
                                         </x-table.action>
+                                        @endif
 
                                         {{-- edit --}}
                                         <x-table.action type="button" variant="edit" title="Edit"

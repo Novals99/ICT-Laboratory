@@ -52,7 +52,6 @@
 
     <div id="assetItemsWrapper" class="asset-items-wrapper">
         <div class="asset-item-card" data-asset-item>
-            {{-- TODO: sejajarin tabs sama x --}}
             <button
                 type="button"
                 class="asset-remove-item-btn"
@@ -62,19 +61,7 @@
                 &times;
             </button>
 
-            {{-- tabs --}}
-            <div class="asset-tabs" data-asset-tabs>
-                <button type="button" class="asset-tab-btn is-active" data-asset-tab-target="info">
-                    Asset Information
-                </button>
-
-                <button type="button" class="asset-tab-btn" data-asset-tab-target="stock">
-                    Quantity & Stock
-                </button>
-            </div>
-
-            {{-- tab: asset information --}}
-            <div class="asset-tab-panel is-active" data-asset-tab-panel="info">
+            <div class="asset-info-panel">
                 <div class="asset-item-grid">
                     <div class="asset-field asset-field-name">
                         <label class="asset-field-label">Asset Name:</label>
@@ -142,21 +129,21 @@
                     </div>
 
                     <div class="asset-field asset-field-source">
-                        <label class="asset-field-label">Source:</label>
-                        <input
-                            type="text"
+                        <label class="asset-field-label">Source <span class="text-red-500">*</span></label>
+                        <select
                             name="items[0][source]"
-                            value="{{ old('items.0.source') }}"
-                            placeholder="Pembelian / Hibah / Lab"
                             class="panel-form-input"
                             data-progress-field
+                            required
                         >
+                            <option value="Pengadaan" {{ old('items.0.source') === 'Pengadaan' ? 'selected' : '' }}>Pengadaan</option>
+                            <option value="Pembelian" {{ old('items.0.source') === 'Pembelian' ? 'selected' : '' }}>Pembelian</option>
+                        </select>
 
                         @error('items.0.source')
                             <p class="panel-form-error">{{ $message }}</p>
                         @enderror
                     </div>
-
 
                     {{-- Kode Inventaris — disembunyikan untuk PC Component, tampil untuk kategori lain --}}
                     <div class="asset-field js-serial-field">
@@ -164,6 +151,48 @@
                         <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
                         <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Tambah Kode</button>
                         <p class="panel-form-help">Boleh dikosongkan — akan ter-generate otomatis.</p>
+                    </div>
+
+                    <div class="js-total-good-wrapper" style="display:contents;">
+                        <div class="asset-field">
+                            <label class="asset-field-label">Total <span class="text-red-500">*</span></label>
+                            <input
+                                type="number"
+                                name="items[0][total_asset]"
+                                value="{{ old('items.0.total_asset', 0) }}"
+                                placeholder="0"
+                                class="panel-form-input"
+                                data-progress-field
+                                data-validate="asset-number"
+                                data-stock-total
+                                min="0"
+                                required
+                            >
+                            @error('items.0.total_asset')
+                                <p class="panel-form-error">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="asset-field">
+                            <label class="asset-field-label">Good <span class="text-red-500">*</span></label>
+                            <input
+                                type="number"
+                                name="items[0][total_good]"
+                                value="{{ old('items.0.total_good', 0) }}"
+                                placeholder="0"
+                                class="panel-form-input"
+                                data-progress-field
+                                data-validate="asset-number"
+                                data-stock-good
+                                min="0"
+                                required
+                            >
+                            @error('items.0.total_good')
+                                <p class="panel-form-error">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <input type="hidden" name="items[0][total_damaged]" value="0" data-stock-damaged>
+                        <input type="hidden" name="items[0][total_loss]" value="0">
                     </div>
 
                     <div class="asset-field asset-field-notes">
@@ -181,59 +210,6 @@
                     </div>
                 </div>
             </div>
-
-            {{-- tab: quantity & stock --}}
-            <div class="asset-tab-panel" data-asset-tab-panel="stock">
-                <div class="asset-stock-grid">
-                    <div class="asset-field">
-                        <label class="asset-field-label">Total:</label>
-                        <input
-                            type="number"
-                            name="items[0][total_asset]"
-                            value="{{ old('items.0.total_asset', 0) }}"
-                            placeholder="0"
-                            class="panel-form-input"
-                            data-progress-field
-                            data-validate="asset-number"
-                            data-stock-total
-                            min="0"
-                            required
-                        >
-
-                        @error('items.0.total_asset')
-                            <p class="panel-form-error">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div class="asset-field">
-                        <label class="asset-field-label">Good:</label>
-                        <input
-                            type="number"
-                            name="items[0][total_good]"
-                            value="{{ old('items.0.total_good', 0) }}"
-                            placeholder="0"
-                            class="panel-form-input"
-                            data-progress-field
-                            data-validate="asset-number"
-                            data-stock-good
-                            min="0"
-                            required
-                        >
-
-                        @error('items.0.total_good')
-                            <p class="panel-form-error">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    {{-- (#17) Damaged & Loss disembunyikan — aset baru pasti good --}}
-                    <input type="hidden" name="items[0][total_damaged]" value="0" data-stock-damaged>
-                    <input type="hidden" name="items[0][total_loss]" value="0">
-                </div>
-
-                <p class="asset-stock-helper">
-                    Good akan mengikuti Total. Aset baru otomatis berkondisi good.
-                </p>
-            </div>
         </div>
     </div>
 
@@ -249,17 +225,7 @@
                 &times;
             </button>
 
-            <div class="asset-tabs" data-asset-tabs>
-                <button type="button" class="asset-tab-btn is-active" data-asset-tab-target="info">
-                    Asset Information
-                </button>
-
-                <button type="button" class="asset-tab-btn" data-asset-tab-target="stock">
-                    Quantity & Stock
-                </button>
-            </div>
-
-            <div class="asset-tab-panel is-active" data-asset-tab-panel="info">
+            <div class="asset-info-panel">
                 <div class="asset-item-grid">
                     <div class="asset-field asset-field-name">
                         <label class="asset-field-label">Asset Name:</label>
@@ -317,16 +283,17 @@
                     </div>
 
                     <div class="asset-field asset-field-source">
-                        <label class="asset-field-label">Source:</label>
-                        <input
-                            type="text"
+                        <label class="asset-field-label">Source <span class="text-red-500">*</span></label>
+                        <select
                             data-name="source"
-                            placeholder="Pembelian / Hibah / Lab"
                             class="panel-form-input"
                             data-progress-field
+                            required
                         >
+                            <option value="Pengadaan">Pengadaan</option>
+                            <option value="Pembelian">Pembelian</option>
+                        </select>
                     </div>
-
 
                     {{-- Kode Inventaris — disembunyikan untuk PC Component --}}
                     <div class="asset-field js-serial-field">
@@ -334,6 +301,42 @@
                         <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
                         <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Tambah Kode</button>
                         <p class="panel-form-help">Boleh dikosongkan — akan ter-generate otomatis.</p>
+                    </div>
+
+                    <div class="js-total-good-wrapper" style="display:contents;">
+                        <div class="asset-field">
+                            <label class="asset-field-label">Total <span class="text-red-500">*</span></label>
+                            <input
+                                type="number"
+                                data-name="total_asset"
+                                value="0"
+                                placeholder="0"
+                                class="panel-form-input"
+                                data-progress-field
+                                data-validate="asset-number"
+                                data-stock-total
+                                min="0"
+                                required
+                            >
+                        </div>
+
+                        <div class="asset-field">
+                            <label class="asset-field-label">Good <span class="text-red-500">*</span></label>
+                            <input
+                                type="number"
+                                data-name="total_good"
+                                value="0"
+                                placeholder="0"
+                                class="panel-form-input"
+                                data-progress-field
+                                data-validate="asset-number"
+                                data-stock-good
+                                min="0"
+                                required
+                            >
+                        </div>
+                        <input type="hidden" data-name="total_damaged" value="0" data-stock-damaged>
+                        <input type="hidden" data-name="total_loss" value="0">
                     </div>
 
                     <div class="asset-field asset-field-notes">
@@ -346,50 +349,6 @@
                         ></textarea>
                     </div>
                 </div>
-            </div>
-
-            <div class="asset-tab-panel" data-asset-tab-panel="stock">
-                <div class="asset-stock-grid">
-                    <div class="asset-field">
-                        <label class="asset-field-label">Total:</label>
-                        <input
-                            type="number"
-                            data-name="total_asset"
-                            value="0"
-                            placeholder="0"
-                            class="panel-form-input"
-                            data-progress-field
-                            data-validate="asset-number"
-                            data-stock-total
-                            min="0"
-                            required
-                        >
-                    </div>
-
-                    <div class="asset-field">
-                        <label class="asset-field-label">Good:</label>
-                        <input
-                            type="number"
-                            data-name="total_good"
-                            value="0"
-                            placeholder="0"
-                            class="panel-form-input"
-                            data-progress-field
-                            data-validate="asset-number"
-                            data-stock-good
-                            min="0"
-                            required
-                        >
-                    </div>
-
-                    {{-- (#17) Damaged & Loss disembunyikan — aset baru pasti good --}}
-                    <input type="hidden" data-name="total_damaged" value="0" data-stock-damaged>
-                    <input type="hidden" data-name="total_loss" value="0">
-                </div>
-
-                <p class="asset-stock-helper">
-                    Good akan mengikuti Total. Aset baru otomatis berkondisi good.
-                </p>
             </div>
         </div>
     </template>
@@ -619,19 +578,21 @@
                 @enderror
             </div> --}}
 
-            <label class="panel-form-label">Source</label>
-            <input
-                type="text"
-                name="source"
-                value="{{ old('source') }}"
-                class="panel-form-input"
-                placeholder="Pembelian / Hibah / Lab"
-            >
-
-            @error('source')
-                <p class="panel-form-error">{{ $message }}</p>
-            @enderror
-
+            <label class="panel-form-label">Source <span class="text-red-500">*</span></label>
+            <div class="panel-form-field">
+                <select
+                    name="source"
+                    class="panel-form-input"
+                    data-progress-field
+                    required
+                >
+                    <option value="Pengadaan" {{ old('source', $asset->source ?? '') === 'Pengadaan' ? 'selected' : '' }}>Pengadaan</option>
+                    <option value="Pembelian" {{ old('source', $asset->source ?? '') === 'Pembelian' ? 'selected' : '' }}>Pembelian</option>
+                </select>
+                @error('source')
+                    <p class="panel-form-error">{{ $message }}</p>
+                @enderror
+            </div>
         </div>
 
         <div class="panel-form-row">
@@ -657,6 +618,77 @@
 </x-modal.index>
 
 @once
+    {{-- QR Scanner Overlay --}}
+    <div id="modal-qr-scanner-overlay" onclick="if(event.target===this) stopModalQrScanner()" style="display:none;">
+        <div class="qr-scanner-container" onclick="event.stopPropagation()">
+            <div class="qr-scanner-header">
+                <div class="qr-scanner-title">Scan QR Code</div>
+                <button type="button" class="qr-scanner-close" onclick="stopModalQrScanner()">&times;</button>
+            </div>
+            <div id="modal-qr-reader"></div>
+            <p style="font-size: .8rem; color: var(--text-muted); text-align: center; margin: 0;">
+                Arahkan QR Code ke kamera untuk memindai otomatis.
+            </p>
+        </div>
+    </div>
+
+    @push('styles')
+        <style>
+            #modal-qr-scanner-overlay {
+                position: fixed;
+                top: 0; left: 0; width: 100vw; height: 100vh;
+                background: rgba(0, 0, 0, 0.7);
+                backdrop-filter: blur(8px);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 99999;
+            }
+            .qr-scanner-container {
+                background: var(--bg-card, #fff);
+                border: 1px solid var(--border-color, #e5e7eb);
+                border-radius: 16px;
+                width: 90%;
+                max-width: 480px;
+                padding: 24px;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            .qr-scanner-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .qr-scanner-title {
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: var(--text-primary, #111b4c);
+            }
+            .qr-scanner-close {
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                cursor: pointer;
+                color: var(--text-muted, #9ca3af);
+            }
+            .qr-scanner-close:hover {
+                color: var(--text-primary, #111b4c);
+            }
+            #modal-qr-reader {
+                width: 100%;
+                border-radius: 12px;
+                overflow: hidden;
+                background: #000;
+                min-height: 280px;
+            }
+            #modal-qr-reader video {
+                border-radius: 12px;
+            }
+        </style>
+    @endpush
+
     @push('scripts')
         <script>
             // (#16/#17) Logika serial number & component_type untuk modal Asset.
@@ -727,12 +759,21 @@
                     input.type = 'text';
                     input.name = name;
                     input.value = value || '';
-                    input.placeholder = 'Kode inventaris...';
+                    input.placeholder = 'Scan QR Code...';
                     input.className = 'panel-form-input';
                     input.style.flex = '1';
-                    if (locked) input.readOnly = true;
+                    input.readOnly = true;
                     row.appendChild(input);
+
                     if (!locked) {
+                        const qrBtn = document.createElement('button');
+                        qrBtn.type = 'button';
+                        qrBtn.className = 'panel-btn-secondary';
+                        qrBtn.style.padding = '0 12px';
+                        qrBtn.innerHTML = '📷';
+                        qrBtn.onclick = () => startQrScannerForInput(input);
+                        row.appendChild(qrBtn);
+
                         const btn = document.createElement('button');
                         btn.type = 'button';
                         btn.className = 'panel-btn-secondary';
@@ -757,6 +798,16 @@
                     if (spv) {
                         spv.style.display = isComp ? 'none' : '';
                         if (!isComp) initSpvPicker(card);
+                    }
+
+                    // Dynamically move total-good wrapper
+                    const wrapper = card.querySelector('.js-total-good-wrapper');
+                    if (wrapper) {
+                        if (isComp) {
+                            if (spec) spec.after(wrapper);
+                        } else {
+                            if (serial) serial.after(wrapper);
+                        }
                     }
                 }
 
@@ -816,6 +867,81 @@
                             .catch(() => {});
                     });
                 });
+
+                /* ─── QR Code Scanner ─── */
+                let modalHtml5QrCode = null;
+                let activeQrInput = null;
+
+                window.startQrScannerForInput = async function(inputEl) {
+                    activeQrInput = inputEl;
+                    const overlay = document.getElementById('modal-qr-scanner-overlay');
+                    if (!overlay) return;
+
+                    overlay.style.display = 'flex';
+
+                    try {
+                        if (typeof Html5Qrcode === 'undefined') {
+                            document.getElementById('modal-qr-reader').innerHTML = 
+                                '<div style="color:#fff; display:flex; align-items:center; justify-content:center; height:280px; font-size:13px;">Loading camera library...</div>';
+                            
+                            await new Promise((resolve, reject) => {
+                                const script = document.createElement('script');
+                                script.src = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
+                                script.onload = resolve;
+                                script.onerror = () => reject(new Error("Gagal memuat library scanner."));
+                                document.head.appendChild(script);
+                            });
+                            
+                            document.getElementById('modal-qr-reader').innerHTML = '';
+                        }
+
+                        modalHtml5QrCode = new Html5Qrcode("modal-qr-reader");
+                        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+                        modalHtml5QrCode.start(
+                            { facingMode: "environment" },
+                            config,
+                            (decodedText, decodedResult) => {
+                                if (activeQrInput) {
+                                    activeQrInput.value = decodedText;
+                                    activeQrInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                    activeQrInput.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                                stopModalQrScanner();
+                            },
+                            (errorMessage) => {
+                                // ignore errors
+                            }
+                        ).catch(err => {
+                            console.error("Unable to start scanner", err);
+                            document.getElementById('modal-qr-reader').innerHTML = 
+                                `<div style="color:#f87171; display:flex; align-items:center; justify-content:center; height:280px; font-size:13px; text-align:center; padding:16px;">Error: ${err.message || err}</div>`;
+                        });
+                    } catch (err) {
+                        console.error("Scanner library load error", err);
+                        document.getElementById('modal-qr-reader').innerHTML = 
+                            `<div style="color:#f87171; display:flex; align-items:center; justify-content:center; height:280px; font-size:13px; text-align:center; padding:16px;">Gagal memuat library kamera. Pastikan koneksi internet aktif.</div>`;
+                    }
+                };
+
+                window.stopModalQrScanner = function() {
+                    const overlay = document.getElementById('modal-qr-scanner-overlay');
+                    if (overlay) {
+                        overlay.style.display = 'none';
+                    }
+                    if (modalHtml5QrCode) {
+                        modalHtml5QrCode.stop().then(() => {
+                            modalHtml5QrCode = null;
+                            activeQrInput = null;
+                        }).catch(err => {
+                            console.error("Failed to stop scanner", err);
+                            modalHtml5QrCode = null;
+                            activeQrInput = null;
+                        });
+                    } else {
+                        activeQrInput = null;
+                    }
+                };
             })();
         </script>
     @endpush

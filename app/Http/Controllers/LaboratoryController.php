@@ -207,7 +207,7 @@ class LaboratoryController extends Controller
                     $qty   = $a['quantity'] ?? 0;
 
                     if ($asset && $qty > 0) {
-                        $isSerialized = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc', 'non-electronic']);
+                        $isSerialized = in_array($asset->asset_category, ['electronic', 'pc', 'non-electronic']);
                         if ($isSerialized) {
                             $serialIds = $a['serial_ids'] ?? [];
                             $validSerials = \App\Models\AssetSerialNumber::where('asset_id', $asset->id)
@@ -505,7 +505,7 @@ class LaboratoryController extends Controller
                         if (!in_array($assetId, $newAssetIds)) {
                             $asset = Asset::find($assetId);
                             if ($asset) {
-                                $isSerialized = in_array($asset->asset_category, ['electronic', 'component-pc', 'pc', 'non-electronic']);
+                                $isSerialized = in_array($asset->asset_category, ['electronic', 'pc', 'non-electronic']);
                                 if ($isSerialized) {
                                     $labSerials = \App\Models\AssetSerialNumber::where('asset_id', $assetId)
                                         ->where('lab_id', $laboratory->id)

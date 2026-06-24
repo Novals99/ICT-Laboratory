@@ -47,3 +47,20 @@ Dokumen ini merangkum semua perubahan, perbaikan bug, dan penyesuaian fitur yang
 ## 5. Perbaikan Bug (Hotfix)
 - **Fix Tombol Create Transfer Request:** Memperbaiki kesalahan sintaksis JavaScript (kurang tutup kurung kurawal `}`) pada script di halaman index mutasi (`transfer-requests/index.blade.php`) yang sempat membuat modal pembuatan request transfer tidak mau terbuka saat tombol diklik.
 - **Menyembunyikan Tombol Edit Kode Inventaris:** Menghilangkan tombol aksi edit kode inventaris jika kategori aset yang bersangkutan adalah PC Component.
+
+---
+
+## 6. Penyempurnaan Mutasi Aset, Form Modal & QR Scanner
+- **Dropdown Field Source:** Mengubah input tipe teks `Source` pada modal pembuatan dan pengeditan aset menjadi dropdown selector dengan pilihan tetap: **"Pengadaan"** dan **"Pembelian"**.
+- **QR Scanner & Kamera Terjemahan Otomatis:**
+  - Membuat baris input Kode Inventaris (serial number) menjadi `readonly` (tidak bisa diketik manual).
+  - Menambahkan tombol ikon kamera (`📷`) di sebelah kanan input Kode Inventaris. Jika diklik, kamera aktif memindai QR Code menggunakan pustaka `html5-qrcode` lewat overlay modal, lalu secara otomatis mengisi input tersebut dengan hasil pemindaian.
+- **Pengecualian PC Component:** Menghilangkan aksi QR Code dan kolom input Kode Inventaris untuk aset berkategori **PC Component** (karena kategori ini tidak memiliki kode inventaris unik sendiri).
+- **Redesain Modal Create Transfer Request:**
+  - Menghapus tombol kategori global dan dropdown pilihan PC global.
+  - Mengimplementasikan tata letak berbasis **Category Cards**. Pengguna dapat menambahkan kartu kategori secara dinamis, memilih PC (opsional untuk komponen PC), dan menambahkan beberapa aset ke dalam masing-masing kartu kategori.
+- **Redesain Detail Transfer Request & Tabel SPV:**
+  - Memisahkan tampilan daftar aset di dalam modal detail transfer menjadi tabel-tabel terpisah berdasarkan kategorinya dengan judul yang jelas.
+  - Mengimplementasikan alur **Partial Approval** (persetujuan sebagian) oleh SPV di mana jumlah unit yang disetujui dapat diisi secara dinamis antara nilai persetujuan saat ini hingga jumlah pengajuan maksimal. Jumlah unit yang disetujui tidak dapat dikurangi setelah disimpan (hanya dapat ditingkatkan).
+  - Mengizinkan item berkondisi **Partial** untuk diproses ulang oleh SPV guna menyetujui tambahan unit baru, menghitung perbedaan stok secara otomatis, dan memperbarui mutasi stok.
+- **Perbaikan Bug Penambahan Aset Lab:** Memperbaiki ketidaksesuaian validasi backend dan frontend terkait properti serialization (`isSerialized`) sehingga aset kategori **electronic**, **pc**, dan **non-electronic** terdeteksi sebagai aset berserial secara konsisten, sedangkan kategori **component-pc** dibebaskan dari kewajiban serialisasi saat ditambahkan ke dalam laboratorium.

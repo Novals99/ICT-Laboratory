@@ -473,39 +473,51 @@ class StockMutationService
 
     public function processTransferRequestItem(\App\Models\TransferRequestItem $item, string $newStatus, int $customQtyApproved = null): void
     {
-        if ($item->status !== 'pending') {
+        $isPending = $item->status === 'pending';
+        $isApproved = $item->status === 'approved';
+        
+        if (!$isPending && !$isApproved) {
             return;
         }
 
         if ($newStatus === 'rejected') {
-            $item->update([
-                'status' => 'rejected',
-                'quantity_approved' => 0
-            ]);
+            if ($isPending) {
+                $item->update([
+                    'status' => 'rejected',
+                    'quantity_approved' => 0
+                ]);
+            }
             return;
         }
 
         if ($newStatus === 'approved') {
             $transferRequest = $item->transferRequest;
             $qtyApproved = $customQtyApproved ?? $item->quantity_requested;
+            
+            $oldQtyApproved = $isApproved ? $item->quantity_approved : 0;
+            $delta = $qtyApproved - $oldQtyApproved;
+            
+            if ($delta <= 0) {
+                return;
+            }
 
-            DB::transaction(function () use ($item, $transferRequest, $qtyApproved) {
+            DB::transaction(function () use ($item, $transferRequest, $qtyApproved, $delta, $isPending) {
                 $fromLabStock = AssetLab::where('lab_id', $transferRequest->from_lab_id)
                     ->where('asset_id', $item->asset_id)
                     ->lockForUpdate()
                     ->first();
 
-                if (!$fromLabStock || $fromLabStock->total_good_lab < $qtyApproved) {
+                if (!$fromLabStock || $fromLabStock->total_good_lab < $delta) {
                     $available = $fromLabStock?->total_good_lab ?? 0;
                     throw new \Exception(
                         "Stok {$item->asset->asset_name} di lab asal tidak mencukupi. " .
-                        "Tersedia: {$available}, Disetujui: {$qtyApproved}."
+                        "Tersedia: {$available}, Dibutuhkan tambahan: {$delta}."
                     );
                 }
 
                 $snapFrom = $fromLabStock->total_asset_lab;
-                $fromLabStock->decrement('total_asset_lab', $qtyApproved);
-                $fromLabStock->decrement('total_good_lab', $qtyApproved);
+                $fromLabStock->decrement('total_asset_lab', $delta);
+                $fromLabStock->decrement('total_good_lab', $delta);
 
                 $toLabStock = AssetLab::where('lab_id', $transferRequest->to_lab_id)
                     ->where('asset_id', $item->asset_id)
@@ -515,20 +527,20 @@ class StockMutationService
                 $snapTo = $toLabStock?->total_asset_lab ?? 0;
 
                 if ($toLabStock) {
-                    $toLabStock->increment('total_asset_lab', $qtyApproved);
-                    $toLabStock->increment('total_good_lab', $qtyApproved);
+                    $toLabStock->increment('total_asset_lab', $delta);
+                    $toLabStock->increment('total_good_lab', $delta);
                 } else {
                     AssetLab::create([
                         'lab_id'            => $transferRequest->to_lab_id,
                         'asset_id'          => $item->asset_id,
-                        'total_asset_lab'   => $qtyApproved,
-                        'total_good_lab'    => $qtyApproved,
+                        'total_asset_lab'   => $delta,
+                        'total_good_lab'    => $delta,
                         'total_damaged_lab' => 0,
                         'total_loss_lab'    => 0,
                     ]);
                 }
 
-                if ($item->serial_number_id) {
+                if ($item->serial_number_id && $isPending) {
                     $serial = \App\Models\AssetSerialNumber::find($item->serial_number_id);
                     if ($serial) {
                         if ($serial->pc_id) {
@@ -562,7 +574,7 @@ class StockMutationService
                     'asset_id'              => $item->asset_id,
                     'user_id'               => Auth::id(),
                     'type'                  => 'transfer',
-                    'quantity'              => $qtyApproved,
+                    'quantity'              => $delta,
                     'from_lab_id'           => $transferRequest->from_lab_id,
                     'to_lab_id'             => $transferRequest->to_lab_id,
                     'before_total_asset'    => $asset->total_asset,
@@ -574,11 +586,11 @@ class StockMutationService
                     'before_total_loss'     => $asset->total_loss,
                     'after_total_loss'      => $asset->total_loss,
                     'before_from_lab_stock' => $snapFrom,
-                    'after_from_lab_stock'  => $snapFrom - $qtyApproved,
+                    'after_from_lab_stock'  => $snapFrom - $delta,
                     'before_to_lab_stock'   => $snapTo,
-                    'after_to_lab_stock'    => $snapTo + $qtyApproved,
+                    'after_to_lab_stock'    => $snapTo + $delta,
                     'source'                => "transfer_request:{$transferRequest->request_code}",
-                    'notes'                 => $item->notes,
+                    'notes'                 => $item->notes . ($isPending ? "" : " (Penambahan stok transfer)"),
                 ]);
 
                 $item->update([

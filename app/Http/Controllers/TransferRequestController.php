@@ -297,6 +297,7 @@ class TransferRequestController extends Controller
                     'id' => $item->id,
                     'asset_id' => $item->asset_id,
                     'asset_name' => $item->asset?->asset_name ?? '-',
+                    'category' => $item->asset?->asset_category ?? '-',
                     'serial_number' => $item->serialNumber?->serial_number ?? '-',
                     'quantity' => $item->quantity_requested,
                     'quantity_approved' => $item->quantity_approved,
@@ -331,9 +332,16 @@ class TransferRequestController extends Controller
                     $item = TransferRequestItem::where('id', $itemData['id'])
                         ->where('transfer_request_id', $transferRequest->id)
                         ->first();
-                    if ($item && $item->status === 'pending') {
-                        $qtyApp = ($itemData['status'] === 'approved') ? ($itemData['quantity_approved'] ?? $item->quantity_requested) : 0;
-                        $this->mutationService->processTransferRequestItem($item, $itemData['status'], $qtyApp);
+                    if ($item) {
+                        if ($item->status === 'pending') {
+                            $qtyApp = ($itemData['status'] === 'approved') ? ($itemData['quantity_approved'] ?? $item->quantity_requested) : 0;
+                            $this->mutationService->processTransferRequestItem($item, $itemData['status'], $qtyApp);
+                        } elseif ($item->status === 'approved' && $item->quantity_approved < $item->quantity_requested) {
+                            $newQty = $itemData['quantity_approved'] ?? $item->quantity_requested;
+                            if ($newQty > $item->quantity_approved) {
+                                $this->mutationService->processTransferRequestItem($item, 'approved', $newQty);
+                            }
+                        }
                     }
                 }
 

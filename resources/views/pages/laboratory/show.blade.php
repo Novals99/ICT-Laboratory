@@ -773,7 +773,7 @@ document.getElementById('add-asset-select').addEventListener('change', function(
         return;
     }
     
-    const usesSerial = ['electronic'].includes(category);
+    const usesSerial = ['electronic', 'pc', 'non-electronic'].includes(category);
     
     if (usesSerial) {
         container.style.display = 'block';
