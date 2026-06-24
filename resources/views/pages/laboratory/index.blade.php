@@ -506,16 +506,14 @@ function addCreateAssetRow(type) {
         <div class="grid grid-cols-2 gap-2.5">
             <div>
                 <label class="block text-xs text-gray-500 dark:text-gray-300 mb-1">Asset Name:</label>
-                <select name="lab_assets[${idx}][asset_id]"
-                        class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md px-2.5 py-2 text-sm box-border">
+                <select name="lab_assets[${idx}][asset_id]" class="panel-form-input" style="height:36px; padding:0 10px;">
                     <option value="">Choose asset...</option>
                     ${options.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
                 </select>
             </div>
             <div>
                 <label class="block text-xs text-gray-500 dark:text-gray-300 mb-1">Quantity:</label>
-                <input type="number" name="lab_assets[${idx}][quantity]" value="0" min="0"
-                    class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md px-2.5 py-2 text-sm box-border">
+                <input type="number" name="lab_assets[${idx}][quantity]" value="0" min="0" class="panel-form-input" style="height:36px; padding:0 10px;">
             </div>
         </div>
     `;

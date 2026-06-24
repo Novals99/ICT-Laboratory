@@ -39,13 +39,13 @@
     {{-- Baris 3: Staff Cards --}}
     <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
         @forelse($staffUsers as $staff)
-        <div style="background:var(--bg-light); border:1px solid var(--border-light); border-radius:8px; padding:8px 12px; display:flex; align-items:center; gap:8px; min-width:150px;">
-            <div style="width:30px; height:30px; border-radius:50%; background:var(--bg-primary); color:var(--text-primary); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0;">
+        <div class="flex min-w-[150px] items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-slate-800">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-900 text-xs font-bold text-white dark:bg-indigo-600">
                 {{ strtoupper(substr($staff->name, 0, 1)) }}
             </div>
-            <div style="min-width:0;">
-                <p style="font-size:10px; color:var(--text-muted); font-weight:600; margin:0 0 1px; text-transform:uppercase; letter-spacing:.5px;">Staff</p>
-                <p style="font-size:12px; font-weight:600; color:var(--text-bold); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $staff->name }}</p>
+            <div class="min-w-0">
+                <p class="mb-px text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Staff</p>
+                <p class="truncate whitespace-nowrap text-xs font-semibold text-gray-900 dark:text-gray-100">{{ $staff->name }}</p>
             </div>
             @if($isSPV)
             <form method="POST" action="{{ route('laboratory.staff.remove', [$laboratory->id, $staff->id]) }}" style="margin-left:auto; flex-shrink:0;">

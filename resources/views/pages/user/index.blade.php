@@ -51,14 +51,26 @@
                         </label>
                     </div>
 
+                    {{-- Lab Status --}}
+                    <div class="filter-section">
+                        <div class="filter-section-title">Laboratory</div>
+
+                        <label class="filter-checkbox-row">
+                            <input type="checkbox" name="lab" value="empty"
+                                {{ request('lab') === 'empty' ? 'checked' : '' }}
+                                style="accent-color: #111B4C;">
+                            <span>Tanpa Lab (Lab Kosong)</span>
+                        </label>
+                    </div>
+
                 </x-button.filter>
 
                 {{-- Export --}}
                 <x-button.export.export
                     menuId="usersExportMenu"
-                    pdfUrl="{{ route('users.export', 'pdf') }}"
-                    excelUrl="{{ route('users.export', 'excel') }}"
-                    csvUrl="{{ route('users.export', 'csv') }}"
+                    pdfUrl="{{ route('users.export', ['format' => 'pdf'] + request()->query()) }}"
+                    excelUrl="{{ route('users.export', ['format' => 'excel'] + request()->query()) }}"
+                    csvUrl="{{ route('users.export', ['format' => 'csv'] + request()->query()) }}"
                 />
 
                 {{-- Add User --}}
@@ -94,7 +106,15 @@
                         </x-table.td>
 
                         <x-table.td>
-                            {{ $user->name }}
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                                    {{ strtoupper(substr($user->name, 0, 1)) }}
+                                </div>
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-gray-100">{{ $user->name }}</div>
+                                    <div class="text-xs text-gray-500">{{ $user->email }}</div>
+                                </div>
+                            </div>
                         </x-table.td>
 
                         <x-table.td>
@@ -102,7 +122,19 @@
                         </x-table.td>
 
                         <x-table.td>
-                            {{ ucwords($user->role) }}
+                            @php
+                                $roleClass = match($user->role) {
+                                    'spv inventory' => 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+                                    'admin' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+                                    'pic' => 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+                                    'staff' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+                                    'assistant' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+                                    default => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                                };
+                            @endphp
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $roleClass }}">
+                                {{ ucwords($user->role) }}
+                            </span>
                         </x-table.td>
 
                         <x-table.td>

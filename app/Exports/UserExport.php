@@ -7,9 +7,16 @@ use Illuminate\Support\Collection;
 
 class UserExport extends BaseExport
 {
+    protected $query;
+
+    public function __construct($query = null)
+    {
+        $this->query = $query ?: User::query();
+    }
+
     public function collection(): Collection
     {
-        return User::with('labs')
+        return $this->query->with('labs')
             ->select('id', 'name', 'nim', 'role', 'username', 'status_user', 'email')
             ->get()
             ->map(function ($user) {
