@@ -45,6 +45,19 @@
             Dashboard
         </a>
 
+        {{-- scan code --}}
+        <a href="{{ route('scan-code.index') }}"
+            class="sidebar-item {{ request()->routeIs('scan-code.*') ? 'sidebar-item-active' : '' }}">
+            <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 5h2M3 9h2M3 13h2M3 17h2M3 21h2" />
+                <rect x="7" y="3" width="4" height="18" rx="1" />
+                <path d="M13 5h2M13 9h2M13 13h2M13 17h2M13 21h2" />
+                <rect x="17" y="3" width="4" height="18" rx="1" />
+            </svg>
+            Scan Code
+        </a>
+
         @if ($isSpv)
             {{-- user --}}
             <a href="{{ route('users.index') }}"

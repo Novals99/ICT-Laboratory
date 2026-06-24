@@ -35,3 +35,4 @@
 
     --background-image-gradient: linear-gradient(to bottom right, #111B4C, #98083D);
 }
+@custom-variant dark (&:is(.dark *));

@@ -20,7 +20,7 @@ class UserController extends Controller
 
     public function index()
     {
-        $users = User::with('labs')
+        $query = User::with('labs')
             ->when(request('search'), function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -36,7 +36,11 @@ class UserController extends Controller
             ->when(request('status') !== null, function ($query) {
                 $query->whereIn('status_user', (array) request('status'));
             })
-            ->latest()
+            ->when(request('lab') === 'empty', function ($query) {
+                $query->whereDoesntHave('labs');
+            });
+
+        $users = (clone $query)->latest()
             ->paginate(10)
             ->withQueryString();
 
@@ -173,7 +177,28 @@ class UserController extends Controller
 
     public function export(string $format)
     {
-        $export = new UserExport();
+        $query = User::with('labs')
+            ->when(request('search'), function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('nim', 'like', "%{$search}%")
+                        ->orWhere('username', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('role', 'like', "%{$search}%");
+                });
+            })
+            ->when(request('role'), function ($query, $roles) {
+                $query->whereIn('role', (array) $roles);
+            })
+            ->when(request('status') !== null, function ($query) {
+                $query->whereIn('status_user', (array) request('status'));
+            })
+            ->when(request('lab') === 'empty', function ($query) {
+                $query->whereDoesntHave('labs');
+            })
+            ->latest();
+
+        $export = new UserExport($query);
 
         return match ($format) {
             'pdf' => $export->downloadPdf(),

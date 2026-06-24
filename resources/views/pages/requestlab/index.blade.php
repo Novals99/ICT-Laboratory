@@ -720,18 +720,46 @@
                         <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
                             ${itemStatusBadge(item.status)}
                             ${canReviewRequest && item.status === 'pending' ? `
-                                <select data-item-status-select data-item-id="${item.item_id}"
-                                    style="min-width:100px;padding:4px 8px;font-size:11px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);cursor:pointer;">
-                                    <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>Pending</option>
-                                    <option value="approved" ${item.status === 'approved' ? 'selected' : ''}>Approve</option>
-                                    <option value="rejected" ${item.status === 'rejected' ? 'selected' : ''}>Reject</option>
-                                </select>
+                                <input type="hidden" data-item-status-select data-item-id="${item.item_id}" value="${item.status}" id="status_input_${item.item_id}">
+                                <div class="flex items-center gap-1">
+                                    <button type="button" onclick="setItemStatus(${item.item_id}, 'approved')" id="btn_approve_${item.item_id}"
+                                        class="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-green-900/30 dark:hover:text-green-400" title="Approve">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" onclick="setItemStatus(${item.item_id}, 'rejected')" id="btn_reject_${item.item_id}"
+                                        class="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400" title="Reject">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
                             ` : ''}
                         </div>
                     </td>
                 </tr>
             `;
         }).join('');
+    }
+
+    window.setItemStatus = function(itemId, status) {
+        const input = document.getElementById(`status_input_${itemId}`);
+        if (input) input.value = status;
+
+        const btnApprove = document.getElementById(`btn_approve_${itemId}`);
+        const btnReject = document.getElementById(`btn_reject_${itemId}`);
+
+        if (btnApprove && btnReject) {
+            btnApprove.className = "flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-green-900/30 dark:hover:text-green-400";
+            btnReject.className = "flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400";
+
+            if (status === 'approved') {
+                btnApprove.className = "flex h-7 w-7 items-center justify-center rounded-md border-green-500 bg-green-500 text-white transition-colors dark:border-green-600 dark:bg-green-600 dark:text-white";
+            } else if (status === 'rejected') {
+                btnReject.className = "flex h-7 w-7 items-center justify-center rounded-md border-red-500 bg-red-500 text-white transition-colors dark:border-red-600 dark:bg-red-600 dark:text-white";
+            }
+        }
     }
 
     let currentPickerItemId = null;

@@ -114,6 +114,22 @@
                                             </svg>
                                         </x-table.action> --}}
 
+                                        {{-- qr code --}}
+                                        <x-table.action type="button" variant="view" title="QR Code"
+                                            onclick="openQrModal({{ $asset->id }}, '{{ addslashes($asset->asset_name) }}', '{{ $asset->sku }}', '{{ $asset->asset_category }}')"
+                                            style="color:#2563eb;">
+                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                                                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                                                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                                                <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none"/>
+                                                <rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none"/>
+                                                <rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none"/>
+                                                <path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/>
+                                            </svg>
+                                        </x-table.action>
+
                                         {{-- edit --}}
                                         <x-table.action type="button" variant="edit" title="Edit"
                                             onclick="openPanelModal('edit-modal-asset-{{ $asset->id }}')">
@@ -162,7 +178,105 @@
     @foreach ($assets as $asset)
         <x-asset.modal-asset mode="edit" :asset="$asset" />
     @endforeach
+
+    {{-- ── QR Code Modal ── --}}
+    <div id="qr-modal-overlay" class="panel-modal-overlay hidden"
+        onclick="if(event.target===this) closeQrModal()">
+        <div style="
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 0;
+            width: 420px;
+            max-width: 95vw;
+            max-height: 88vh;
+            overflow: hidden;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+            display: flex; flex-direction: column;
+            position: relative;
+        ">
+            {{-- Modal Header --}}
+            <div style="
+                padding: 20px 24px 16px;
+                border-bottom: 1px solid var(--border-color);
+                display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+                flex-shrink: 0;
+            ">
+                <div>
+                    <div style="font-size:1rem; font-weight:700; color:var(--text-primary);" id="qr-modal-asset-name">—</div>
+                    <div style="font-size:.75rem; color:var(--text-muted); font-family:monospace; margin-top:2px;" id="qr-modal-asset-sku">—</div>
+                </div>
+                <button onclick="closeQrModal()" style="
+                    background:none; border:none; cursor:pointer;
+                    color:var(--text-muted); font-size:1.4rem; line-height:1;
+                    flex-shrink:0; padding:2px 4px;
+                " aria-label="Close">&times;</button>
+            </div>
+
+            {{-- Panel A: Serial Number List --}}
+            <div id="qr-panel-serials" style="flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:8px;">
+                {{-- filled by JS --}}
+            </div>
+
+            {{-- Panel B: QR Display (hidden initially) --}}
+            <div id="qr-panel-qr" style="display:none; flex-direction:column; align-items:center; gap:16px; padding:24px; flex:1; overflow-y:auto;">
+                {{-- Back button --}}
+                <button onclick="showSerialList()" style="
+                    align-self:flex-start;
+                    background:none; border:none; cursor:pointer;
+                    color:var(--text-muted); font-size:.82rem; font-weight:600;
+                    display:flex; align-items:center; gap:6px; padding:0;
+                ">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                    Kembali ke daftar
+                </button>
+
+                {{-- Serial label --}}
+                <div style="text-align:center;">
+                    <div style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:4px;">Serial Number</div>
+                    <div style="font-size:1rem; font-weight:700; font-family:monospace; color:var(--text-primary);" id="qr-display-serial">—</div>
+                </div>
+
+                {{-- QR canvas wrapper --}}
+                <div style="
+                    background:#fff; padding:14px;
+                    border-radius:14px; border:1px solid var(--border-color);
+                    display:flex; align-items:center; justify-content:center;
+                    min-width:200px; min-height:200px;
+                " id="qr-canvas-wrapper">
+                    <canvas id="qr-canvas"></canvas>
+                </div>
+
+                <p style="font-size:.73rem; color:var(--text-muted); text-align:center; margin:0;">
+                    QR Code berisi serial number unit ini.<br>
+                    Scan di menu <strong>Scan Code</strong> untuk melihat detail barang.
+                </p>
+
+                {{-- Download --}}
+                <button onclick="downloadQr()" style="
+                    width:100%; padding:10px 0; border-radius:10px;
+                    background: linear-gradient(135deg,#111B4C,#2563eb);
+                    color:#fff; font-size:.85rem; font-weight:600;
+                    border:none; cursor:pointer;
+                    display:flex; align-items:center; justify-content:center; gap:7px;
+                    transition: opacity .18s;
+                " onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Download PNG
+                </button>
+            </div>
+
+        </div>
+    </div>
 @endsection
+
 
 @push('scripts')
     <script>
@@ -567,4 +681,158 @@
             });
         }
     </script>
+@endpush
+
+{{-- ════ QR CODE MODAL SCRIPTS ════ --}}
+@push('scripts')
+<script>
+    /* ────────────────────────────────────────────────────────────
+       QR CODE MODAL — Serial Number
+       QR image is generated by Laravel backend /qr?text=...
+       No JS library needed at all.
+    ──────────────────────────────────────────────────────────── */
+    let _currentSerial  = '';
+    let _currentAssetId = null;
+
+    const _STATUS = { available:'Available', in_use:'In Use', 'in-use':'In Use', damaged:'Rusak', lost:'Hilang' };
+    const _COND   = { good:'Baik', damaged:'Rusak', lost:'Hilang' };
+
+    /* ── Open modal, fetch serial list ── */
+    async function openQrModal(assetId, assetName, assetSku, assetCategory) {
+        _currentAssetId = assetId;
+
+        document.getElementById('qr-modal-asset-name').textContent = assetName;
+        document.getElementById('qr-modal-asset-sku').textContent  = assetSku;
+
+        showSerialList();
+
+        document.getElementById('qr-modal-overlay').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        const panel = document.getElementById('qr-panel-serials');
+        panel.innerHTML = '<p style="color:var(--text-muted);font-size:.85rem;padding:8px 0;">Memuat data serial...</p>';
+
+        if (!['electronic','component-pc','pc'].includes(assetCategory)) {
+            panel.innerHTML = `
+                <div style="text-align:center;padding:28px 0;color:var(--text-muted);">
+                    <div style="font-weight:600;font-size:.9rem;color:var(--text-primary);margin-bottom:4px;">Tidak ada Serial Number</div>
+                    <div style="font-size:.78rem;">Aset <strong>Non-Electronic</strong> tidak menggunakan serial number.</div>
+                </div>`;
+            return;
+        }
+
+        try {
+            const res  = await fetch(`/api/assets/${assetId}/serials`);
+            const data = await res.json();
+            _renderSerialList(panel, data.serials || []);
+        } catch(e) {
+            panel.innerHTML = '<p style="color:#b91c1c;font-size:.85rem;">Gagal memuat data serial.</p>';
+        }
+    }
+
+    /* ── Render list of serial numbers ── */
+    function _renderSerialList(panel, serials) {
+        if (!serials.length) {
+            panel.innerHTML = `
+                <div style="text-align:center;padding:28px 0;color:var(--text-muted);">
+                    <div style="font-weight:600;font-size:.9rem;color:var(--text-primary);margin-bottom:4px;">Belum ada Serial Number</div>
+                    <div style="font-size:.78rem;">Tambahkan serial number saat edit aset.</div>
+                </div>`;
+            return;
+        }
+
+        panel.innerHTML = `<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:6px;">${serials.length} unit — klik untuk lihat QR</div>`;
+
+        serials.forEach(s => {
+            const isAvail = s.status === 'available';
+            const pill    = `<span style="display:inline-block;padding:1px 9px;border-radius:20px;font-size:.67rem;font-weight:700;background:${isAvail?'rgba(22,163,74,.12)':'rgba(37,99,235,.1)'};color:${isAvail?'#16a34a':'#2563eb'}">${_STATUS[s.status]??s.status}</span>`;
+
+            const row = document.createElement('button');
+            row.type  = 'button';
+            row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:10px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s;';
+            row.onmouseover = ()=>{ row.style.borderColor='#2563eb'; row.style.background='rgba(37,99,235,.04)'; };
+            row.onmouseout  = ()=>{ row.style.borderColor='var(--border-color)'; row.style.background='var(--bg-input)'; };
+            row.innerHTML   = `
+                <div>
+                    <div style="font-family:monospace;font-weight:700;font-size:.9rem;color:var(--text-primary);">${_esc(s.serial_number)}</div>
+                    <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;">Kondisi: ${_COND[s.condition]??s.condition}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">${pill}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><polyline points="9 18 15 12 9 6"/></svg></div>`;
+            row.onclick = () => _showQr(s.serial_number);
+            panel.appendChild(row);
+        });
+    }
+
+    /* ── Show QR panel for one serial ── */
+    function _showQr(serialNumber) {
+        _currentSerial = serialNumber;
+
+        document.getElementById('qr-panel-serials').style.display = 'none';
+        document.getElementById('qr-panel-qr').style.display = 'flex';
+        document.getElementById('qr-display-serial').textContent = serialNumber;
+
+        const wrapper = document.getElementById('qr-canvas-wrapper');
+
+        // Loading state
+        wrapper.innerHTML = '<div style="color:var(--text-muted);font-size:.82rem;">Generating QR...</div>';
+
+        // Backend-generated QR image — guaranteed to render
+        const url = '/qr?size=220&text=' + encodeURIComponent(serialNumber);
+        const img  = new Image();
+        img.id     = 'qr-image';
+        img.alt    = 'QR Code ' + serialNumber;
+        img.style.cssText = 'width:220px;height:220px;display:block;border-radius:4px;';
+
+        img.onload = () => {
+            wrapper.innerHTML = '';
+            wrapper.appendChild(img);
+        };
+        img.onerror = () => {
+            wrapper.innerHTML = `<div style="color:#b91c1c;font-size:.8rem;text-align:center;padding:12px;">
+                Gagal generate QR Code.<br>Pastikan server berjalan.
+            </div>`;
+        };
+
+        img.src = url;
+    }
+
+    /* ── Back to serial list ── */
+    function showSerialList() {
+        document.getElementById('qr-panel-serials').style.display = 'flex';
+        document.getElementById('qr-panel-qr').style.display = 'none';
+    }
+
+    /* ── Close modal ── */
+    function closeQrModal() {
+        document.getElementById('qr-modal-overlay').classList.add('hidden');
+        document.body.style.overflow = '';
+        showSerialList();
+    }
+
+    /* ── Download QR PNG ── */
+    async function downloadQr() {
+        const img = document.getElementById('qr-image');
+        if (!img) return;
+
+        try {
+            // Fetch via backend (same origin — no CORS issue)
+            const res   = await fetch(img.src);
+            const blob  = await res.blob();
+            const objUrl = URL.createObjectURL(blob);
+            const a     = document.createElement('a');
+            a.href      = objUrl;
+            a.download  = 'QR-SN-' + _currentSerial.replace(/[^a-zA-Z0-9_-]/g, '_') + '.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
+        } catch(e) {
+            alert('Download gagal: ' + e.message);
+        }
+    }
+
+    function _esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeQrModal(); });
+</script>
 @endpush
