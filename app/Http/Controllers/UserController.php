@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
+use App\Exports\UserExport;
+
 class UserController extends Controller
 {
     /**
@@ -172,6 +174,19 @@ class UserController extends Controller
             ->with('success', 'User berhasil dihapus.');
     }
 
+<<<<<<<<< Temporary merge branch 1
+    public function export(string $format)
+   {
+      $export = new UserExport();
+
+      return match($format) {
+         'pdf'   => $export->downloadPdf(),
+         'excel' => $export->downloadExcel(),
+         'csv'   => $export->downloadCsv(),
+         default => abort(404),
+      };
+   }
+=========
     private function validatedLabIdsForRole(string $role, array $labIds): array
     {
         $labIds = array_values(array_unique(array_filter($labIds)));
@@ -194,4 +209,5 @@ class UserController extends Controller
 
         return $labIds;
     }
+>>>>>>>>> Temporary merge branch 2
 }

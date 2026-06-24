@@ -25,15 +25,21 @@ Route::middleware('auth')->group(function () {
     Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
 
     Route::resource('users', UserController::class);
+    Route::get('/users/export/{format}', [UserController::class, 'export'])->name('users.export');
 
     Route::resource('laboratory', LaboratoryController::class);
+    Route::get('/laboratory/export/{format}', [LaboratoryController::class, 'export'])->name('laboratory.export');
+
 
     Route::post('/laboratory/{laboratory}/pc', [PcController::class, 'store'])->name('pc.store');
     Route::put('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'update'])->name('pc.update');
     Route::delete('/laboratory/{laboratory}/pc/{pc}', [PcController::class, 'destroy'])->name('pc.destroy');
 
     Route::resource('asset', AssetController::class);
+    Route::get('/asset/export/{format}', [AssetController::class, 'export'])->name('asset.export');
 
+    //////////
+    // Lab Request
     Route::get('/requestlab', [RequestLabController::class, 'index'])
         ->name('requestlab.index');
     Route::post('/requestlab', [RequestLabController::class, 'store'])
@@ -65,6 +71,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('assetlog', AssetLogController::class)
         ->only(['index', 'show']);
+    Route::get('/assetlog/export/{format}', [AssetLogController::class, 'export'])->name('assetlog.export');
 
     Route::prefix('asset/{asset}/log')->name('assetlog.')->group(function () {
         Route::post('/stock-in', [AssetLogController::class, 'storeStockIn'])->name('stock-in');
