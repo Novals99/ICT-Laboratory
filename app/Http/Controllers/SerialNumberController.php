@@ -57,10 +57,6 @@ class SerialNumberController extends Controller
         ]);
     }
 
-    /**
-     * Semua S/N milik satu asset (untuk modal Edit Asset / Asset Information).
-     * GET /api/assets/{asset}/serials
-     */
     public function byAsset(Asset $asset)
     {
         return response()->json([
@@ -69,10 +65,12 @@ class SerialNumberController extends Controller
             'total'      => $asset->total_asset,
             'serials'    => $asset->serialNumbers()
                 ->orderBy('serial_number')
-                ->get(['id', 'serial_number', 'condition', 'status', 'lab_id', 'pc_id'])
+                ->get(['id', 'serial_number', 'prefix', 'qr_code', 'condition', 'status', 'lab_id', 'pc_id'])
                 ->map(fn ($s) => [
                     'id'            => $s->id,
                     'serial_number' => $s->serial_number,
+                    'prefix'        => $s->prefix,
+                    'qr_code'       => $s->qr_code,
                     'condition'     => $s->condition,
                     'status'        => $s->status,        // available / in_use
                     'locked'        => $s->status === 'in_use', // sedang terpasang di PC → tidak boleh dihapus
@@ -186,6 +184,8 @@ class SerialNumberController extends Controller
             'serials'                 => ['array'],
             'serials.*.id'            => ['required', 'integer'],
             'serials.*.serial_number' => ['nullable', 'string', 'max:255'],
+            'serials.*.prefix'        => ['nullable', 'string', 'max:255'],
+            'serials.*.qr_code'       => ['nullable', 'string', 'max:255'],
             'serials.*.condition'     => ['nullable', 'string', 'in:good,damaged,lost'],
         ]);
 
@@ -202,6 +202,12 @@ class SerialNumberController extends Controller
                 $updateData = [];
                 if (isset($row['serial_number'])) {
                     $updateData['serial_number'] = trim($row['serial_number']);
+                }
+                if (isset($row['prefix'])) {
+                    $updateData['prefix'] = trim($row['prefix']) ?: null;
+                }
+                if (isset($row['qr_code'])) {
+                    $updateData['qr_code'] = trim($row['qr_code']) ?: null;
                 }
                 if (isset($row['condition'])) {
                     $updateData['condition'] = $row['condition'];
@@ -283,6 +289,8 @@ class SerialNumberController extends Controller
                 return [
                     'id'            => $s->id,
                     'serial_number' => $s->serial_number,
+                    'prefix'        => $s->prefix,
+                    'qr_code'       => $s->qr_code,
                     'condition'     => $s->condition,
                     'status'        => $s->status,
                     'pc_id'         => $s->pc_id,

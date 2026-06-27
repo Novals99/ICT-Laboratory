@@ -33,7 +33,7 @@ class AppServiceProvider extends ServiceProvider
             $view->with('laboratories', $laboratories);
         });
 
-        if (app()->environment('production')) {
+        if (!app()->environment('local', 'testing')) {
             URL::forceScheme('https');
         }
     }

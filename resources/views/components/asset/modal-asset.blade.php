@@ -813,14 +813,14 @@
                     }
                 }
 
-                function addSerialInput(list, name, value, locked, serialId = null, condition = 'good') {
+                function addSerialInput(list, name, value, locked, serialId = null, condition = 'good', prefix = null, qr_code = null) {
                     const row = document.createElement('div');
                     row.style.cssText = 'display:flex; gap:6px; align-items:center; margin-bottom:6px;';
 
-                    // Parse existing value (e.g. L01MJ01-THEYVTE100R -> Prefix: L01MJ01, QR: THEYVTE100R)
-                    let prefixVal = '';
-                    let qrVal = value || '';
-                    if (value) {
+                    // Parse prefix & qrVal from separate columns or fallback
+                    let prefixVal = prefix || '';
+                    let qrVal = qr_code || value || '';
+                    if (value && !prefix && !qr_code) {
                         const lastDash = value.lastIndexOf('-');
                         if (lastDash !== -1) {
                             prefixVal = value.substring(0, lastDash);
@@ -829,34 +829,35 @@
                     }
 
                     const idx = list.children.length;
-                    const isStructured = name.includes('serials[]');
+                    const baseName = name.endsWith('[]') ? name.slice(0, -2) + `[${idx}]` : name + `[${idx}]`;
 
                     // Hidden input that will actually be submitted to backend
                     const hiddenInput = document.createElement('input');
                     hiddenInput.type = 'hidden';
-                    hiddenInput.name = isStructured ? `serials[${idx}][serial_number]` : name;
+                    hiddenInput.name = `${baseName}[serial_number]`;
                     hiddenInput.value = value || '';
                     row.appendChild(hiddenInput);
 
-                    if (isStructured) {
-                        // ID input
+                    // ID input
+                    if (serialId) {
                         const idInput = document.createElement('input');
                         idInput.type = 'hidden';
-                        idInput.name = `serials[${idx}][id]`;
-                        idInput.value = serialId || '';
+                        idInput.name = `${baseName}[id]`;
+                        idInput.value = serialId;
                         row.appendChild(idInput);
-
-                        // Condition input
-                        const condInput = document.createElement('input');
-                        condInput.type = 'hidden';
-                        condInput.name = `serials[${idx}][condition]`;
-                        condInput.value = condition || 'good';
-                        row.appendChild(condInput);
                     }
+
+                    // Condition input
+                    const condInput = document.createElement('input');
+                    condInput.type = 'hidden';
+                    condInput.name = `${baseName}[condition]`;
+                    condInput.value = condition || 'good';
+                    row.appendChild(condInput);
 
                     // Prefix / Template input
                     const prefixInput = document.createElement('input');
                     prefixInput.type = 'text';
+                    prefixInput.name = `${baseName}[prefix]`;
                     prefixInput.value = prefixVal;
                     prefixInput.placeholder = 'Template / Prefix...';
                     prefixInput.className = 'panel-form-input';
@@ -866,6 +867,7 @@
                     // Scanned QR code input
                     const qrInput = document.createElement('input');
                     qrInput.type = 'text';
+                    qrInput.name = `${baseName}[qr_code]`;
                     qrInput.value = qrVal;
                     qrInput.placeholder = 'Scan QR Code...';
                     qrInput.className = 'panel-form-input';
@@ -1164,7 +1166,7 @@
                             .then(r => r.json())
                             .then(d => {
                                 list.innerHTML = '';
-                                (d.serials || []).forEach(s => addSerialInput(list, 'serials[]', s.serial_number, s.locked));
+                                (d.serials || []).forEach(s => addSerialInput(list, 'serials[]', s.serial_number, s.locked, s.id, s.condition, s.prefix, s.qr_code));
                             })
                             .catch(() => {});
                     });
