@@ -872,7 +872,9 @@ window.populateComponentTypes = function(cardIdx, itemIdx) {
     };
     
     if (pcComponents && pcComponents.length > 0) {
-        types = pcComponents.map(c => ({ value: c.slot, label: slotLabels[c.slot] || ucFirst(c.slot) }));
+        types = pcComponents
+            .filter(c => c.slot !== 'pc')
+            .map(c => ({ value: c.slot, label: slotLabels[c.slot] || ucFirst(c.slot) }));
     } else {
         types = [
             { value: 'processor', label: 'Processor' },
@@ -1026,18 +1028,28 @@ window.handleCardAssetChange = function(cardIdx, itemIdx) {
                 window.trSerialData = window.trSerialData || {};
                 window.trSerialData[assetId] = data.serials || [];
                 
-                if (!data.serials || data.serials.length === 0) {
-                    serialList.innerHTML = '<div style="color:#f87171; font-size:12px; padding:4px 0;">No serial numbers available in this lab</div>';
+                const pcSelect = card.querySelector('.js-card-pc');
+                const pcId = pcSelect ? pcSelect.value : '';
+                let filtered = data.serials || [];
+                if (pcId) {
+                    filtered = filtered.filter(s => String(s.pc_id) === String(pcId));
+                }
+                
+                const addSerialBtn = serialContainer.querySelector('button');
+                if (addSerialBtn) {
+                    addSerialBtn.style.display = pcId ? 'none' : '';
+                }
+                
+                if (filtered.length === 0) {
+                    serialList.innerHTML = '<div style="color:#f87171; font-size:12px; padding:4px 0;">No serial numbers available</div>';
                     stockInput.value = 0;
                     qtyInput.value = 0;
                     return;
                 }
                 
-                stockInput.value = data.serials.length;
+                stockInput.value = filtered.length;
                 
                 // If category is PC Component and PC is selected, we automatically find and preselect the serial_id
-                const pcSelect = card.querySelector('.js-card-pc');
-                const pcId = pcSelect ? pcSelect.value : '';
                 if (category === 'component-pc' && pcId) {
                     const compTypeSelect = row.querySelector('.js-component-type-select');
                     const componentType = compTypeSelect ? compTypeSelect.value : '';
@@ -1055,8 +1067,42 @@ window.handleCardAssetChange = function(cardIdx, itemIdx) {
             })
             .catch(() => alert('Failed to load serial numbers.'));
     } else {
-        stockInput.value = asset.stock ?? 0;
-        updateCardQtyStyle(row, asset.stock, parseInt(qtyInput.value));
+        serialContainer.style.display = 'none';
+        
+        const pcSelect = card.querySelector('.js-card-pc');
+        const pcId = pcSelect ? pcSelect.value : '';
+        let stock;
+        
+        if (category === 'component-pc' && pcId) {
+            stock = 1;
+            qtyInput.value = 1;
+            qtyInput.max = 1;
+            qtyInput.readOnly = true;
+            
+            // Find and populate hidden serial number
+            const compTypeSelect = row.querySelector('.js-component-type-select');
+            const componentType = compTypeSelect ? compTypeSelect.value : '';
+            const pcComponentsStr = card.dataset.pcComponents;
+            const pcComponents = pcComponentsStr ? JSON.parse(pcComponentsStr) : null;
+            if (pcComponents && componentType) {
+                const comp = pcComponents.find(c => c.slot === componentType);
+                if (comp && comp.serial_id) {
+                    serialList.innerHTML = `<input type="hidden" class="js-serial-picker-select" value="${comp.serial_id}">`;
+                } else {
+                    serialList.innerHTML = '';
+                }
+            } else {
+                serialList.innerHTML = '';
+            }
+        } else {
+            stock = asset.stock ?? 0;
+            qtyInput.removeAttribute('max');
+            qtyInput.readOnly = false;
+            serialList.innerHTML = '';
+        }
+        
+        stockInput.value = stock;
+        updateCardQtyStyle(row, stock, parseInt(qtyInput.value));
     }
     
     validateCardUniqueAssets(cardIdx);
@@ -1108,6 +1154,9 @@ window.addCardSerialSelect = function(cardIdx, itemIdx, preselectedValue = null)
     if (preselectedValue) {
         select.value = preselectedValue;
     }
+    if (pcId) {
+        select.disabled = true;
+    }
     
     select.addEventListener('change', () => {
         validateCardUniqueSerials(row);
@@ -1145,7 +1194,11 @@ window.addCardSerialSelect = function(cardIdx, itemIdx, preselectedValue = null)
     };
     
     subRow.appendChild(wrapper);
-    subRow.appendChild(removeBtn);
+    if (pcId) {
+        scanBtn.style.display = 'none';
+    } else {
+        subRow.appendChild(removeBtn);
+    }
     list.appendChild(subRow);
     
     updateCardQtyFromSerials(row);
@@ -1212,6 +1265,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const createForm = document.querySelector('#createTransferModal form');
     if (createForm) {
         createForm.addEventListener('submit', function(e) {
+            createForm.querySelectorAll('.js-serial-picker-select[disabled]').forEach(sel => {
+                sel.disabled = false;
+            });
             let index = 0;
             const cards = document.querySelectorAll('.tr-category-card');
             cards.forEach(card => {

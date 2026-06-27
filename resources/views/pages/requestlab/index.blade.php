@@ -297,7 +297,8 @@
                         <thead>
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty Requested</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty Approved</th>
                                 <th style="padding:8px 14px; text-align:left;">Kode Inventaris</th>
                                 <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
                             </tr>
@@ -312,7 +313,8 @@
                         <thead>
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty Requested</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty Approved</th>
                                 <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
                             </tr>
                         </thead>
@@ -326,7 +328,8 @@
                         <thead>
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty Requested</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty Approved</th>
                                 <th style="padding:8px 14px; text-align:left;">Spesifikasi</th>
                                 <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
                             </tr>
@@ -341,7 +344,8 @@
                         <thead>
                             <tr style="background:var(--bg-table-header);">
                                 <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty Requested</th>
+                                <th style="padding:8px 14px; text-align:center;">Qty Approved</th>
                                 <th style="padding:8px 14px; text-align:left;">Kode Inventaris</th>
                                 <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
                             </tr>
@@ -402,16 +406,26 @@
             style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
     </div>
 
-    <div style="margin-bottom:16px;">
-        <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Laboratory</label>
-        <select name="lab_id" required
-            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-            <option value="">Pilih Lab</option>
-            @foreach (auth()->user()->labs as $lab)
-                <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
-            @endforeach
-        </select>
-    </div>
+    @if(auth()->user()->labs->count() === 1)
+        <div style="margin-bottom:16px;">
+            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Laboratory</label>
+            <div style="padding:10px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input); font-weight:600;">
+                {{ auth()->user()->labs->first()->lab_name }}
+            </div>
+            <input type="hidden" name="lab_id" value="{{ auth()->user()->labs->first()->id }}">
+        </div>
+    @else
+        <div style="margin-bottom:16px;">
+            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">Laboratory</label>
+            <select name="lab_id" required
+                style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                <option value="">Pilih Lab</option>
+                @foreach (auth()->user()->labs as $lab)
+                    <option value="{{ $lab->id }}">{{ $lab->lab_name }}</option>
+                @endforeach
+            </select>
+        </div>
+    @endif
 
     <div id="requestItemList">
         <div class="item-row"
@@ -656,21 +670,50 @@
 
     function itemStatusBadge(status) {
         if (status === 'approved') {
-            return '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Approved</span>';
+            return '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Approved</span>';
         }
         if (status === 'rejected') {
-            return '<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Rejected</span>';
+            return '<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Rejected</span>';
         }
-        return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;">Pending</span>';
+        if (status === 'partial') {
+            return '<span style="background:#2563eb;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Partial</span>';
+        }
+        return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Pending</span>';
     }
 
     function rowHtml(items, hasSerial = false, isComponentPc = false) {
         if (!(items ?? []).length) {
-            return `<tr><td colspan="${hasSerial ? 4 : 3}" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">No data</td></tr>`;
+            return `<tr><td colspan="${hasSerial ? 5 : 4}" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">No data</td></tr>`;
         }
 
         return items.map(item => {
             let serialCol = '';
+            let qtyApprovedCol = '';
+            let actionCol = '';
+
+            const isCompleted = item.status === 'approved' || item.status === 'rejected';
+            const isSpvPending = canReviewRequest && !isCompleted;
+
+            // Qty Approved column
+            if (isSpvPending) {
+                if (hasSerial && !isComponentPc) {
+                    // Serial-based
+                    qtyApprovedCol = `<td style="padding:8px 14px;text-align:center;color:var(--text-primary);font-weight:600;"><span id="qty_approved_label_${item.item_id}">${item.qty_approved}</span></td>`;
+                } else {
+                    // Non-serial
+                    qtyApprovedCol = `
+                        <td style="padding:8px 14px;text-align:center;">
+                            <input type="number" data-item-qty-approved-input data-item-id="${item.item_id}" min="0" max="${item.quantity}" value="${item.qty_approved}"
+                                oninput="handleQtyApprovedInput(this, ${item.item_id})"
+                                style="width:60px; text-align:center; padding:4px 8px; border:1px solid var(--border-color); border-radius:6px; background:var(--bg-input); color:var(--text-primary); font-size:13px; font-weight:600;">
+                        </td>
+                    `;
+                }
+            } else {
+                qtyApprovedCol = `<td style="padding:8px 14px;text-align:center;color:var(--text-primary);font-weight:600;">${item.qty_approved}</td>`;
+            }
+
+            // Serial / Spec column
             if (hasSerial) {
                 if (isComponentPc) {
                     serialCol = `
@@ -683,7 +726,6 @@
                         requestItemSerials[item.item_id] = (item.serials ?? []).map(s => s.id);
                     }
                     const currentLabels = (item.serials ?? []).map(s => s.serial_number).join(', ') || 'None';
-                    const isSpvPending = canReviewRequest && item.status === 'pending';
                     
                     if (isSpvPending) {
                         serialCol = `
@@ -707,39 +749,50 @@
                 }
             }
 
+            // Action / Status column
+            if (isSpvPending) {
+                actionCol = `
+                    <td style="padding:8px 14px;text-align:center;">
+                        <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                            <input type="hidden" data-item-status-select data-item-id="${item.item_id}" value="${item.status}" id="status_input_${item.item_id}">
+                            <div class="flex items-center gap-1">
+                                <button type="button" onclick="setItemStatus(${item.item_id}, 'approved', ${item.quantity})" id="btn_approve_${item.item_id}"
+                                    class="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-green-900/30 dark:hover:text-green-400" title="Approve Full">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </button>
+                                <button type="button" onclick="setItemStatus(${item.item_id}, 'rejected', ${item.quantity})" id="btn_reject_${item.item_id}"
+                                    class="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400" title="Reject">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                `;
+            } else {
+                actionCol = `
+                    <td style="padding:8px 14px;text-align:center;">
+                        ${itemStatusBadge(item.status)}
+                    </td>
+                `;
+            }
+
             return `
                 <tr style="border-top:1px solid var(--border-color);">
                     <td style="padding:8px 14px;color:var(--text-primary);">${item.asset_name}</td>
                     <td style="padding:8px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.quantity}</td>
+                    ${qtyApprovedCol}
                     ${serialCol}
-                    <td style="padding:8px 14px;text-align:center;">
-                        <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
-                            ${itemStatusBadge(item.status)}
-                            ${canReviewRequest && item.status === 'pending' ? `
-                                <input type="hidden" data-item-status-select data-item-id="${item.item_id}" value="${item.status}" id="status_input_${item.item_id}">
-                                <div class="flex items-center gap-1">
-                                    <button type="button" onclick="setItemStatus(${item.item_id}, 'approved')" id="btn_approve_${item.item_id}"
-                                        class="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-green-900/30 dark:hover:text-green-400" title="Approve">
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                        </svg>
-                                    </button>
-                                    <button type="button" onclick="setItemStatus(${item.item_id}, 'rejected')" id="btn_reject_${item.item_id}"
-                                        class="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400" title="Reject">
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </td>
+                    ${actionCol}
                 </tr>
             `;
         }).join('');
     }
 
-    window.setItemStatus = function(itemId, status) {
+    window.setItemStatus = function(itemId, status, quantity) {
         const input = document.getElementById(`status_input_${itemId}`);
         if (input) input.value = status;
 
@@ -752,8 +805,31 @@
 
             if (status === 'approved') {
                 btnApprove.className = "flex h-7 w-7 items-center justify-center rounded-md border-green-500 bg-green-500 text-white transition-colors dark:border-green-600 dark:bg-green-600 dark:text-white";
+                const qtyInput = document.querySelector(`input[data-item-qty-approved-input][data-item-id="${itemId}"]`);
+                if (qtyInput) {
+                    qtyInput.value = quantity;
+                }
             } else if (status === 'rejected') {
                 btnReject.className = "flex h-7 w-7 items-center justify-center rounded-md border-red-500 bg-red-500 text-white transition-colors dark:border-red-600 dark:bg-red-600 dark:text-white";
+                const qtyInput = document.querySelector(`input[data-item-qty-approved-input][data-item-id="${itemId}"]`);
+                if (qtyInput) {
+                    qtyInput.value = 0;
+                }
+            }
+        }
+    }
+
+    window.handleQtyApprovedInput = function(input, itemId) {
+        const val = parseInt(input.value) || 0;
+        const max = parseInt(input.max) || 0;
+        const statusInput = document.getElementById(`status_input_${itemId}`);
+        if (statusInput) {
+            if (val >= max) {
+                statusInput.value = 'approved';
+            } else if (val > 0) {
+                statusInput.value = 'partial';
+            } else {
+                statusInput.value = 'pending';
             }
         }
     }
@@ -842,6 +918,20 @@
                 const serialNos = Array.from(checkedBoxes).map(cb => cb.dataset.serialNo);
                 labelsEl.innerText = serialNos.join(', ') || 'None';
             }
+            const qtyApprovedLabel = document.getElementById(`qty_approved_label_${currentPickerItemId}`);
+            if (qtyApprovedLabel) {
+                qtyApprovedLabel.innerText = tempSelectedSerials.length;
+            }
+            const statusInput = document.getElementById(`status_input_${currentPickerItemId}`);
+            if (statusInput) {
+                if (tempSelectedSerials.length >= currentPickerMaxQty) {
+                    statusInput.value = 'approved';
+                } else if (tempSelectedSerials.length > 0) {
+                    statusInput.value = 'partial';
+                } else {
+                    statusInput.value = 'pending';
+                }
+            }
         }
         closeSerialPicker();
     }
@@ -882,8 +972,28 @@
 
         for (const select of selects) {
             const itemId = select.dataset.itemId;
-            const status = select.value;
+            let status = select.value;
             const serialIds = requestItemSerials[itemId] || [];
+
+            let qtyApproved = 0;
+            const qtyInput = document.querySelector(`input[data-item-qty-approved-input][data-item-id="${itemId}"]`);
+            if (qtyInput) {
+                qtyApproved = parseInt(qtyInput.value) || 0;
+            } else {
+                qtyApproved = serialIds.length;
+            }
+
+            if (status !== 'rejected') {
+                const itemData = window.currentRequestItemsList.find(i => i.item_id == itemId);
+                const quantity = itemData ? itemData.quantity : 9999;
+                if (qtyApproved >= quantity) {
+                    status = 'approved';
+                } else if (qtyApproved > 0) {
+                    status = 'partial';
+                } else {
+                    status = 'pending';
+                }
+            }
 
             try {
                 const response = await fetch(`/requestlab/item/${itemId}/status`, {
@@ -892,7 +1002,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({ status, serial_ids: serialIds })
+                    body: JSON.stringify({ status, qty_approved: qtyApproved, serial_ids: serialIds })
                 });
                 const data = await response.json();
 

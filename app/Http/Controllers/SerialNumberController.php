@@ -178,22 +178,19 @@ class SerialNumberController extends Controller
         ]);
     }
 
-    /**
-     * (#14) SPV menyimpan perubahan nomor seri unit yang ada di lab.
-     * Hanya mengubah nilai serial_number (jumlah tetap mengikuti stok lab).
-     */
     public function syncInLab(Request $request, Laboratory $laboratory, Asset $asset)
     {
         abort_unless(auth()->user()->role === 'spv inventory', 403);
 
         $data = $request->validate([
             'serials'                 => ['array'],
-            'serials.*.id'            => ['nullable', 'integer'],
+            'serials.*.id'            => ['required', 'integer'],
             'serials.*.serial_number' => ['nullable', 'string', 'max:255'],
+            'serials.*.condition'     => ['nullable', 'string', 'in:good,damaged,lost'],
         ]);
 
         foreach ($data['serials'] ?? [] as $row) {
-            if (empty($row['id']) || empty($row['serial_number'])) {
+            if (empty($row['id'])) {
                 continue;
             }
 
@@ -201,10 +198,33 @@ class SerialNumberController extends Controller
                 ->where('lab_id', $laboratory->id)
                 ->find($row['id']);
 
-            // Jangan ubah serial yang sedang terpasang di PC.
-            if ($serial && $serial->status !== 'in_use') {
-                $serial->update(['serial_number' => trim($row['serial_number'])]);
+            if ($serial) {
+                $updateData = [];
+                if (isset($row['serial_number'])) {
+                    $updateData['serial_number'] = trim($row['serial_number']);
+                }
+                if (isset($row['condition'])) {
+                    $updateData['condition'] = $row['condition'];
+                }
+                if (!empty($updateData)) {
+                    $serial->update($updateData);
+                }
             }
+        }
+
+        // Recalculate and sync AssetLab counts
+        $goodCount = $asset->serialNumbers()->where('lab_id', $laboratory->id)->where('condition', 'good')->count();
+        $damagedCount = $asset->serialNumbers()->where('lab_id', $laboratory->id)->where('condition', 'damaged')->count();
+        $lossCount = $asset->serialNumbers()->where('lab_id', $laboratory->id)->where('condition', 'lost')->count();
+
+        $assetLab = AssetLab::where('lab_id', $laboratory->id)->where('asset_id', $asset->id)->first();
+        if ($assetLab) {
+            $assetLab->update([
+                'total_good_lab' => $goodCount,
+                'total_damaged_lab' => $damagedCount,
+                'total_loss_lab' => $lossCount,
+                'total_asset_lab' => $goodCount + $damagedCount + $lossCount,
+            ]);
         }
 
         return response()->json(['success' => true]);
@@ -251,17 +271,24 @@ class SerialNumberController extends Controller
             ->orderBy('serial_number')
             ->get();
 
+        $pcsOrdered = $laboratory->pcs()->orderBy('id')->pluck('id')->toArray();
+
         return response()->json([
             'asset_id'   => $asset->id,
             'asset_name' => $asset->asset_name,
-            'serials'    => $serials->map(fn ($s) => [
-                'id'            => $s->id,
-                'serial_number' => $s->serial_number,
-                'condition'     => $s->condition,
-                'status'        => $s->status,
-                'pc_id'         => $s->pc_id,
-                'pc_sku'        => $s->pc?->sku,
-            ]),
+            'serials'    => $serials->map(function ($s) use ($pcsOrdered) {
+                $index = array_search($s->pc_id, $pcsOrdered);
+                $pcName = $index !== false ? 'PC-' . str_pad($index, 2, '0', STR_PAD_LEFT) : null;
+
+                return [
+                    'id'            => $s->id,
+                    'serial_number' => $s->serial_number,
+                    'condition'     => $s->condition,
+                    'status'        => $s->status,
+                    'pc_id'         => $s->pc_id,
+                    'pc_sku'        => $pcName ?: ($s->pc?->sku),
+                ];
+            }),
         ]);
     }
 }

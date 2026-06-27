@@ -192,7 +192,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 </style>
 
     {{-- ══ SECTION 2: ASSET INFORMATION ══ --}}
-    <div id="section-asset" class="db-card" style="display:none; padding:0; overflow:hidden;">
+    <div id="section-asset" class="db-card" style="display:none; padding:0;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px 14px; border-bottom:1px solid var(--border-light); flex-wrap: wrap; gap: 12px;">
             <h3 style="font-size:15px; font-weight:700; color:var(--text-bold); margin:0;">Asset Information</h3>
             <div style="display:flex; align-items:center; gap:8px;">
@@ -245,7 +245,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
             </div>
         </div>
 
-        <div style="overflow-x:auto;">
+        <div style="overflow-x:auto; border-radius: 0 0 14px 14px;">
             <table class="db-table" style="min-width:{{ $canEdit ? '950px' : '800px' }};">
                 <thead>
                     <tr>
@@ -264,7 +264,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                         <td style="font-weight:500;">{{ $asset->asset_name }}{{ $asset->specification ? ' - ' . $asset->specification : '' }}</td>
                         <td>{{ ucfirst($asset->asset_category) }}</td>
 
-                        @if($canEdit)
+                        @if($canEdit && $asset->asset_category === 'component-pc')
                         {{-- Total Good --}}
                         <td style="text-align:center;">
                             <div style="display:inline-flex; align-items:center; gap:6px;">
@@ -320,9 +320,9 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                             </div>
                         </td>
                         @else
-                        <td style="text-align:center; font-weight:700; font-size:14px; background:var(--bg-light); color:var(--text-bold); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_good_lab ?? 0 }}</td>
-                        <td style="text-align:center; font-weight:700; font-size:14px; color:var(--text-danger); background:var(--bg-danger); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_damaged_lab ?? 0 }}</td>
-                        <td style="text-align:center; font-weight:700; font-size:14px; color:var(--text-warning); background:var(--bg-warning); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_loss_lab ?? 0 }}</td>
+                        <td style="text-align:center;"><span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; background:var(--bg-light); color:var(--text-bold); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_good_lab ?? 0 }}</span></td>
+                        <td style="text-align:center;"><span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; color:var(--text-danger); background:var(--bg-danger); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_damaged_lab ?? 0 }}</span></td>
+                        <td style="text-align:center;"><span style="min-width:36px; text-align:center; font-weight:700; font-size:14px; color:var(--text-warning); background:var(--bg-warning); padding:4px 8px; border-radius:6px; display:inline-block;">{{ $asset->pivot->total_loss_lab ?? 0 }}</span></td>
                         @endif
 
                         <td style="text-align:center; font-weight:700; font-size:14px; color:var(--text-bold);">
@@ -334,7 +334,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                             <div class="action-btns" style="justify-content:center;">
                             @if($asset->asset_category !== 'component-pc')
                             <button type="button"
-                                    onclick="openAssetSerialModal({{ $asset->id }}, '{{ addslashes($asset->asset_name) }}')"
+                                    onclick="openAssetSerialModal({{ $asset->id }}, '{{ addslashes($asset->asset_name) }}', '{{ $asset->asset_category }}')"
                                     class="action-btn action-edit" title="{{ $isSPV ? 'Edit Kode Inventaris' : 'Lihat Kode Inventaris' }}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
                                     <rect x="3" y="5" width="18" height="14" rx="2"/>
@@ -563,7 +563,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 
 {{-- ══ MODAL SERIAL ASET (#14) ══ --}}
 <div id="modal-asset-serial" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:60; align-items:center; justify-content:center;">
-    <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:650px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; display:flex; flex-direction:column;">
+    <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:880px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; display:flex; flex-direction:column;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border-light); flex-shrink:0;">
             <h3 style="font-size:16px; font-weight:700; color:var(--text-bold); margin:0;">
                 Kode Inventaris — <span id="asset-serial-title" style="font-weight:600;"></span>
@@ -576,9 +576,11 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                     <tr style="background:var(--bg-light); border-bottom:2px solid var(--border-light);">
                         <th style="padding:10px; text-align:center; font-size:12px; font-weight:600; width:40px; color:var(--text-bold);">No</th>
                         <th style="padding:10px; text-align:left; font-size:12px; font-weight:600; color:var(--text-bold);">Kode Inventaris</th>
+                        <th style="padding:10px; text-align:center; font-size:12px; font-weight:600; width:180px; color:var(--text-bold);">Scan QR / Kamera</th>
+                        <th style="padding:10px; text-align:center; font-size:12px; font-weight:600; width:90px; color:var(--text-bold);">Status</th>
                         <th style="padding:10px; text-align:center; font-size:12px; font-weight:600; width:90px; color:var(--text-bold);">Kondisi</th>
-                        <th style="padding:10px; text-align:center; font-size:12px; font-weight:600; width:95px; color:var(--text-bold);">Status</th>
-                        <th style="padding:10px; text-align:left; font-size:12px; font-weight:600; width:130px; color:var(--text-bold);">PC Terpasang</th>
+                        <th style="padding:10px; text-align:center; font-size:12px; font-weight:600; width:180px; color:var(--text-bold);">Pilih Kondisi</th>
+                        <th class="pc-only-col" style="padding:10px; text-align:left; font-size:12px; font-weight:600; width:130px; color:var(--text-bold);">PC Terpasang</th>
                     </tr>
                 </thead>
                 <tbody id="asset-serial-table-body">
@@ -885,15 +887,21 @@ document.getElementById('add-asset-select').addEventListener('change', function(
 const IS_SPV_SERIAL = @json($isSPV);
 let currentAssetSerialId = null;
 
-function openAssetSerialModal(assetId, name) {
+function openAssetSerialModal(assetId, name, category) {
     currentAssetSerialId = assetId;
     document.getElementById('asset-serial-title').textContent = name;
     document.getElementById('asset-serial-empty').style.display = 'none';
     const tbody = document.getElementById('asset-serial-table-body');
     const table = document.getElementById('asset-serial-table');
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);font-size:13px;padding:16px;">Memuat...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);font-size:13px;padding:16px;">Memuat...</td></tr>';
     table.style.display = 'table';
     document.getElementById('modal-asset-serial').style.display = 'flex';
+
+    // Show/hide PC Terpasang column
+    const isPc = (category === 'pc');
+    document.querySelectorAll('.pc-only-col').forEach(el => {
+        el.style.display = isPc ? '' : 'none';
+    });
 
     fetch(`/api/laboratory/${labId}/assets/${assetId}/serials-with-pc`)
         .then(r => r.json())
@@ -907,36 +915,65 @@ function openAssetSerialModal(assetId, name) {
             d.serials.forEach((s, idx) => {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid var(--border-light)';
+                tr.dataset.id = s.id;
                 
                 // No
                 const tdNo = document.createElement('td');
                 tdNo.textContent = idx + 1;
                 tdNo.style.cssText = 'padding:10px; text-align:center; color:var(--text-muted); font-size:13px;';
+                tr.appendChild(tdNo);
+
+                // Parse Prefix and QR Code from serial_number
+                let prefixVal = '';
+                let qrVal = s.serial_number || '';
+                if (s.serial_number) {
+                    const lastDash = s.serial_number.lastIndexOf('-');
+                    if (lastDash !== -1) {
+                        prefixVal = s.serial_number.substring(0, lastDash);
+                        qrVal = s.serial_number.substring(lastDash + 1);
+                    }
+                }
                 
-                // Serial / Input
-                const tdSerial = document.createElement('td');
-                tdSerial.style.padding = '10px';
-                const inp = document.createElement('input');
-                inp.type = 'text';
-                inp.value = s.serial_number;
-                inp.dataset.serialId = s.id;
-                // Locked if in use
-                inp.readOnly = !IS_SPV_SERIAL || s.status === 'in_use';
-                inp.style.cssText = 'width:100%; border:1px solid var(--border-main); background:' + (inp.readOnly ? 'var(--bg-light)' : 'var(--bg-main)') + '; color:var(--text-normal); border-radius:6px; padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;';
-                tdSerial.appendChild(inp);
+                // Kode Inventaris / Prefix Input
+                const tdPrefix = document.createElement('td');
+                tdPrefix.style.padding = '10px';
+                const prefixInp = document.createElement('input');
+                prefixInp.type = 'text';
+                prefixInp.value = prefixVal;
+                prefixInp.placeholder = 'Prefix...';
+                prefixInp.className = 'js-serial-prefix';
+                prefixInp.readOnly = !IS_SPV_SERIAL;
+                prefixInp.style.cssText = 'width:100%; border:1px solid var(--border-main); background:' + (prefixInp.readOnly ? 'var(--bg-light)' : 'var(--bg-main)') + '; color:var(--text-normal); border-radius:6px; padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;';
+                tdPrefix.appendChild(prefixInp);
+                tr.appendChild(tdPrefix);
+
+                // Scan QR / Kamera
+                const tdQr = document.createElement('td');
+                tdQr.style.padding = '10px';
+                const qrContainer = document.createElement('div');
+                qrContainer.style.cssText = 'display:flex; gap:4px; align-items:center;';
                 
-                // Condition Badge
-                const tdCond = document.createElement('td');
-                tdCond.style.cssText = 'padding:10px; text-align:center;';
-                const condBadge = document.createElement('span');
-                const c = s.condition || 'good';
-                const condLabels = { good: 'Baik', damaged: 'Rusak', lost: 'Hilang' };
-                const condBg = c === 'good' ? '#dcfce7' : (c === 'damaged' ? '#fee2e2' : '#fffbeb');
-                const condText = c === 'good' ? '#15803d' : (c === 'damaged' ? '#b91c1c' : '#b45309');
-                condBadge.textContent = condLabels[c] || c;
-                condBadge.style.cssText = `font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; background:${condBg}; color:${condText}; display:inline-block;`;
-                tdCond.appendChild(condBadge);
-                
+                const qrInp = document.createElement('input');
+                qrInp.type = 'text';
+                qrInp.value = qrVal;
+                qrInp.placeholder = 'Scan QR...';
+                qrInp.className = 'js-serial-qr';
+                qrInp.readOnly = !IS_SPV_SERIAL;
+                qrInp.style.cssText = 'flex:1; width:80px; min-width:0; border:1px solid var(--border-main); background:' + (qrInp.readOnly ? 'var(--bg-light)' : 'var(--bg-main)') + '; color:var(--text-normal); border-radius:6px; padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;';
+                qrContainer.appendChild(qrInp);
+
+                if (IS_SPV_SERIAL) {
+                    const camBtn = document.createElement('button');
+                    camBtn.type = 'button';
+                    camBtn.innerHTML = '📷';
+                    camBtn.style.cssText = 'background:var(--bg-light); border:1px solid var(--border-main); border-radius:6px; padding:6px 8px; cursor:pointer; font-size:13px;';
+                    camBtn.onclick = () => startQrScannerForInput(qrInp);
+                    qrContainer.appendChild(camBtn);
+                }
+
+                tdQr.appendChild(qrContainer);
+                tr.appendChild(tdQr);
+
                 // Status Badge
                 const tdStatus = document.createElement('td');
                 tdStatus.style.cssText = 'padding:10px; text-align:center;';
@@ -947,21 +984,73 @@ function openAssetSerialModal(assetId, name) {
                 statusBadge.textContent = isUsed ? 'Terpasang' : 'Tersedia';
                 statusBadge.style.cssText = `font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; background:${statusBg}; color:${statusText}; display:inline-block;`;
                 tdStatus.appendChild(statusBadge);
+                tr.appendChild(tdStatus);
+                
+                // Condition Badge
+                const tdCond = document.createElement('td');
+                tdCond.style.cssText = 'padding:10px; text-align:center;';
+                const condBadge = document.createElement('span');
+                condBadge.className = 'js-cond-badge';
+                
+                const updateCondBadge = (cond) => {
+                    const labels = { good: 'Baik', damaged: 'Rusak', lost: 'Hilang' };
+                    let bg = '#dcfce7', text = '#15803d';
+                    if (cond === 'damaged') { bg = '#fee2e2'; text = '#b91c1c'; }
+                    else if (cond === 'lost') { bg = '#f3f4f6'; text = '#4b5563'; }
+                    
+                    condBadge.textContent = labels[cond] || cond;
+                    condBadge.style.cssText = `font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; background:${bg}; color:${text}; display:inline-block;`;
+                };
+                
+                updateCondBadge(s.condition || 'good');
+                tdCond.appendChild(condBadge);
+                tr.appendChild(tdCond);
+
+                // Pilih Kondisi buttons
+                const tdPilihCond = document.createElement('td');
+                tdPilihCond.style.cssText = 'padding:10px; text-align:center;';
+                const btnGroup = document.createElement('div');
+                btnGroup.style.cssText = 'display:flex; gap:4px; justify-content:center;';
+
+                const conditions = [
+                    { key: 'good', label: 'Baik' },
+                    { key: 'damaged', label: 'Rusak' },
+                    { key: 'lost', label: 'Hilang' }
+                ];
+
+                conditions.forEach(condOpt => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.textContent = condOpt.label;
+                    btn.dataset.cond = condOpt.key;
+                    btn.className = `cond-btn cond-${condOpt.key}` + (s.condition === condOpt.key ? ' active' : '');
+                    btn.disabled = !IS_SPV_SERIAL;
+                    
+                    if (IS_SPV_SERIAL) {
+                        btn.onclick = () => {
+                            btnGroup.querySelectorAll('.cond-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            updateCondBadge(condOpt.key);
+                        };
+                    }
+                    btnGroup.appendChild(btn);
+                });
+
+                tdPilihCond.appendChild(btnGroup);
+                tr.appendChild(tdPilihCond);
                 
                 // PC Terpasang
                 const tdPc = document.createElement('td');
+                tdPc.className = 'pc-only-col';
                 tdPc.style.cssText = 'padding:10px; font-size:13px; font-weight:500; color:var(--text-normal); text-align:left;';
                 tdPc.textContent = s.pc_sku || '-';
-                
-                tr.appendChild(tdNo);
-                tr.appendChild(tdSerial);
-                tr.appendChild(tdCond);
-                tr.appendChild(tdStatus);
+                tdPc.style.display = isPc ? '' : 'none';
                 tr.appendChild(tdPc);
+                
                 tbody.appendChild(tr);
             });
         })
-        .catch(() => { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#f87171;font-size:13px;padding:16px;">Gagal memuat.</td></tr>'; });
+        .catch(() => { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#f87171;font-size:13px;padding:16px;">Gagal memuat.</td></tr>'; });
 }
 
 function closeAssetSerialModal() {
@@ -971,10 +1060,21 @@ function closeAssetSerialModal() {
 
 function saveAssetSerials() {
     if (!currentAssetSerialId) return;
-    const inputs = document.querySelectorAll('#asset-serial-table-body input[data-serial-id]');
-    const serials = Array.from(inputs)
-        .filter(i => !i.readOnly)
-        .map(i => ({ id: i.dataset.serialId, serial_number: i.value }));
+    const rows = document.querySelectorAll('#asset-serial-table-body tr[data-id]');
+    const serials = Array.from(rows).map(tr => {
+        const id = tr.dataset.id;
+        const prefixInput = tr.querySelector('.js-serial-prefix');
+        const qrInput = tr.querySelector('.js-serial-qr');
+        
+        const p = prefixInput ? prefixInput.value.trim() : '';
+        const q = qrInput ? qrInput.value.trim() : '';
+        const serial_number = p && q ? `${p}-${q}` : (p || q);
+        
+        const activeCondBtn = tr.querySelector('.cond-btn.active');
+        const condition = activeCondBtn ? activeCondBtn.dataset.cond : 'good';
+        
+        return { id, serial_number, condition };
+    });
 
     fetch(`/api/laboratory/${labId}/assets/${currentAssetSerialId}/serials/sync`, {
         method: 'POST',
@@ -985,13 +1085,138 @@ function saveAssetSerials() {
         body: JSON.stringify({ serials })
     })
         .then(r => r.json())
-        .then(d => { if (d.success) closeAssetSerialModal(); else alert('Gagal menyimpan.'); })
+        .then(d => {
+            if (d.success) {
+                closeAssetSerialModal();
+                window.location.reload();
+            } else {
+                alert('Gagal menyimpan.');
+            }
+        })
         .catch(() => alert('Gagal menyimpan.'));
 }
 
 document.getElementById('modal-asset-serial').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAssetSerialModal();
 });
+
+/* ─── QR Code Scanner ─── */
+let modalHtml5QrCode = null;
+let activeQrInput = null;
+
+window.startQrScannerForInput = async function(inputEl) {
+    activeQrInput = inputEl;
+    const overlay = document.getElementById('modal-qr-scanner-overlay');
+    if (!overlay) return;
+
+    overlay.style.display = 'flex';
+
+    try {
+        if (typeof Html5Qrcode === 'undefined') {
+            document.getElementById('modal-qr-reader').innerHTML = 
+                '<div style="color:#fff; display:flex; align-items:center; justify-content:center; height:280px; font-size:13px;">Loading camera library...</div>';
+            
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
+                script.onload = resolve;
+                script.onerror = () => reject(new Error("Gagal memuat library scanner."));
+                document.head.appendChild(script);
+            });
+            
+            document.getElementById('modal-qr-reader').innerHTML = '';
+        }
+
+        modalHtml5QrCode = new Html5Qrcode("modal-qr-reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+        modalHtml5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText, decodedResult) => {
+                if (activeQrInput) {
+                    activeQrInput.value = decodedText;
+                    activeQrInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    activeQrInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                stopModalQrScanner();
+            },
+            (errorMessage) => {
+                // ignore errors
+            }
+        ).catch(err => {
+            console.error("Unable to start scanner", err);
+            document.getElementById('modal-qr-reader').innerHTML = 
+                `<div style="color:#f87171; display:flex; align-items:center; justify-content:center; height:280px; font-size:13px; text-align:center; padding:16px;">Error: ${err.message || err}</div>`;
+        });
+    } catch (err) {
+        console.error("Scanner library load error", err);
+        document.getElementById('modal-qr-reader').innerHTML = 
+            `<div style="color:#f87171; display:flex; align-items:center; justify-content:center; height:280px; font-size:13px; text-align:center; padding:16px;">Gagal memuat library kamera. Pastikan koneksi internet aktif.</div>`;
+    }
+};
+
+window.stopModalQrScanner = function() {
+    const overlay = document.getElementById('modal-qr-scanner-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    if (modalHtml5QrCode) {
+        modalHtml5QrCode.stop().then(() => {
+            modalHtml5QrCode = null;
+            activeQrInput = null;
+        }).catch(err => {
+            console.error("Failed to stop scanner", err);
+            modalHtml5QrCode = null;
+            activeQrInput = null;
+        });
+    } else {
+        activeQrInput = null;
+    }
+};
 @endif
 </script>
+
+{{-- QR Scanner Overlay --}}
+<div id="modal-qr-scanner-overlay" onclick="if(event.target===this) stopModalQrScanner()" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 99999;">
+    <div style="background: var(--bg-card, #fff); border: 1px solid var(--border-color, #e5e7eb); border-radius: 16px; width: 90%; max-width: 480px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); display: flex; flex-direction: column; gap: 16px;" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary, #111b4c);">Scan QR Code</div>
+            <button type="button" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted, #9ca3af);" onclick="stopModalQrScanner()">&times;</button>
+        </div>
+        <div id="modal-qr-reader" style="width: 100%; border-radius: 12px; overflow: hidden; background: #000; min-height: 280px;"></div>
+        <p style="font-size: .8rem; color: var(--text-muted); text-align: center; margin: 0;">
+            Arahkan QR Code ke kamera untuk memindai otomatis.
+        </p>
+    </div>
+</div>
+
+<style>
+.cond-btn {
+    border: 1px solid var(--border-main);
+    background: var(--bg-main);
+    color: var(--text-normal);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.cond-btn.cond-good.active {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: #fff;
+}
+.cond-btn.cond-damaged.active {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #fff;
+}
+.cond-btn.cond-lost.active {
+    background: #6b7280;
+    border-color: #6b7280;
+    color: #fff;
+}
+</style>
 @endpush

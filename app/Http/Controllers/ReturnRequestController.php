@@ -253,19 +253,39 @@ class ReturnRequestController extends Controller
             DB::transaction(function () use ($validated) {
                 // Validasi stok tiap item SEBELUM buat request, sesuai kondisi barang
                 foreach ($validated['items'] as $item) {
-                    $field = match ($item['condition']) {
-                        'good'    => 'total_good_lab',
-                        'damaged' => 'total_damaged_lab',
-                        'lost'    => 'total_loss_lab',
-                        default   => 'total_good_lab',
-                    };
+                    $serialIds = $item['serial_number_ids'] ?? [];
+                    if (!empty($serialIds)) {
+                        foreach ($serialIds as $sid) {
+                            $serial = \App\Models\AssetSerialNumber::find($sid);
+                            $currentCondition = $serial ? $serial->condition : $item['condition'];
+                            $field = match ($currentCondition) {
+                                'good'    => 'total_good_lab',
+                                'damaged' => 'total_damaged_lab',
+                                'lost'    => 'total_loss_lab',
+                                default   => 'total_good_lab',
+                            };
+                            $this->mutationService->validateLabStock(
+                                labId:        $validated['lab_id'],
+                                assetId:      $item['asset_id'],
+                                requestedQty: 1,
+                                field:        $field,
+                            );
+                        }
+                    } else {
+                        $field = match ($item['condition']) {
+                            'good'    => 'total_good_lab',
+                            'damaged' => 'total_damaged_lab',
+                            'lost'    => 'total_loss_lab',
+                            default   => 'total_good_lab',
+                        };
 
-                    $this->mutationService->validateLabStock(
-                        labId:        $validated['lab_id'],
-                        assetId:      $item['asset_id'],
-                        requestedQty: $item['quantity'],
-                        field:        $field,
-                    );
+                        $this->mutationService->validateLabStock(
+                            labId:        $validated['lab_id'],
+                            assetId:      $item['asset_id'],
+                            requestedQty: $item['quantity'],
+                            field:        $field,
+                        );
+                    }
                 }
 
                 // Buat header request

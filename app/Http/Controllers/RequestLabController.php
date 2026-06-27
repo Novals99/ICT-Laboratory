@@ -170,7 +170,8 @@ class RequestLabController extends Controller
         abort_unless(auth()->user()->role === 'spv inventory', 403);
 
         $validated = $request->validate([
-            'status' => 'required|in:pending,approved,rejected',
+            'status' => 'required|in:pending,approved,rejected,partial',
+            'qty_approved' => 'nullable|integer|min:0',
             'serial_ids' => 'nullable|array',
             'serial_ids.*' => 'exists:asset_serial_numbers,id',
         ]);
@@ -181,30 +182,21 @@ class RequestLabController extends Controller
         $asset = $item->asset;
         $usesSerial = in_array($asset->asset_category, ['electronic', 'pc', 'non-electronic']);
 
-        if ($validated['status'] === 'approved' && $usesSerial) {
-            if ($asset->asset_category === 'component-pc') {
-                $serialIds = \App\Models\AssetSerialNumber::where('asset_id', $item->asset_id)
-                    ->whereNull('lab_id')
-                    ->where('status', 'available')
-                    ->limit($item->total_request)
-                    ->pluck('id')
-                    ->toArray();
-                if (count($serialIds) < $item->total_request) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Stok serial number untuk {$asset->asset_name} tidak mencukupi di gudang (butuh {$item->total_request})."
-                    ], 422);
-                }
-                $validated['serial_ids'] = $serialIds;
-            } else {
-                $serialIds = $validated['serial_ids'] ?? [];
-                if (count($serialIds) > $item->total_request) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Number of selected serial numbers cannot exceed the requested quantity ({$item->total_request})."
-                    ], 422);
-                }
-                
+        $qtyApproved = (int) ($validated['qty_approved'] ?? 0);
+        if ($usesSerial) {
+            $serialIds = $validated['serial_ids'] ?? [];
+            $qtyApproved = count($serialIds);
+        }
+
+        if ($validated['status'] !== 'rejected') {
+            if ($qtyApproved > $item->total_request) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Number of approved items cannot exceed the requested quantity ({$item->total_request})."
+                ], 422);
+            }
+            
+            if ($usesSerial && !empty($serialIds)) {
                 // Check that they match the asset and are available in SPV warehouse (lab_id is null) or already assigned to this request item
                 $validSerialsCount = \App\Models\AssetSerialNumber::where('asset_id', $item->asset_id)
                     ->where(function($q) use ($item) {
@@ -223,8 +215,11 @@ class RequestLabController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($item, $validated, $labRequest) {
-                $this->applyItemStatus($item, $labRequest, $validated['status'], $validated['serial_ids'] ?? []);
+            DB::transaction(function () use ($item, $labRequest, $validated, $qtyApproved) {
+                $status = $validated['status'];
+                $serialIds = $validated['serial_ids'] ?? [];
+                
+                $this->applyItemStatus($item, $labRequest, $status, $serialIds, $qtyApproved);
 
                 // Recalculate status request
                 $requestStatus = $this->resolveRequestStatus($labRequest->fresh()->request_items);
@@ -233,8 +228,7 @@ class RequestLabController extends Controller
 
                 ActivityLog::create([
                     'user_id' => auth()->id(),
-                    'activity' => ucfirst($validated['status']) .
-                        ' requested asset: ' . $assetName .
+                    'activity' => 'Updated approval status of requested asset: ' . $assetName .
                         ' (REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT) . ')',
                 ]);
             });
@@ -267,18 +261,30 @@ class RequestLabController extends Controller
                     $serialIds = [];
                     $asset = $item->asset;
                     $usesSerial = in_array($asset->asset_category, ['electronic', 'pc', 'non-electronic']);
-                    if ($validated['status'] === 'approved' && $usesSerial) {
-                        $serialIds = \App\Models\AssetSerialNumber::where('asset_id', $item->asset_id)
-                            ->whereNull('lab_id')
-                            ->where('status', 'available')
-                            ->limit($item->total_request)
-                            ->pluck('id')
-                            ->toArray();
-                        if (count($serialIds) < $item->total_request) {
-                            throw new \Exception("Stok serial number untuk {$asset->asset_name} tidak mencukupi di gudang.");
+                    
+                    if ($validated['status'] === 'approved') {
+                        $qtyNeeded = $item->total_request - $item->qty_approved;
+                        if ($qtyNeeded > 0) {
+                            if ($usesSerial) {
+                                $currentSerials = \App\Models\AssetSerialNumber::where('request_item_id', $item->id)->pluck('id')->toArray();
+                                $newSerials = \App\Models\AssetSerialNumber::where('asset_id', $item->asset_id)
+                                    ->whereNull('lab_id')
+                                    ->where('status', 'available')
+                                    ->limit($qtyNeeded)
+                                    ->pluck('id')
+                                    ->toArray();
+                                if (count($newSerials) < $qtyNeeded) {
+                                    throw new \Exception("Stok serial number untuk {$asset->asset_name} tidak mencukupi di gudang.");
+                                }
+                                $serialIds = array_merge($currentSerials, $newSerials);
+                                $this->applyItemStatus($item, $labRequest, 'approved', $serialIds, count($serialIds));
+                            } else {
+                                $this->applyItemStatus($item, $labRequest, 'approved', [], $item->total_request);
+                            }
                         }
+                    } else {
+                        $this->applyItemStatus($item, $labRequest, 'rejected', [], 0);
                     }
-                    $this->applyItemStatus($item, $labRequest, $validated['status'], $serialIds);
                 }
 
                 $requestStatus = $this->resolveRequestStatus($labRequest->fresh()->request_items);
@@ -290,7 +296,6 @@ class RequestLabController extends Controller
                         ' laboratory request: REQ-' .
                         str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
                 ]);
-
             });
         } catch (\Throwable $e) {
             return response()->json([
@@ -310,13 +315,27 @@ class RequestLabController extends Controller
         $total = $items->count();
         if ($total === 0) return 'pending';
 
-        $pending  = $items->where('status', 'pending')->count();
-        $approved = $items->where('status', 'approved')->count();
-        $rejected = $items->where('status', 'rejected')->count();
+        $pending = 0;
+        $approved = 0;
+        $rejected = 0;
+        $partial = 0;
 
+        foreach ($items as $item) {
+            if ($item->status === 'rejected') {
+                $rejected++;
+            } elseif ($item->qty_approved >= $item->total_request) {
+                $approved++;
+            } elseif ($item->qty_approved > 0) {
+                $partial++;
+            } else {
+                $pending++;
+            }
+        }
+
+        if ($rejected === $total) return 'rejected';
+        if ($approved === $total) return 'approved';
         if ($pending === $total) return 'pending';
-        if ($pending > 0) return 'partial';
-        return 'done';
+        return 'partial';
     }
 
     public function destroy($id)
@@ -388,6 +407,7 @@ class RequestLabController extends Controller
                 'asset_name' => $item->asset->asset_name ?? '-',
                 'specification' => $item->asset->specification ?? '-',
                 'quantity' => $item->total_request,
+                'qty_approved' => $item->qty_approved,
                 'status' => $item->status ?? 'pending',
                 'category' => $category,
                 'serials' => $item->serialNumbers->map(fn($s) => [
@@ -398,79 +418,38 @@ class RequestLabController extends Controller
             ->toArray();
     }
 
-    private function applyItemStatus(RequestItem $item, RequestLab $labRequest, string $newStatus, array $serialIds = []): void
+    private function applyItemStatus(RequestItem $item, RequestLab $labRequest, string $newStatus, array $serialIds = [], int $newQtyApproved = 0): void
     {
-        $oldStatus = $item->status ?? 'pending';
-        $qty = (int) $item->total_request;
+        $oldQtyApproved = (int) $item->qty_approved;
+        $usesSerial = in_array($item->asset->asset_category, ['electronic', 'pc', 'non-electronic']);
 
-        if ($oldStatus === $newStatus) {
-            $item->update(['status' => $newStatus]);
+        if ($newStatus === 'rejected') {
+            if ($oldQtyApproved > 0) {
+                $this->reclaimQty($item, $labRequest, $oldQtyApproved);
+            }
+            $item->update([
+                'status' => 'rejected',
+                'qty_approved' => 0,
+            ]);
             return;
         }
 
-        if ($oldStatus === 'approved') {
-            $assetLab = AssetLab::where('lab_id', $labRequest->lab_id)
-                ->where('asset_id', $item->asset_id)
-                ->first();
-
-            $availableInLab = $assetLab->total_good_lab ?? 0;
-            if (!$assetLab || $availableInLab < $qty) {
-                $assetName = Asset::find($item->asset_id)?->asset_name ?? "Asset #{$item->asset_id}";
-                throw new \Exception(
-                    "Tidak bisa membatalkan approval {$assetName}: stok di lab sudah berubah (tersedia {$availableInLab}, butuh {$qty}). Kemungkinan stok sudah terpakai."
-                );
-            }
-
-            $asset = Asset::findOrFail($item->asset_id);
-            $beforeTotalAsset = $asset->total_asset;
-            $beforeGood = $asset->total_good;
-
-            $asset->total_good += $qty;
-            $asset->total_asset = $asset->total_good + $asset->total_damaged + $asset->total_loss;
-            $asset->save();
-
-            $assetLab->total_good_lab -= $qty;
-            $assetLab->total_asset_lab = $assetLab->total_good_lab + $assetLab->total_damaged_lab + $assetLab->total_loss_lab;
-            $assetLab->save();
-
-            // Reclaim serial numbers back to SPV warehouse
-            \App\Models\AssetSerialNumber::where('request_item_id', $item->id)
-                ->update([
-                    'lab_id' => null,
-                    'request_item_id' => null,
-                    'status' => 'available'
-                ]);
-
-            AssetLog::create([
-                'asset_id' => $asset->id,
-                'user_id' => auth()->id(),
-                'type' => 'distribution',
-                'quantity' => $qty,
-                'to_lab_id' => $labRequest->lab_id,
-                'before_total_asset' => $beforeTotalAsset,
-                'after_total_asset' => $asset->total_asset,
-                'before_total_good' => $beforeGood,
-                'after_total_good' => $asset->total_good,
-                'before_total_damaged' => $asset->total_damaged,
-                'after_total_damaged' => $asset->total_damaged,
-                'before_total_loss' => $asset->total_loss,
-                'after_total_loss' => $asset->total_loss,
-                'source' => 'requestlab:REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
-                'notes' => 'Pembatalan approval request — stok ditarik balik dari lab ke gudang.',
-            ]);
+        if ($usesSerial) {
+            $newQtyApproved = count($serialIds);
         }
 
-        if ($newStatus === 'approved') {
-            $asset = Asset::findOrFail($item->asset_id);
+        $delta = $newQtyApproved - $oldQtyApproved;
 
-            if ($asset->total_good < $qty) {
-                throw new \Exception("Stok {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good}).");
+        if ($delta > 0) {
+            $asset = Asset::findOrFail($item->asset_id);
+            if ($asset->total_good < $delta) {
+                throw new \Exception("Stok {$asset->asset_name} tidak mencukupi (tersedia: {$asset->total_good}, butuh: {$delta}).");
             }
 
             $beforeTotalAsset = $asset->total_asset;
             $beforeGood = $asset->total_good;
 
-            $asset->total_good -= $qty;
+            $asset->total_good -= $delta;
             $asset->total_asset = $asset->total_good + $asset->total_damaged + $asset->total_loss;
             $asset->save();
 
@@ -478,20 +457,18 @@ class RequestLabController extends Controller
                 ['lab_id' => $labRequest->lab_id, 'asset_id' => $item->asset_id],
                 ['total_good_lab' => 0, 'total_damaged_lab' => 0, 'total_loss_lab' => 0, 'total_asset_lab' => 0]
             );
-            $assetLab->total_good_lab += $qty;
+            $assetLab->total_good_lab += $delta;
             $assetLab->total_asset_lab = $assetLab->total_good_lab + $assetLab->total_damaged_lab + $assetLab->total_loss_lab;
             $assetLab->save();
 
-            // Reclaim any currently linked serials for this item first to avoid duplicates
-            \App\Models\AssetSerialNumber::where('request_item_id', $item->id)
-                ->update([
-                    'lab_id' => null,
-                    'request_item_id' => null,
-                    'status' => 'available'
-                ]);
+            if ($usesSerial && !empty($serialIds)) {
+                \App\Models\AssetSerialNumber::where('request_item_id', $item->id)
+                    ->update([
+                        'lab_id' => null,
+                        'request_item_id' => null,
+                        'status' => 'available'
+                    ]);
 
-            // Link selected serial numbers to the laboratory and request item
-            if (!empty($serialIds)) {
                 \App\Models\AssetSerialNumber::whereIn('id', $serialIds)
                     ->update([
                         'lab_id' => $labRequest->lab_id,
@@ -504,7 +481,7 @@ class RequestLabController extends Controller
                 'asset_id' => $asset->id,
                 'user_id' => auth()->id(),
                 'type' => 'distribution',
-                'quantity' => $qty,
+                'quantity' => $delta,
                 'to_lab_id' => $labRequest->lab_id,
                 'before_total_asset' => $beforeTotalAsset,
                 'after_total_asset' => $asset->total_asset,
@@ -517,8 +494,85 @@ class RequestLabController extends Controller
                 'source' => 'requestlab:REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
                 'notes' => 'Distribusi stok ke lab via approval Request Lab.',
             ]);
+
+        } elseif ($delta < 0) {
+            $reclaimQty = abs($delta);
+            $this->reclaimQty($item, $labRequest, $reclaimQty);
+
+            if ($usesSerial) {
+                \App\Models\AssetSerialNumber::where('request_item_id', $item->id)
+                    ->update([
+                        'lab_id' => null,
+                        'request_item_id' => null,
+                        'status' => 'available'
+                    ]);
+
+                if (!empty($serialIds)) {
+                    \App\Models\AssetSerialNumber::whereIn('id', $serialIds)
+                        ->update([
+                            'lab_id' => $labRequest->lab_id,
+                            'request_item_id' => $item->id,
+                            'status' => 'available'
+                        ]);
+                }
+            }
         }
 
-        $item->update(['status' => $newStatus]);
+        $status = 'pending';
+        if ($newQtyApproved >= $item->total_request) {
+            $status = 'approved';
+        } elseif ($newQtyApproved > 0) {
+            $status = 'partial';
+        }
+
+        $item->update([
+            'qty_approved' => $newQtyApproved,
+            'status' => $status,
+        ]);
+    }
+
+    private function reclaimQty(RequestItem $item, RequestLab $labRequest, int $qty): void
+    {
+        $assetLab = AssetLab::where('lab_id', $labRequest->lab_id)
+            ->where('asset_id', $item->asset_id)
+            ->first();
+
+        $availableInLab = $assetLab->total_good_lab ?? 0;
+        if (!$assetLab || $availableInLab < $qty) {
+            $assetName = Asset::find($item->asset_id)?->asset_name ?? "Asset #{$item->asset_id}";
+            throw new \Exception(
+                "Tidak bisa membatalkan approval {$assetName}: stok di lab sudah berubah (tersedia {$availableInLab}, butuh {$qty}). Kemungkinan stok sudah terpakai."
+            );
+        }
+
+        $asset = Asset::findOrFail($item->asset_id);
+        $beforeTotalAsset = $asset->total_asset;
+        $beforeGood = $asset->total_good;
+
+        $asset->total_good += $qty;
+        $asset->total_asset = $asset->total_good + $asset->total_damaged + $asset->total_loss;
+        $asset->save();
+
+        $assetLab->total_good_lab -= $qty;
+        $assetLab->total_asset_lab = $assetLab->total_good_lab + $assetLab->total_damaged_lab + $assetLab->total_loss_lab;
+        $assetLab->save();
+
+        AssetLog::create([
+            'asset_id' => $asset->id,
+            'user_id' => auth()->id(),
+            'type' => 'distribution',
+            'quantity' => $qty,
+            'to_lab_id' => $labRequest->lab_id,
+            'before_total_asset' => $beforeTotalAsset,
+            'after_total_asset' => $asset->total_asset,
+            'before_total_good' => $beforeGood,
+            'after_total_good' => $asset->total_good,
+            'before_total_damaged' => $asset->total_damaged,
+            'after_total_damaged' => $asset->total_damaged,
+            'before_total_loss' => $asset->total_loss,
+            'after_total_loss' => $asset->total_loss,
+            'source' => 'requestlab:REQ-' . str_pad($labRequest->id, 3, '0', STR_PAD_LEFT),
+            'notes' => 'Pembatalan approval request — stok ditarik balik dari lab ke gudang.',
+        ]);
     }
 }

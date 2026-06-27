@@ -813,7 +813,7 @@
                     }
                 }
 
-                function addSerialInput(list, name, value, locked) {
+                function addSerialInput(list, name, value, locked, serialId = null, condition = 'good') {
                     const row = document.createElement('div');
                     row.style.cssText = 'display:flex; gap:6px; align-items:center; margin-bottom:6px;';
 
@@ -828,12 +828,31 @@
                         }
                     }
 
+                    const idx = list.children.length;
+                    const isStructured = name.includes('serials[]');
+
                     // Hidden input that will actually be submitted to backend
                     const hiddenInput = document.createElement('input');
                     hiddenInput.type = 'hidden';
-                    hiddenInput.name = name;
+                    hiddenInput.name = isStructured ? `serials[${idx}][serial_number]` : name;
                     hiddenInput.value = value || '';
                     row.appendChild(hiddenInput);
+
+                    if (isStructured) {
+                        // ID input
+                        const idInput = document.createElement('input');
+                        idInput.type = 'hidden';
+                        idInput.name = `serials[${idx}][id]`;
+                        idInput.value = serialId || '';
+                        row.appendChild(idInput);
+
+                        // Condition input
+                        const condInput = document.createElement('input');
+                        condInput.type = 'hidden';
+                        condInput.name = `serials[${idx}][condition]`;
+                        condInput.value = condition || 'good';
+                        row.appendChild(condInput);
+                    }
 
                     // Prefix / Template input
                     const prefixInput = document.createElement('input');
@@ -842,7 +861,6 @@
                     prefixInput.placeholder = 'Template / Prefix...';
                     prefixInput.className = 'panel-form-input';
                     prefixInput.style.width = '140px';
-                    prefixInput.disabled = locked;
                     row.appendChild(prefixInput);
 
                     // Scanned QR code input
@@ -852,7 +870,6 @@
                     qrInput.placeholder = 'Scan QR Code...';
                     qrInput.className = 'panel-form-input';
                     qrInput.style.flex = '1';
-                    qrInput.readOnly = true;
                     row.appendChild(qrInput);
 
                     const updateFinalValue = () => {
@@ -865,15 +882,64 @@
                     qrInput.addEventListener('input', updateFinalValue);
                     qrInput.addEventListener('change', updateFinalValue);
 
-                    if (!locked) {
-                        const qrBtn = document.createElement('button');
-                        qrBtn.type = 'button';
-                        qrBtn.className = 'panel-btn-secondary';
-                        qrBtn.style.padding = '0 12px';
-                        qrBtn.innerHTML = '📷';
-                        qrBtn.onclick = () => startQrScannerForInput(qrInput);
-                        row.appendChild(qrBtn);
+                    // Camera button (always available, even if locked)
+                    const qrBtn = document.createElement('button');
+                    qrBtn.type = 'button';
+                    qrBtn.className = 'panel-btn-secondary';
+                    qrBtn.style.padding = '0 12px';
+                    qrBtn.innerHTML = '📷';
+                    qrBtn.onclick = () => startQrScannerForInput(qrInput);
+                    row.appendChild(qrBtn);
 
+                    // Condition selection round buttons (only if structured/edit mode)
+                    if (isStructured) {
+                        const condWrapper = document.createElement('div');
+                        condWrapper.style.cssText = 'display:flex; gap:3px;';
+                        
+                        const conds = [
+                            { key: 'good', label: 'G', color: '#22c55e' },
+                            { key: 'damaged', label: 'D', color: '#ef4444' },
+                            { key: 'lost', label: 'L', color: '#6b7280' }
+                        ];
+                        
+                        conds.forEach(cOpt => {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.textContent = cOpt.label;
+                            btn.style.cssText = `width:26px; height:26px; border-radius:50%; border:1px solid ${cOpt.color}; font-size:10px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s;`;
+                            
+                            const setBtnState = (isActive) => {
+                                if (isActive) {
+                                    btn.style.background = cOpt.color;
+                                    btn.style.color = '#fff';
+                                } else {
+                                    btn.style.background = 'transparent';
+                                    btn.style.color = cOpt.color;
+                                }
+                            };
+                            
+                            setBtnState(condition === cOpt.key);
+                            
+                            btn.onclick = () => {
+                                condWrapper.querySelectorAll('button').forEach(b => {
+                                    b.style.background = 'transparent';
+                                    b.style.color = b.style.borderColor;
+                                });
+                                setBtnState(true);
+                                const condInputEl = row.querySelector(`input[name="serials[${idx}][condition]"]`);
+                                if (condInputEl) {
+                                    condInputEl.value = cOpt.key;
+                                    recalculateEditModalCounts(row.closest('form'));
+                                }
+                            };
+                            
+                            condWrapper.appendChild(btn);
+                        });
+                        row.appendChild(condWrapper);
+                    }
+
+                    // Delete button (only if not locked)
+                    if (!locked) {
                         const btn = document.createElement('button');
                         btn.type = 'button';
                         btn.className = 'panel-btn-secondary';
@@ -882,10 +948,37 @@
                         btn.onclick = () => {
                             updateStockCount(row, -1);
                             row.remove();
+                            recalculateEditModalCounts(row.closest('form'));
                         };
                         row.appendChild(btn);
                     }
                     list.appendChild(row);
+                }
+
+                function recalculateEditModalCounts(form) {
+                    if (!form) return;
+                    const rows = form.querySelectorAll('.js-serial-list > div');
+                    let total = rows.length;
+                    let good = 0;
+                    let damaged = 0;
+                    let lost = 0;
+                    rows.forEach(r => {
+                        const condInp = r.querySelector('input[name$="[condition]"]');
+                        const cond = condInp ? condInp.value : 'good';
+                        if (cond === 'good') good++;
+                        else if (cond === 'damaged') damaged++;
+                        else if (cond === 'lost') lost++;
+                    });
+                    
+                    const totalInput = form.querySelector('[name="total_asset"]');
+                    const goodInput = form.querySelector('[name="total_good"]');
+                    const damagedInput = form.querySelector('[name="total_damaged"]');
+                    const lossInput = form.querySelector('[name="total_loss"]');
+                    
+                    if (totalInput) totalInput.value = total;
+                    if (goodInput) goodInput.value = good;
+                    if (damagedInput) damagedInput.value = damaged;
+                    if (lossInput) lossInput.value = lost;
                 }
 
                 // CREATE: tampil/sembunyi component_type, spec, dan kode inventaris per kartu.
@@ -949,6 +1042,59 @@
                     }
                     if (e.target.matches && e.target.matches('input[name="asset_category"]')) {
                         toggleEdit(e.target.closest('form'), e.target.value);
+                    }
+                });
+
+                document.addEventListener('input', function (e) {
+                    if (!e.target.matches) return;
+                    const isTotal = e.target.matches('[name="total_asset"], [name$="[total_asset]"]');
+                    const isDamaged = e.target.matches('[name="total_damaged"], [name$="[total_damaged]"]');
+                    const isLoss = e.target.matches('[name="total_loss"], [name$="[total_loss]"]');
+                    
+                    if (isTotal || isDamaged || isLoss) {
+                        const card = e.target.closest('.asset-item-card');
+                        const form = e.target.closest('form');
+                        
+                        let totalInput, goodInput, damagedInput, lossInput;
+                        if (card) {
+                            totalInput = card.querySelector('[name$="[total_asset]"], [data-stock-total]');
+                            goodInput = card.querySelector('[name$="[total_good]"], [data-stock-good]');
+                            damagedInput = card.querySelector('[name$="[total_damaged]"], [data-stock-damaged]');
+                            lossInput = card.querySelector('[name$="[total_loss]"]');
+                        } else if (form) {
+                            totalInput = form.querySelector('[name="total_asset"]');
+                            goodInput = form.querySelector('[name="total_good"]');
+                            damagedInput = form.querySelector('[name="total_damaged"]');
+                            lossInput = form.querySelector('[name="total_loss"]');
+                        }
+                        
+                        if (totalInput && goodInput && damagedInput && lossInput) {
+                            const total = parseInt(totalInput.value) || 0;
+                            let damaged = parseInt(damagedInput.value) || 0;
+                            let loss = parseInt(lossInput.value) || 0;
+                            
+                            let good = total - damaged - loss;
+                            if (good < 0) {
+                                if (isDamaged) {
+                                    damaged = total - loss;
+                                    if (damaged < 0) damaged = 0;
+                                    damagedInput.value = damaged;
+                                } else if (isLoss) {
+                                    loss = total - damaged;
+                                    if (loss < 0) loss = 0;
+                                    lossInput.value = loss;
+                                } else if (isTotal) {
+                                    damaged = total;
+                                    loss = 0;
+                                    damagedInput.value = damaged;
+                                    lossInput.value = loss;
+                                }
+                                good = 0;
+                            }
+                            
+                            goodInput.value = good;
+                            goodInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
                     }
                 });
 

@@ -1,6 +1,6 @@
 # Implementation Plan - Asset Filter, Sort, and Request Lab Enhancements
 
-We will add a Category Filter and Date Sorting to the Asset Information table on the Laboratory Show page, combine PC Component names with their specifications in the Request Lab modal for Staff, and provide a tinker command to retrieve/reset the `spvinventory` credentials. Furthermore, we will fix the PC dropdown display inside the Create Transfer and Return Request modals to show formatted PC names (e.g. `PC-00 (Mahasiswa)`) instead of `null`. Lastly, we will add a Template / Prefix Code input field to the Kode Inventaris rows in the Create/Edit Asset modal, make the Total and Good fields read-only for non-PC Components, and dynamically increment/decrement them when Kode Inventaris rows are added or removed.
+We will add a Category Filter and Date Sorting to the Asset Information table on the Laboratory Show page, combine PC Component names with their specifications in the Request Lab modal for Staff, and provide a tinker command to retrieve/reset the `spvinventory` credentials. Furthermore, we will fix the PC dropdown display inside the Create Transfer and Return Request modals to show formatted PC names (e.g. `PC-00 (Mahasiswa)`) instead of `null`. Lastly, we will add a Template / Prefix Code input field to the Kode Inventaris rows in the Create/Edit Asset modal, make the Total and Good fields read-only for non-PC Components, and dynamically increment/decrement them when Kode Inventaris rows are added or removed. Finally, we will implement dynamic stock count calculation where `Good = Total - Damaged - Loss`.
 
 ## User Review Required
 
@@ -11,6 +11,7 @@ We will add a Category Filter and Date Sorting to the Asset Information table on
 > - **PC Dropdown Formatting**: We will map each PC fetched via `/api/labs/{labId}/pcs` to a name corresponding to its index (e.g., `PC-00`, `PC-01`, etc.) so that the dropdown does not display `null (Mahasiswa)`.
 > - **Kode Inventaris Template / Prefix**: In the Create/Edit Asset modal, each Kode Inventaris input row will feature an editable "Template / Prefix" input field to the left of the scanned QR Code field. When submitted, they will be joined with a dash (`Prefix-QR`). If loaded in edit mode, existing codes containing dashes will be parsed back into their respective prefix and QR parts.
 > - **Stock Total & Good Auto Sync**: Total and Good inputs will be `readonly` for category `PC`, `Electronic`, and `Non-Electronic`. They will auto-increment by 1 when a Kode Inventaris row is added, and auto-decrement by 1 when a row is removed. For `PC Component`, since there are no serial numbers, they remain manually editable.
+> - **Damaged / Loss Calculation**: When `Damaged` or `Loss` inputs are edited, `Good` is automatically re-calculated as `Total - Damaged - Loss`. If `Good` falls below 0, the active input (Damaged or Loss) is capped at the maximum allowed value (`Total - other field`), preventing invalid values.
 
 ## Proposed Changes
 
@@ -70,6 +71,7 @@ We will add a Category Filter and Date Sorting to the Asset Information table on
 - Update `toggleCard(card, cat)` to toggle `readonly` state and background styling of Total and Good inputs.
 - Register event click on `.js-add-serial` to also increment stock count using `updateStockCount(e.target, 1)`.
 - Set `readonly` attribute in HTML inputs by default for non-PC Component fields.
+- Add global `input` event listener to automatically calculate `Good = Total - Damaged - Loss` and apply values capping to prevent negative stock counts.
 
 ---
 
@@ -98,3 +100,4 @@ $u = App\Models\User::where('username', 'spvinventory')->first() ?: new App\Mode
 - Click `+ Tambah Kode` in Create Asset modal. Verify `Total` and `Good` automatically increase by 1, and are read-only.
 - Click `×` to remove a serial row. Verify `Total` and `Good` automatically decrease by 1.
 - Select Category "PC Component", verify `Total` and `Good` inputs are editable.
+- In Edit Asset modal, change `Damaged` or `Loss` fields. Verify `Good` dynamically increments/decrements. Capping restricts going below 0.

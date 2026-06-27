@@ -202,7 +202,10 @@ class StockMutationService
                     );
                 }
 
-                $conditionField = match ($item->condition) {
+                $serial = $item->serial_number_id ? \App\Models\AssetSerialNumber::find($item->serial_number_id) : null;
+                $currentCondition = $serial ? $serial->condition : $item->condition;
+
+                $conditionField = match ($currentCondition) {
                     ReturnRequestItem::CONDITION_GOOD    => 'total_good_lab',
                     ReturnRequestItem::CONDITION_DAMAGED => 'total_damaged_lab',
                     ReturnRequestItem::CONDITION_LOST    => 'total_loss_lab',
@@ -211,7 +214,7 @@ class StockMutationService
 
                 if ($assetLab->$conditionField < $qtyApproved) {
                     throw new \Exception(
-                        "Stok {$asset->asset_name} ({$item->condition}) di lab sudah berubah. " .
+                        "Stok {$asset->asset_name} ({$currentCondition}) di lab sudah berubah. " .
                         "Tersedia: {$assetLab->$conditionField}, " .
                         "Disetujui: {$qtyApproved}. Silakan review ulang."
                     );
