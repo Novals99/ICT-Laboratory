@@ -53,7 +53,7 @@
         <form method="GET" action="{{ $action }}">
 
             {{-- carry over params selain filter & search (biar pagination dll ga ilang) --}}
-            @foreach(request()->except(['role', 'status', 'search', 'page']) as $key => $val)
+            @foreach(request()->except(['role', 'status', 'search', 'page', 'category', 'sort']) as $key => $val)
                 @if(is_array($val))
                     @foreach($val as $v)
                         <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">

@@ -10,9 +10,11 @@
     $canDeleteRequest = $isSpv;
     $assetGroups = $assets
         ->groupBy('asset_category')
-        ->map(fn ($items) => $items->map(fn ($asset) => [
+        ->map(fn ($items, $category) => $items->map(fn ($asset) => [
             'id' => $asset->id,
-            'name' => $asset->asset_name,
+            'name' => ($category === 'component-pc' && $asset->specification) 
+                ? $asset->asset_name . ' - ' . $asset->specification 
+                : $asset->asset_name,
             'specification' => $asset->specification,
         ])->values());
 @endphp
@@ -435,12 +437,6 @@
                         <option value="{{ $asset->id }}">{{ $asset->asset_name }}</option>
                     @endforeach
                 </select>
-            </div>
-            <div class="js-item-spec-container" style="margin-bottom:8px; display:none;">
-                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Spesifikasi:</label>
-                <input type="text" class="js-item-spec-input" readonly
-                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input); opacity:0.8;">
-            </div>
             <div>
                 <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
                 <input type="number" name="items[0][total_request]" min="1" placeholder="Enter here..."
@@ -529,12 +525,16 @@
         
         const specContainer = row.querySelector('.js-item-spec-container');
         const specInput = row.querySelector('.js-item-spec-input');
-        if (categorySelect.value === 'component-pc') {
-            specContainer.style.display = 'block';
-        } else {
-            specContainer.style.display = 'none';
+        if (specContainer) {
+            if (categorySelect.value === 'component-pc') {
+                specContainer.style.display = 'block';
+            } else {
+                specContainer.style.display = 'none';
+            }
         }
-        specInput.value = '';
+        if (specInput) {
+            specInput.value = '';
+        }
     }
 
     window.updateItemSpecification = function(assetSelect) {
@@ -543,19 +543,21 @@
         const specContainer = row.querySelector('.js-item-spec-container');
         const specInput = row.querySelector('.js-item-spec-input');
         
-        if (categorySelect.value === 'component-pc') {
-            specContainer.style.display = 'block';
-            const assetId = assetSelect.value;
-            const categoryAssets = assets['component-pc'] ?? [];
-            const asset = categoryAssets.find(a => String(a.id) === String(assetId));
-            if (asset && asset.specification) {
-                specInput.value = asset.specification;
+        if (specContainer && specInput) {
+            if (categorySelect.value === 'component-pc') {
+                specContainer.style.display = 'block';
+                const assetId = assetSelect.value;
+                const categoryAssets = assets['component-pc'] ?? [];
+                const asset = categoryAssets.find(a => String(a.id) === String(assetId));
+                if (asset && asset.specification) {
+                    specInput.value = asset.specification;
+                } else {
+                    specInput.value = '';
+                }
             } else {
+                specContainer.style.display = 'none';
                 specInput.value = '';
             }
-        } else {
-            specContainer.style.display = 'none';
-            specInput.value = '';
         }
     };
 
@@ -583,12 +585,6 @@
                     style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
                     ${assetOptions('electronic')}
                 </select>
-            </div>
-            <div class="js-item-spec-container" style="margin-bottom:8px; display:none;">
-                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Spesifikasi:</label>
-                <input type="text" class="js-item-spec-input" readonly
-                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input); opacity:0.8;">
-            </div>
             <div>
                 <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity:</label>
                 <input type="number" name="items[${idx}][total_request]" placeholder="Enter here..." min="1"
