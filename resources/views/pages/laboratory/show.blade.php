@@ -193,14 +193,56 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 
     {{-- ══ SECTION 2: ASSET INFORMATION ══ --}}
     <div id="section-asset" class="db-card" style="display:none; padding:0; overflow:hidden;">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px 14px; border-bottom:1px solid var(--border-light);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px 14px; border-bottom:1px solid var(--border-light); flex-wrap: wrap; gap: 12px;">
             <h3 style="font-size:15px; font-weight:700; color:var(--text-bold); margin:0;">Asset Information</h3>
-            @if($isSPV)
-            <button onclick="openAddAssetModal()"
-                    style="background:var(--bg-primary); color:var(--text-primary); border:none; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:600;">
-                + Add Asset
-            </button>
-            @endif
+            <div style="display:flex; align-items:center; gap:8px;">
+                <x-button.filter activeCount="{{
+                    (request()->filled('category') ? 1 : 0) +
+                    (request()->filled('sort') && request('sort') !== 'desc' ? 1 : 0)
+                }}">
+                    <input type="hidden" name="section" value="asset">
+                    @if (request('search'))
+                        <input type="hidden" name="search" value="{{ request('search') }}">
+                    @endif
+
+                    <div class="filter-section">
+                        <div class="filter-section-title">Category</div>
+                        @foreach ([
+                            '' => 'All',
+                            'component-pc' => 'PC Component',
+                            'pc' => 'PC',
+                            'non-electronic' => 'Non Electronic',
+                            'electronic' => 'Electronic'
+                        ] as $val => $label)
+                            <label class="filter-checkbox-row" style="cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                <input type="radio" name="category" value="{{ $val }}"
+                                    {{ request('category', '') === $val ? 'checked' : '' }}
+                                    style="accent-color: #111B4C; cursor: pointer;">
+                                <span style="font-size: 13px; color: var(--text-secondary);">{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+
+                    <div class="filter-section">
+                        <div class="filter-section-title">Sort By Date</div>
+                        <label class="filter-checkbox-row" style="cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <input type="radio" name="sort" value="desc" {{ request('sort', 'desc') === 'desc' ? 'checked' : '' }} style="accent-color: #111B4C; cursor: pointer;">
+                            <span style="font-size: 13px; color: var(--text-secondary);">Newest to Oldest</span>
+                        </label>
+                        <label class="filter-checkbox-row" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" name="sort" value="asc" {{ request('sort') === 'asc' ? 'checked' : '' }} style="accent-color: #111B4C; cursor: pointer;">
+                            <span style="font-size: 13px; color: var(--text-secondary);">Oldest to Newest</span>
+                        </label>
+                    </div>
+                </x-button.filter>
+
+                @if($isSPV)
+                <button onclick="openAddAssetModal()"
+                        style="background:var(--bg-primary); color:var(--text-primary); border:none; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:600;">
+                    + Add Asset
+                </button>
+                @endif
+            </div>
         </div>
 
         <div style="overflow-x:auto;">
@@ -217,7 +259,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($laboratory->assets as $asset)
+                    @forelse($filteredAssets as $asset)
                     <tr>
                         <td style="font-weight:500;">{{ $asset->asset_name }}{{ $asset->specification ? ' - ' . $asset->specification : '' }}</td>
                         <td>{{ ucfirst($asset->asset_category) }}</td>
@@ -290,7 +332,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
                         @if($canEdit)
                         <td style="text-align:center;">
                             <div class="action-btns" style="justify-content:center;">
-                            @if($asset->asset_category === 'electronic')
+                            @if($asset->asset_category !== 'component-pc')
                             <button type="button"
                                     onclick="openAssetSerialModal({{ $asset->id }}, '{{ addslashes($asset->asset_name) }}')"
                                     class="action-btn action-edit" title="{{ $isSPV ? 'Edit Kode Inventaris' : 'Lihat Kode Inventaris' }}">
@@ -521,7 +563,7 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
 
 {{-- ══ MODAL SERIAL ASET (#14) ══ --}}
 <div id="modal-asset-serial" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:60; align-items:center; justify-content:center;">
-    <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:460px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; display:flex; flex-direction:column;">
+    <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:650px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; display:flex; flex-direction:column;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border-light); flex-shrink:0;">
             <h3 style="font-size:16px; font-weight:700; color:var(--text-bold); margin:0;">
                 Kode Inventaris — <span id="asset-serial-title" style="font-weight:600;"></span>
@@ -529,7 +571,20 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
             <button type="button" onclick="closeAssetSerialModal()" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:22px;">&times;</button>
         </div>
         <div style="overflow-y:auto; flex:1; padding:24px;">
-            <div id="asset-serial-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+            <table class="db-table" style="width:100%; border-collapse:collapse;" id="asset-serial-table">
+                <thead>
+                    <tr style="background:var(--bg-light); border-bottom:2px solid var(--border-light);">
+                        <th style="padding:10px; text-align:center; font-size:12px; font-weight:600; width:40px; color:var(--text-bold);">No</th>
+                        <th style="padding:10px; text-align:left; font-size:12px; font-weight:600; color:var(--text-bold);">Kode Inventaris</th>
+                        <th style="padding:10px; text-align:center; font-size:12px; font-weight:600; width:90px; color:var(--text-bold);">Kondisi</th>
+                        <th style="padding:10px; text-align:center; font-size:12px; font-weight:600; width:95px; color:var(--text-bold);">Status</th>
+                        <th style="padding:10px; text-align:left; font-size:12px; font-weight:600; width:130px; color:var(--text-bold);">PC Terpasang</th>
+                    </tr>
+                </thead>
+                <tbody id="asset-serial-table-body">
+                    <!-- Dynamic serial rows will be loaded here -->
+                </tbody>
+            </table>
             <p id="asset-serial-empty" style="display:none; text-align:center; color:var(--text-muted); font-size:13px; margin:8px 0 0;">
                 Belum ada kode inventaris untuk aset ini di lab.
             </p>
@@ -566,9 +621,9 @@ function showSection(s) {
 }
 
 // ── Auto-show section after redirect ──
-@if(session('section') === 'asset')
+@if(session('section') === 'asset' || request('section') === 'asset')
     showSection('asset');
-@elseif(session('section') === 'pc')
+@elseif(session('section') === 'pc' || request('section') === 'pc')
     showSection('pc');
 @endif
 
@@ -834,42 +889,79 @@ function openAssetSerialModal(assetId, name) {
     currentAssetSerialId = assetId;
     document.getElementById('asset-serial-title').textContent = name;
     document.getElementById('asset-serial-empty').style.display = 'none';
-    const list = document.getElementById('asset-serial-list');
-    list.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:13px;">Memuat...</p>';
+    const tbody = document.getElementById('asset-serial-table-body');
+    const table = document.getElementById('asset-serial-table');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);font-size:13px;padding:16px;">Memuat...</td></tr>';
+    table.style.display = 'table';
     document.getElementById('modal-asset-serial').style.display = 'flex';
 
-    fetch(`/api/laboratory/${labId}/assets/${assetId}/serials`)
+    fetch(`/api/laboratory/${labId}/assets/${assetId}/serials-with-pc`)
         .then(r => r.json())
         .then(d => {
-            list.innerHTML = '';
+            tbody.innerHTML = '';
             if (!(d.serials || []).length) {
+                table.style.display = 'none';
                 document.getElementById('asset-serial-empty').style.display = 'block';
                 return;
             }
             d.serials.forEach((s, idx) => {
-                const row = document.createElement('div');
-                row.style.cssText = 'display:flex; gap:8px; align-items:center;';
-                const num = document.createElement('span');
-                num.textContent = (idx + 1) + '.';
-                num.style.cssText = 'width:22px; color:var(--text-muted); font-size:13px; flex-shrink:0;';
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid var(--border-light)';
+                
+                // No
+                const tdNo = document.createElement('td');
+                tdNo.textContent = idx + 1;
+                tdNo.style.cssText = 'padding:10px; text-align:center; color:var(--text-muted); font-size:13px;';
+                
+                // Serial / Input
+                const tdSerial = document.createElement('td');
+                tdSerial.style.padding = '10px';
                 const inp = document.createElement('input');
                 inp.type = 'text';
                 inp.value = s.serial_number;
                 inp.dataset.serialId = s.id;
-                inp.readOnly = !IS_SPV_SERIAL || s.locked;
-                inp.style.cssText = 'flex:1; border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:8px 12px; font-size:13px; outline:none;';
-                row.appendChild(num);
-                row.appendChild(inp);
-                if (s.locked) {
-                    const badge = document.createElement('span');
-                    badge.textContent = 'Terpasang';
-                    badge.style.cssText = 'font-size:11px; background:var(--bg-success); color:var(--text-success); padding:2px 8px; border-radius:6px; flex-shrink:0;';
-                    row.appendChild(badge);
-                }
-                list.appendChild(row);
+                // Locked if in use
+                inp.readOnly = !IS_SPV_SERIAL || s.status === 'in_use';
+                inp.style.cssText = 'width:100%; border:1px solid var(--border-main); background:' + (inp.readOnly ? 'var(--bg-light)' : 'var(--bg-main)') + '; color:var(--text-normal); border-radius:6px; padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;';
+                tdSerial.appendChild(inp);
+                
+                // Condition Badge
+                const tdCond = document.createElement('td');
+                tdCond.style.cssText = 'padding:10px; text-align:center;';
+                const condBadge = document.createElement('span');
+                const c = s.condition || 'good';
+                const condLabels = { good: 'Baik', damaged: 'Rusak', lost: 'Hilang' };
+                const condBg = c === 'good' ? '#dcfce7' : (c === 'damaged' ? '#fee2e2' : '#fffbeb');
+                const condText = c === 'good' ? '#15803d' : (c === 'damaged' ? '#b91c1c' : '#b45309');
+                condBadge.textContent = condLabels[c] || c;
+                condBadge.style.cssText = `font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; background:${condBg}; color:${condText}; display:inline-block;`;
+                tdCond.appendChild(condBadge);
+                
+                // Status Badge
+                const tdStatus = document.createElement('td');
+                tdStatus.style.cssText = 'padding:10px; text-align:center;';
+                const statusBadge = document.createElement('span');
+                const isUsed = s.status === 'in_use';
+                const statusBg = isUsed ? '#dbeafe' : '#f3f4f6';
+                const statusText = isUsed ? '#1d4ed8' : '#4b5563';
+                statusBadge.textContent = isUsed ? 'Terpasang' : 'Tersedia';
+                statusBadge.style.cssText = `font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; background:${statusBg}; color:${statusText}; display:inline-block;`;
+                tdStatus.appendChild(statusBadge);
+                
+                // PC Terpasang
+                const tdPc = document.createElement('td');
+                tdPc.style.cssText = 'padding:10px; font-size:13px; font-weight:500; color:var(--text-normal); text-align:left;';
+                tdPc.textContent = s.pc_sku || '-';
+                
+                tr.appendChild(tdNo);
+                tr.appendChild(tdSerial);
+                tr.appendChild(tdCond);
+                tr.appendChild(tdStatus);
+                tr.appendChild(tdPc);
+                tbody.appendChild(tr);
             });
         })
-        .catch(() => { list.innerHTML = '<p style="text-align:center;color:#f87171;font-size:13px;">Gagal memuat.</p>'; });
+        .catch(() => { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#f87171;font-size:13px;padding:16px;">Gagal memuat.</td></tr>'; });
 }
 
 function closeAssetSerialModal() {
@@ -879,7 +971,7 @@ function closeAssetSerialModal() {
 
 function saveAssetSerials() {
     if (!currentAssetSerialId) return;
-    const inputs = document.querySelectorAll('#asset-serial-list input[data-serial-id]');
+    const inputs = document.querySelectorAll('#asset-serial-table-body input[data-serial-id]');
     const serials = Array.from(inputs)
         .filter(i => !i.readOnly)
         .map(i => ({ id: i.dataset.serialId, serial_number: i.value }));

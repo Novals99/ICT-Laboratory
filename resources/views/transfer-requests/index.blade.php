@@ -238,10 +238,42 @@
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                + Add Category Card
+                Category
             </button>
         </div>
     </x-modal.index>
+
+    {{-- QR SCANNER MODAL --}}
+    <div id="qrScanModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+        <div style="background:var(--bg-main, #fff); border-radius:16px; width:100%; max-width:400px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,0.25); border:1px solid var(--border-color, #e5e7eb); display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="font-size:15px; font-weight:700; color:var(--text-bold, #111827); margin:0;">Scan QR Code</h3>
+                <button type="button" onclick="closeQrScanModal()" style="background:none; border:none; cursor:pointer; color:var(--text-muted, #9ca3af); font-size:22px;">&times;</button>
+            </div>
+            
+            <div style="display:flex; border-bottom:1px solid var(--border-color, #e5e7eb); margin-bottom:8px;">
+                <button type="button" id="scanTabCam" onclick="switchScanTab('camera')" style="flex:1; padding:8px 0; border:none; background:transparent; font-size:12px; font-weight:600; cursor:pointer; border-bottom:2px solid #111B4C; color:#111B4C;">Kamera</button>
+                <button type="button" id="scanTabFile" onclick="switchScanTab('file')" style="flex:1; padding:8px 0; border:none; background:transparent; font-size:12px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; color:var(--text-muted, #9ca3af);">Upload File</button>
+            </div>
+
+            <div id="scanCamPanel" style="display:block;">
+                <div id="qr_scanner_reader" style="width:100%; border-radius:12px; overflow:hidden; background:#000; min-height:220px;"></div>
+                <div style="margin-top:12px; text-align:center;">
+                    <button type="button" id="btnStartScanCam" onclick="startScanCamera()" style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">Aktifkan Kamera</button>
+                    <button type="button" id="btnStopScanCam" onclick="stopScanCamera()" style="background:#dc2626; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; display:none;">Stop Kamera</button>
+                </div>
+            </div>
+            
+            <div id="scanFilePanel" style="display:none;">
+                <div onclick="document.getElementById('qr_file_input').click()" style="border:2px dashed var(--border-main, #d1d5db); border-radius:12px; padding:30px 16px; text-align:center; cursor:pointer; background:var(--bg-light, #f3f4f6);">
+                    <svg style="margin:0 auto 8px; color:var(--text-muted);" width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    <span style="font-size:13px; font-weight:600; color:var(--text-normal, #374151); display:block;">Pilih / Drop Foto QR Code</span>
+                    <span style="font-size:11px; color:var(--text-muted); display:block; margin-top:4px;">JPG, PNG, WebP</span>
+                </div>
+                <input type="file" id="qr_file_input" accept="image/*" style="display:none;" onchange="handleQrFileSelected(event)">
+            </div>
+        </div>
+    </div>
 @endif
 
 {{-- MODAL DETAIL TRANSFER REQUEST --}}
@@ -352,6 +384,8 @@
 @endpush
 
 @push('scripts')
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 let trLabAssets = [];
 let trLabPcs = [];
@@ -362,6 +396,11 @@ let itemRowIndex = 0;
 let currentTransferRequestId = null;
 let trItemStates = {};
 let trItemsList = [];
+
+// QR scanner state
+let activeQrSelect = null;
+let scanHtml5QrCode = null;
+let isScanCameraRunning = false;
 
 window.openPanelModal = function(id) {
     const modal = document.getElementById(id);
@@ -381,6 +420,117 @@ window.closePanelModalOnBackdrop = function(event, id) {
     if (event.target.id === id) closePanelModal(id);
 }
 
+// QR scanner helpers
+window.openQrScannerFor = function(selectEl) {
+    activeQrSelect = selectEl;
+    document.getElementById('qrScanModal').style.display = 'flex';
+    switchScanTab('camera');
+};
+
+window.closeQrScanModal = function() {
+    stopScanCamera();
+    document.getElementById('qrScanModal').style.display = 'none';
+    activeQrSelect = null;
+};
+
+window.switchScanTab = function(tab) {
+    document.getElementById('scanTabCam').style.borderBottomColor = tab === 'camera' ? '#111B4C' : 'transparent';
+    document.getElementById('scanTabCam').style.color = tab === 'camera' ? '#111B4C' : 'var(--text-muted)';
+    document.getElementById('scanTabFile').style.borderBottomColor = tab === 'file' ? '#111B4C' : 'transparent';
+    document.getElementById('scanTabFile').style.color = tab === 'file' ? '#111B4C' : 'var(--text-muted)';
+    
+    document.getElementById('scanCamPanel').style.display = tab === 'camera' ? 'block' : 'none';
+    document.getElementById('scanFilePanel').style.display = tab === 'file' ? 'block' : 'none';
+    
+    if (tab !== 'camera') {
+        stopScanCamera();
+    }
+};
+
+window.startScanCamera = async function() {
+    if (isScanCameraRunning) return;
+    if (!scanHtml5QrCode) {
+        scanHtml5QrCode = new Html5Qrcode('qr_scanner_reader');
+    }
+    
+    const config = {
+        fps: 12,
+        qrbox: { width: 220, height: 220 },
+        formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39
+        ]
+    };
+    
+    try {
+        await scanHtml5QrCode.start(
+            { facingMode: 'environment' },
+            config,
+            onQrScanSuccess,
+            () => {}
+        );
+        isScanCameraRunning = true;
+        document.getElementById('btnStartScanCam').style.display = 'none';
+        document.getElementById('btnStopScanCam').style.display = 'inline-flex';
+    } catch (err) {
+        alert('Gagal mengakses kamera: ' + err);
+    }
+};
+
+window.stopScanCamera = async function() {
+    if (!isScanCameraRunning || !scanHtml5QrCode) return;
+    try {
+        await scanHtml5QrCode.stop();
+    } catch (_) {}
+    isScanCameraRunning = false;
+    document.getElementById('btnStartScanCam').style.display = 'inline-flex';
+    document.getElementById('btnStopScanCam').style.display = 'none';
+};
+
+function onQrScanSuccess(decodedText) {
+    if (!activeQrSelect) return;
+    
+    const options = Array.from(activeQrSelect.options);
+    const matched = options.find(o => o.text.trim().toLowerCase().startsWith(decodedText.trim().toLowerCase()));
+    
+    if (matched) {
+        activeQrSelect.value = matched.value;
+        activeQrSelect.dispatchEvent(new Event('change'));
+        closeQrScanModal();
+    } else {
+        alert(`Kode "${decodedText}" tidak sesuai atau tidak tersedia untuk item ini di lab.`);
+    }
+}
+
+window.handleQrFileSelected = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (code) {
+                onQrScanSuccess(code.data);
+            } else {
+                alert('QR Code tidak terdeteksi pada gambar. Silakan coba gambar lain yang lebih jelas.');
+            }
+        };
+        img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
 async function handleTrFromLabChange() {
     const labId = document.getElementById('tr_from_lab_id').value;
     if (!labId) {
@@ -388,7 +538,7 @@ async function handleTrFromLabChange() {
         document.getElementById('tr_loading').style.display = 'none';
         document.getElementById('tr_no_assets').style.display = 'none';
         document.getElementById('tr_cards_container').style.display = 'none';
-        document.getElementById('btn_add_card').style.display = 'none';
+        document.getElementById('tr_add_btn').style.display = 'none';
         return;
     }
 
@@ -396,7 +546,7 @@ async function handleTrFromLabChange() {
     document.getElementById('tr_loading').style.display = 'block';
     document.getElementById('tr_no_assets').style.display = 'none';
     document.getElementById('tr_cards_container').style.display = 'none';
-    document.getElementById('btn_add_card').style.display = 'none';
+    document.getElementById('tr_add_btn').style.display = 'none';
 
     try {
         const assetsRes = await fetch(`/api/labs/${labId}/assets`);
@@ -418,7 +568,7 @@ async function handleTrFromLabChange() {
         addCategoryCard();
         
         document.getElementById('tr_cards_container').style.display = 'flex';
-        document.getElementById('btn_add_card').style.display = 'inline-flex';
+        document.getElementById('tr_add_btn').style.display = 'inline-flex';
     } catch (e) {
         alert('Failed to load laboratory data.');
         document.getElementById('tr_loading').style.display = 'none';
@@ -466,13 +616,6 @@ window.addCategoryCard = function() {
         </div>
         
         <div class="js-card-items-container" style="display:flex; flex-direction:column; gap:8px;"></div>
-        
-        <div>
-            <button type="button" onclick="addCardItem(${idx})"
-                class="js-btn-add-asset rounded-lg bg-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-300 transition" style="border:none; cursor:pointer; display:none;">
-                + Add Asset
-            </button>
-        </div>
     `;
     container.appendChild(card);
 };
@@ -497,7 +640,7 @@ window.handleCardCategoryChange = function(cardIdx) {
         const otherSelects = Array.from(document.querySelectorAll('.js-card-category')).filter(sel => sel !== catSelect);
         const hasDuplicate = otherSelects.some(sel => sel.value === category);
         if (hasDuplicate) {
-            alert('This category card is already added.');
+            alert('Kategori ini sudah dipilih pada card lain.');
             catSelect.value = '';
             handleCardCategoryChange(cardIdx);
             return;
@@ -507,27 +650,24 @@ window.handleCardCategoryChange = function(cardIdx) {
     const pcContainer = card.querySelector('.js-card-pc-container');
     const pcSelect = card.querySelector('.js-card-pc');
     const itemsContainer = card.querySelector('.js-card-items-container');
-    const addAssetBtn = card.querySelector('.js-btn-add-asset');
     
     itemsContainer.innerHTML = '';
     
     if (!category) {
         pcContainer.style.display = 'none';
         pcSelect.value = '';
-        addAssetBtn.style.display = 'none';
         return;
     }
     
     if (category === 'component-pc') {
         pcContainer.style.display = 'block';
         pcSelect.innerHTML = '<option value="">-- All PCs / No PC --</option>' +
-            trLabPcs.map(pc => `<option value="${pc.id}">${pc.sku} (${ucFirst(pc.type_pc)})</option>`).join('');
+            trLabPcs.map(pc => `<option value="${pc.id}">${pc.pc_name || pc.sku || 'PC'} (${ucFirst(pc.type_pc)})</option>`).join('');
     } else {
         pcContainer.style.display = 'none';
         pcSelect.value = '';
     }
     
-    addAssetBtn.style.display = 'inline-block';
     addCardItem(cardIdx);
 };
 
@@ -550,7 +690,13 @@ window.handleCardPcChange = async function(cardIdx) {
         card.removeAttribute('data-pc-components');
     }
     
-    updateCardAssetDropdowns(cardIdx);
+    // For each row in PC card, update component types dropdown
+    const rows = card.querySelectorAll('.item-row');
+    rows.forEach(row => {
+        const itemIdx = row.dataset.itemIdx;
+        populateComponentTypes(cardIdx, itemIdx);
+        handleComponentTypeChange(cardIdx, itemIdx);
+    });
 };
 
 function updateCardAssetDropdowns(cardIdx) {
@@ -590,15 +736,33 @@ window.addCardItem = function(cardIdx) {
     const container = card.querySelector('.js-card-items-container');
     const idx = itemRowIndex++;
     
+    const category = card.querySelector('.js-card-category').value;
+    const isPcComp = category === 'component-pc';
+    
     const row = document.createElement('div');
     row.className = 'item-row';
     row.dataset.itemIdx = idx;
     row.style.cssText = 'border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative; background:var(--bg-card);';
     
+    let componentTypeHtml = '';
+    if (isPcComp) {
+        componentTypeHtml = `
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Component Type <span class="text-red-500">*</span></label>
+                <select class="js-component-type-select" required onchange="handleComponentTypeChange(${cardIdx}, ${idx})"
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    <option value="">-- Choose Component Type --</option>
+                </select>
+            </div>
+        `;
+    }
+    
     row.innerHTML = `
         <button type="button" onclick="removeCardItem(this)"
             style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:16px;">&times;</button>
         
+        ${componentTypeHtml}
+
         <div style="margin-bottom:8px;">
             <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name <span class="text-red-500">*</span></label>
             <select class="js-asset-select" required onchange="handleCardAssetChange(${cardIdx}, ${idx})"
@@ -630,25 +794,196 @@ window.addCardItem = function(cardIdx) {
             </div>
         </div>
 
-        <div>
+        <div style="margin-bottom:8px;">
             <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Notes (optional)</label>
             <input type="text" class="js-notes-input"
                 style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
                 placeholder="Enter notes...">
         </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+            <button type="button" onclick="addCardItem(${cardIdx})"
+                class="rounded-lg bg-[#111B4C] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition" style="border:none; cursor:pointer;">
+                + Add Asset
+            </button>
+        </div>
     `;
+    
+    // Hide add asset buttons on previous rows in this card
+    container.querySelectorAll('.item-row button[onclick^="addCardItem"]').forEach(btn => {
+        btn.parentElement.style.display = 'none';
+    });
+    
     container.appendChild(row);
     
-    updateCardAssetDropdowns(cardIdx);
+    if (isPcComp) {
+        populateComponentTypes(cardIdx, idx);
+        handleComponentTypeChange(cardIdx, idx);
+    } else {
+        updateCardAssetDropdowns(cardIdx);
+    }
 };
 
 window.removeCardItem = function(btn) {
     const container = btn.closest('.js-card-items-container');
+    const card = btn.closest('.tr-category-card');
+    const cardIdx = card.dataset.cardIndex;
+    
     if (container.querySelectorAll('.item-row').length === 1) {
         alert('At least one asset row is required per card.');
         return;
     }
+    
     btn.closest('.item-row').remove();
+    
+    // Ensure the last row has its add asset button visible
+    const rows = container.querySelectorAll('.item-row');
+    const lastRow = rows[rows.length - 1];
+    if (lastRow) {
+        const lastBtn = lastRow.querySelector('button[onclick^="addCardItem"]');
+        if (lastBtn) lastBtn.parentElement.style.display = 'flex';
+    }
+    
+    validateCardUniqueAssets(cardIdx);
+    validateCardUniqueComponentTypes(cardIdx);
+};
+
+window.populateComponentTypes = function(cardIdx, itemIdx) {
+    const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+    const row = card.querySelector(`.item-row[data-item-idx="${itemIdx}"]`);
+    if (!row) return;
+    const compTypeSelect = row.querySelector('.js-component-type-select');
+    if (!compTypeSelect) return;
+    
+    const pcComponentsStr = card.dataset.pcComponents;
+    const pcComponents = pcComponentsStr ? JSON.parse(pcComponentsStr) : null;
+    
+    let types = [];
+    const slotLabels = {
+        processor: 'Processor',
+        ram: 'RAM',
+        ram2: 'RAM (Slot 2)',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        motherboard: 'Motherboard',
+        vga: 'VGA',
+        cpu_fan: 'CPU Fan',
+        powersupply: 'Power Supply'
+    };
+    
+    if (pcComponents && pcComponents.length > 0) {
+        types = pcComponents.map(c => ({ value: c.slot, label: slotLabels[c.slot] || ucFirst(c.slot) }));
+    } else {
+        types = [
+            { value: 'processor', label: 'Processor' },
+            { value: 'ram', label: 'RAM' },
+            { value: 'ssd', label: 'SSD' },
+            { value: 'hdd', label: 'HDD' },
+            { value: 'motherboard', label: 'Motherboard' },
+            { value: 'vga', label: 'VGA' },
+            { value: 'cpu_fan', label: 'CPU Fan' },
+            { value: 'powersupply', label: 'Power Supply' }
+        ];
+    }
+    
+    compTypeSelect.innerHTML = '<option value="">-- Choose Component Type --</option>' +
+        types.map(t => `<option value="${t.value}">${t.label}</option>`).join('');
+};
+
+window.handleComponentTypeChange = function(cardIdx, itemIdx) {
+    const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+    const row = card.querySelector(`.item-row[data-item-idx="${itemIdx}"]`);
+    if (!row) return;
+    
+    const compTypeSelect = row.querySelector('.js-component-type-select');
+    const componentType = compTypeSelect.value;
+    
+    const assetSelect = row.querySelector('.js-asset-select');
+    assetSelect.innerHTML = '<option value="">-- Choose Asset --</option>';
+    
+    row.querySelector('.js-stock-input').value = '';
+    const qtyInput = row.querySelector('.js-qty-input');
+    qtyInput.value = 1;
+    qtyInput.readOnly = false;
+    row.querySelector('.js-serial-container').style.display = 'none';
+    row.querySelector('.js-serial-list').innerHTML = '';
+    
+    if (!componentType) return;
+    
+    const pcComponentsStr = card.dataset.pcComponents;
+    const pcComponents = pcComponentsStr ? JSON.parse(pcComponentsStr) : null;
+    
+    let filteredAssets = [];
+    
+    if (pcComponents && pcComponents.length > 0) {
+        const mappedType = (componentType === 'ram2') ? 'ram' : componentType;
+        const comp = pcComponents.find(c => c.slot === componentType);
+        if (comp) {
+            const asset = trLabAssets.find(a => a.asset_id == comp.asset_id);
+            if (asset) {
+                filteredAssets.push(asset);
+            } else {
+                filteredAssets.push({
+                    asset_id: comp.asset_id,
+                    name: comp.name,
+                    category: comp.category,
+                    component_type: mappedType,
+                    stock: 1
+                });
+            }
+        }
+    } else {
+        filteredAssets = trLabAssets.filter(a => a.category === 'component-pc' && a.component_type === componentType);
+    }
+    
+    assetSelect.innerHTML = '<option value="">-- Choose Asset --</option>' +
+        filteredAssets.map(a => `<option value="${a.asset_id}">${a.name}</option>`).join('');
+        
+    if (filteredAssets.length === 1) {
+        assetSelect.value = filteredAssets[0].asset_id;
+        handleCardAssetChange(cardIdx, itemIdx);
+    }
+    
+    validateCardUniqueAssets(cardIdx);
+    validateCardUniqueComponentTypes(cardIdx);
+};
+
+window.validateCardUniqueAssets = function(cardIdx) {
+    const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+    if (!card) return;
+    const selects = card.querySelectorAll('.js-asset-select');
+    const selectedValues = Array.from(selects).map(s => s.value).filter(Boolean);
+    
+    selects.forEach(sel => {
+        const currentVal = sel.value;
+        Array.from(sel.options).forEach(opt => {
+            if (opt.value && opt.value !== currentVal) {
+                opt.disabled = selectedValues.includes(opt.value);
+            } else {
+                opt.disabled = false;
+            }
+        });
+    });
+};
+
+window.validateCardUniqueComponentTypes = function(cardIdx) {
+    const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+    if (!card) return;
+    const selects = card.querySelectorAll('.js-component-type-select');
+    if (selects.length === 0) return;
+    
+    const selectedValues = Array.from(selects).map(s => s.value).filter(Boolean);
+    
+    selects.forEach(sel => {
+        const currentVal = sel.value;
+        Array.from(sel.options).forEach(opt => {
+            if (opt.value && opt.value !== currentVal) {
+                opt.disabled = selectedValues.includes(opt.value);
+            } else {
+                opt.disabled = false;
+            }
+        });
+    });
 };
 
 window.handleCardAssetChange = function(cardIdx, itemIdx) {
@@ -669,7 +1004,10 @@ window.handleCardAssetChange = function(cardIdx, itemIdx) {
     qtyInput.value = 1;
     qtyInput.readOnly = false;
     
-    if (!assetId) return;
+    if (!assetId) {
+        validateCardUniqueAssets(cardIdx);
+        return;
+    }
     
     const asset = trLabAssets.find(a => a.asset_id == assetId);
     if (!asset) return;
@@ -696,6 +1034,23 @@ window.handleCardAssetChange = function(cardIdx, itemIdx) {
                 }
                 
                 stockInput.value = data.serials.length;
+                
+                // If category is PC Component and PC is selected, we automatically find and preselect the serial_id
+                const pcSelect = card.querySelector('.js-card-pc');
+                const pcId = pcSelect ? pcSelect.value : '';
+                if (category === 'component-pc' && pcId) {
+                    const compTypeSelect = row.querySelector('.js-component-type-select');
+                    const componentType = compTypeSelect ? compTypeSelect.value : '';
+                    const pcComponentsStr = card.dataset.pcComponents;
+                    const pcComponents = pcComponentsStr ? JSON.parse(pcComponentsStr) : null;
+                    if (pcComponents && componentType) {
+                        const comp = pcComponents.find(c => c.slot === componentType);
+                        if (comp && comp.serial_id) {
+                            addCardSerialSelect(cardIdx, itemIdx, comp.serial_id);
+                            return;
+                        }
+                    }
+                }
                 addCardSerialSelect(cardIdx, itemIdx);
             })
             .catch(() => alert('Failed to load serial numbers.'));
@@ -703,6 +1058,8 @@ window.handleCardAssetChange = function(cardIdx, itemIdx) {
         stockInput.value = asset.stock ?? 0;
         updateCardQtyStyle(row, asset.stock, parseInt(qtyInput.value));
     }
+    
+    validateCardUniqueAssets(cardIdx);
 };
 
 window.addCardSerialSelect = function(cardIdx, itemIdx, preselectedValue = null) {
@@ -734,6 +1091,10 @@ window.addCardSerialSelect = function(cardIdx, itemIdx, preselectedValue = null)
     subRow.id = `tr_serial_row_${rowId}`;
     subRow.style.cssText = 'display:flex; gap:6px; align-items:center; margin-bottom:4px;';
     
+    // Wrapper for select and scan qr button
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'flex:1; display:flex; gap:6px; align-items:center;';
+    
     const select = document.createElement('select');
     select.className = 'js-serial-picker-select';
     select.style.cssText = 'flex:1; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);';
@@ -752,6 +1113,21 @@ window.addCardSerialSelect = function(cardIdx, itemIdx, preselectedValue = null)
         validateCardUniqueSerials(row);
     });
     
+    wrapper.appendChild(select);
+    
+    // QR Code scanner button next to dropdown
+    const scanBtn = document.createElement('button');
+    scanBtn.type = 'button';
+    scanBtn.style.cssText = 'background:none; border:none; cursor:pointer; color:#111B4C; padding:4px; display:inline-flex; align-items:center; justify-content:center;';
+    scanBtn.title = 'Scan QR Code';
+    scanBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+            <rect x="7" y="7" width="10" height="10" rx="1" />
+        </svg>`;
+    scanBtn.onclick = () => openQrScannerFor(select);
+    wrapper.appendChild(scanBtn);
+    
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'panel-btn-secondary';
@@ -768,7 +1144,7 @@ window.addCardSerialSelect = function(cardIdx, itemIdx, preselectedValue = null)
         validateCardUniqueSerials(row);
     };
     
-    subRow.appendChild(select);
+    subRow.appendChild(wrapper);
     subRow.appendChild(removeBtn);
     list.appendChild(subRow);
     
@@ -833,7 +1209,6 @@ document.addEventListener('DOMContentLoaded', () => {
         handleTrFromLabChange();
     }
     
-    // Listen to form submit on Create Transfer Modal to index name attributes
     const createForm = document.querySelector('#createTransferModal form');
     if (createForm) {
         createForm.addEventListener('submit', function(e) {

@@ -146,7 +146,7 @@
                     </div>
 
                     {{-- Kode Inventaris — disembunyikan untuk PC Component, tampil untuk kategori lain --}}
-                    <div class="asset-field js-serial-field">
+                    <div class="asset-field js-serial-field" style="grid-column: span 2;">
                         <label class="asset-field-label">Kode Inventaris:</label>
                         <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
                         <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Tambah Kode</button>
@@ -166,6 +166,8 @@
                                 data-validate="asset-number"
                                 data-stock-total
                                 min="0"
+                                readonly
+                                style="background:var(--bg-input-readonly, #f3f4f6); cursor:not-allowed;"
                                 required
                             >
                             @error('items.0.total_asset')
@@ -185,6 +187,8 @@
                                 data-validate="asset-number"
                                 data-stock-good
                                 min="0"
+                                readonly
+                                style="background:var(--bg-input-readonly, #f3f4f6); cursor:not-allowed;"
                                 required
                             >
                             @error('items.0.total_good')
@@ -296,7 +300,7 @@
                     </div>
 
                     {{-- Kode Inventaris — disembunyikan untuk PC Component --}}
-                    <div class="asset-field js-serial-field">
+                    <div class="asset-field js-serial-field" style="grid-column: span 2;">
                         <label class="asset-field-label">Kode Inventaris:</label>
                         <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px;"></div>
                         <button type="button" class="panel-btn-secondary js-add-serial" style="margin-top:6px;">+ Tambah Kode</button>
@@ -316,6 +320,8 @@
                                 data-validate="asset-number"
                                 data-stock-total
                                 min="0"
+                                readonly
+                                style="background:var(--bg-input-readonly, #f3f4f6); cursor:not-allowed;"
                                 required
                             >
                         </div>
@@ -332,6 +338,8 @@
                                 data-validate="asset-number"
                                 data-stock-good
                                 min="0"
+                                readonly
+                                style="background:var(--bg-input-readonly, #f3f4f6); cursor:not-allowed;"
                                 required
                             >
                         </div>
@@ -474,6 +482,10 @@
                     data-progress-field
                     data-validate="asset-number"
                     min="0"
+                    @if(!$isComponentPc)
+                    readonly
+                    style="background:var(--bg-input-readonly, #f3f4f6); cursor:not-allowed;"
+                    @endif
                     required
                 >
 
@@ -499,6 +511,10 @@
                     data-progress-field
                     data-validate="asset-number"
                     min="0"
+                    @if(!$isComponentPc)
+                    readonly
+                    style="background:var(--bg-input-readonly, #f3f4f6); cursor:not-allowed;"
+                    @endif
                     required
                 >
 
@@ -752,18 +768,102 @@
                     });
                 }
 
+                function getStockInputs(el) {
+                    const card = el.closest('.asset-item-card');
+                    if (card) {
+                        return {
+                            total: card.querySelector('[data-stock-total]'),
+                            good: card.querySelector('[data-stock-good]')
+                        };
+                    }
+                    const form = el.closest('form');
+                    if (form) {
+                        return {
+                            total: form.querySelector('[name="total_asset"]'),
+                            good: form.querySelector('[name="total_good"]')
+                        };
+                    }
+                    return { total: null, good: null };
+                }
+
+                function updateStockCount(el, delta) {
+                    const card = el.closest('.asset-item-card');
+                    if (card) {
+                        const catEl = card.querySelector('[name$="[asset_category]"]');
+                        if (catEl && catEl.value === 'component-pc') return;
+                    }
+                    const form = el.closest('form');
+                    if (form && !card) {
+                        const isComp = !!form.querySelector('[name="component_type"]');
+                        if (isComp) return;
+                    }
+                    
+                    const inputs = getStockInputs(el);
+                    if (inputs.total) {
+                        const currentTotal = parseInt(inputs.total.value) || 0;
+                        inputs.total.value = Math.max(0, currentTotal + delta);
+                        inputs.total.dispatchEvent(new Event('input', { bubbles: true }));
+                        inputs.total.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    if (inputs.good) {
+                        const currentGood = parseInt(inputs.good.value) || 0;
+                        inputs.good.value = Math.max(0, currentGood + delta);
+                        inputs.good.dispatchEvent(new Event('input', { bubbles: true }));
+                        inputs.good.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+
                 function addSerialInput(list, name, value, locked) {
                     const row = document.createElement('div');
-                    row.style.cssText = 'display:flex; gap:6px; align-items:center;';
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.name = name;
-                    input.value = value || '';
-                    input.placeholder = 'Scan QR Code...';
-                    input.className = 'panel-form-input';
-                    input.style.flex = '1';
-                    input.readOnly = true;
-                    row.appendChild(input);
+                    row.style.cssText = 'display:flex; gap:6px; align-items:center; margin-bottom:6px;';
+
+                    // Parse existing value (e.g. L01MJ01-THEYVTE100R -> Prefix: L01MJ01, QR: THEYVTE100R)
+                    let prefixVal = '';
+                    let qrVal = value || '';
+                    if (value) {
+                        const lastDash = value.lastIndexOf('-');
+                        if (lastDash !== -1) {
+                            prefixVal = value.substring(0, lastDash);
+                            qrVal = value.substring(lastDash + 1);
+                        }
+                    }
+
+                    // Hidden input that will actually be submitted to backend
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = name;
+                    hiddenInput.value = value || '';
+                    row.appendChild(hiddenInput);
+
+                    // Prefix / Template input
+                    const prefixInput = document.createElement('input');
+                    prefixInput.type = 'text';
+                    prefixInput.value = prefixVal;
+                    prefixInput.placeholder = 'Template / Prefix...';
+                    prefixInput.className = 'panel-form-input';
+                    prefixInput.style.width = '140px';
+                    prefixInput.disabled = locked;
+                    row.appendChild(prefixInput);
+
+                    // Scanned QR code input
+                    const qrInput = document.createElement('input');
+                    qrInput.type = 'text';
+                    qrInput.value = qrVal;
+                    qrInput.placeholder = 'Scan QR Code...';
+                    qrInput.className = 'panel-form-input';
+                    qrInput.style.flex = '1';
+                    qrInput.readOnly = true;
+                    row.appendChild(qrInput);
+
+                    const updateFinalValue = () => {
+                        const p = prefixInput.value.trim();
+                        const q = qrInput.value.trim();
+                        hiddenInput.value = p && q ? `${p}-${q}` : (p || q);
+                    };
+
+                    prefixInput.addEventListener('input', updateFinalValue);
+                    qrInput.addEventListener('input', updateFinalValue);
+                    qrInput.addEventListener('change', updateFinalValue);
 
                     if (!locked) {
                         const qrBtn = document.createElement('button');
@@ -771,7 +871,7 @@
                         qrBtn.className = 'panel-btn-secondary';
                         qrBtn.style.padding = '0 12px';
                         qrBtn.innerHTML = '📷';
-                        qrBtn.onclick = () => startQrScannerForInput(input);
+                        qrBtn.onclick = () => startQrScannerForInput(qrInput);
                         row.appendChild(qrBtn);
 
                         const btn = document.createElement('button');
@@ -779,7 +879,10 @@
                         btn.className = 'panel-btn-secondary';
                         btn.textContent = '×';
                         btn.style.padding = '0 12px';
-                        btn.onclick = () => row.remove();
+                        btn.onclick = () => {
+                            updateStockCount(row, -1);
+                            row.remove();
+                        };
                         row.appendChild(btn);
                     }
                     list.appendChild(row);
@@ -807,6 +910,31 @@
                             if (spec) spec.after(wrapper);
                         } else {
                             if (serial) serial.after(wrapper);
+                        }
+                    }
+
+                    // Toggle readonly on Total & Good inputs based on category
+                    const inputs = getStockInputs(card);
+                    if (inputs.total) {
+                        if (isComp) {
+                            inputs.total.removeAttribute('readonly');
+                            inputs.total.style.background = '';
+                            inputs.total.style.cursor = '';
+                        } else {
+                            inputs.total.setAttribute('readonly', 'true');
+                            inputs.total.style.background = 'var(--bg-input-readonly, #f3f4f6)';
+                            inputs.total.style.cursor = 'not-allowed';
+                        }
+                    }
+                    if (inputs.good) {
+                        if (isComp) {
+                            inputs.good.removeAttribute('readonly');
+                            inputs.good.style.background = '';
+                            inputs.good.style.cursor = '';
+                        } else {
+                            inputs.good.setAttribute('readonly', 'true');
+                            inputs.good.style.background = 'var(--bg-input-readonly, #f3f4f6)';
+                            inputs.good.style.cursor = 'not-allowed';
                         }
                     }
                 }
@@ -840,6 +968,7 @@
                         name = m ? `items[${m[1]}][serials][]` : 'items[0][serials][]';
                     }
                     addSerialInput(list, name, '', false);
+                    updateStockCount(e.target, 1);
                 });
 
                 document.addEventListener('DOMContentLoaded', function () {
@@ -852,6 +981,33 @@
                     document.querySelectorAll('input[name="asset_category"]:checked').forEach(r => {
                         toggleEdit(r.closest('form'), r.value);
                     });
+                    // For the Edit form:
+                    const editForm = document.querySelector('form[action*="/asset/"]');
+                    if (editForm) {
+                        const isComp = !!editForm.querySelector('[name="component_type"]');
+                        const totalInput = editForm.querySelector('[name="total_asset"]');
+                        const goodInput = editForm.querySelector('[name="total_good"]');
+                        if (totalInput && goodInput) {
+                            if (isComp) {
+                                totalInput.removeAttribute('readonly');
+                                totalInput.style.background = '';
+                                totalInput.style.cursor = '';
+                            } else {
+                                totalInput.setAttribute('readonly', 'true');
+                                totalInput.style.background = 'var(--bg-input-readonly, #f3f4f6)';
+                                totalInput.style.cursor = 'not-allowed';
+                            }
+                            if (isComp) {
+                                goodInput.removeAttribute('readonly');
+                                goodInput.style.background = '';
+                                goodInput.style.cursor = '';
+                            } else {
+                                goodInput.setAttribute('readonly', 'true');
+                                goodInput.style.background = 'var(--bg-input-readonly, #f3f4f6)';
+                                goodInput.style.cursor = 'not-allowed';
+                            }
+                        }
+                    }
                     // Preload serial existing untuk modal Edit yang relevan (electronic/component-pc).
                     document.querySelectorAll('.js-edit-serial').forEach(field => {
                         if (field.style.display === 'none') return;

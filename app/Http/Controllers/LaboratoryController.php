@@ -71,6 +71,24 @@ class LaboratoryController extends Controller
         $totalInactive = $laboratory->pcs->where('status_pc', 'inactive')->count();
         $allAssets     = Asset::orderBy('asset_name')->get();
 
+        // Filter and Sort Asset
+        $category = request('category');
+        $sort = request('sort', 'desc');
+
+        $filteredAssetsQuery = $laboratory->assets();
+
+        if ($category) {
+            $filteredAssetsQuery->where('assets.asset_category', $category);
+        }
+
+        if ($sort === 'asc') {
+            $filteredAssetsQuery->orderBy('asset_labs.created_at', 'asc');
+        } else {
+            $filteredAssetsQuery->orderBy('asset_labs.created_at', 'desc');
+        }
+
+        $filteredAssets = $filteredAssetsQuery->get();
+
         $pic        = null; // Deprecated
         $admins     = collect(); // Deprecated
         $assistants = collect(); // Deprecated
@@ -99,7 +117,8 @@ class LaboratoryController extends Controller
             'assistants',
             'canEdit',
             'myLabIds',
-            'pcComponents'
+            'pcComponents',
+            'filteredAssets'
         ));
     }
 

@@ -279,27 +279,6 @@
 
         <div style="margin-bottom:16px;">
             <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
-                Choose Category <span class="text-red-500">*</span>
-            </label>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;" id="rr_category_buttons">
-                <button type="button" data-value="electronic" class="rr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">Electronic</button>
-                <button type="button" data-value="component-pc" class="rr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">PC Component</button>
-                <button type="button" data-value="pc" class="rr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">PC</button>
-                <button type="button" data-value="non-electronic" class="rr-cat-btn" style="padding:8px 16px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all 0.2s;">Non-Electronic</button>
-            </div>
-        </div>
-
-        <div style="margin-bottom:16px;" id="rr_pc_row">
-            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
-                Choose PC <span style="color:var(--text-muted);">(optional)</span>
-            </label>
-            <select id="rr_modal_pc_id" style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);" onchange="handleRRPcChange()">
-                <option value="">-- All PCs / No PC --</option>
-            </select>
-        </div>
-
-        <div style="margin-bottom:16px;">
-            <label style="font-size:13px; color:var(--text-secondary); display:block; margin-bottom:6px;">
                 Notes <span style="color:var(--text-muted);">(optional)</span>
             </label>
             <textarea name="notes" rows="3"
@@ -308,25 +287,60 @@
         </div>
 
         <div id="rr_modal_item_list">
-            <div id="rr_modal_no_lab" style="text-align:center; color:var(--text-muted); font-size:13px;">
+            <div id="rr_modal_no_lab" style="text-align:center; color:var(--text-muted); font-size:13px; margin-bottom:12px;">
                 Please select a laboratory first
             </div>
-            <div id="rr_modal_loading" style="display:none; text-align:center; color:var(--text-muted); font-size:13px;">
+            <div id="rr_modal_loading" style="display:none; text-align:center; color:var(--text-muted); font-size:13px; margin-bottom:12px;">
                 Loading assets...
             </div>
-            <div id="rr_modal_no_assets" style="display:none; text-align:center; color:var(--text-muted); font-size:13px;">
+            <div id="rr_modal_no_assets" style="display:none; text-align:center; color:var(--text-muted); font-size:13px; margin-bottom:12px;">
                 No assets available in this laboratory
             </div>
-            <div id="rr_modal_items" style="display:none;"></div>
+            <div id="rr_cards_container" style="display:none; flex-direction:column; gap:16px;"></div>
         </div>
 
-        <div id="rr_modal_add_btn" style="display:none; margin-top:12px;">
-            <button type="button" onclick="addRRModalItem()"
+        <div id="rr_add_btn" style="display:none; margin-top:12px;">
+            <button type="button" id="btn_add_rr_card" onclick="addRRCategoryCard()"
                 class="inline-flex items-center justify-center gap-2 rounded-lg bg-[#111B4C] px-4 py-2 text-sm font-semibold text-white">
-                + Add Item
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Category
             </button>
         </div>
     </x-modal.index>
+
+    {{-- QR SCANNER MODAL --}}
+    <div id="qrScanModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+        <div style="background:var(--bg-main, #fff); border-radius:16px; width:100%; max-width:400px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,0.25); border:1px solid var(--border-color, #e5e7eb); display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="font-size:15px; font-weight:700; color:var(--text-bold, #111827); margin:0;">Scan QR Code</h3>
+                <button type="button" onclick="closeQrScanModal()" style="background:none; border:none; cursor:pointer; color:var(--text-muted, #9ca3af); font-size:22px;">&times;</button>
+            </div>
+            
+            <div style="display:flex; border-bottom:1px solid var(--border-color, #e5e7eb); margin-bottom:8px;">
+                <button type="button" id="scanTabCam" onclick="switchScanTab('camera')" style="flex:1; padding:8px 0; border:none; background:transparent; font-size:12px; font-weight:600; cursor:pointer; border-bottom:2px solid #111B4C; color:#111B4C;">Kamera</button>
+                <button type="button" id="scanTabFile" onclick="switchScanTab('file')" style="flex:1; padding:8px 0; border:none; background:transparent; font-size:12px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; color:var(--text-muted, #9ca3af);">Upload File</button>
+            </div>
+
+            <div id="scanCamPanel" style="display:block;">
+                <div id="qr_scanner_reader" style="width:100%; border-radius:12px; overflow:hidden; background:#000; min-height:220px;"></div>
+                <div style="margin-top:12px; text-align:center;">
+                    <button type="button" id="btnStartScanCam" onclick="startScanCamera()" style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">Aktifkan Kamera</button>
+                    <button type="button" id="btnStopScanCam" onclick="stopScanCamera()" style="background:#dc2626; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; display:none;">Stop Kamera</button>
+                </div>
+            </div>
+            
+            <div id="scanFilePanel" style="display:none;">
+                <div onclick="document.getElementById('qr_file_input').click()" style="border:2px dashed var(--border-main, #d1d5db); border-radius:12px; padding:30px 16px; text-align:center; cursor:pointer; background:var(--bg-light, #f3f4f6);">
+                    <svg style="margin:0 auto 8px; color:var(--text-muted);" width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    <span style="font-size:13px; font-weight:600; color:var(--text-normal, #374151); display:block;">Pilih / Drop Foto QR Code</span>
+                    <span style="font-size:11px; color:var(--text-muted); display:block; margin-top:4px;">JPG, PNG, WebP</span>
+                </div>
+                <input type="file" id="qr_file_input" accept="image/*" style="display:none;" onchange="handleQrFileSelected(event)">
+            </div>
+        </div>
+    </div>
 @endif
 @endsection
 
@@ -360,13 +374,22 @@
 @endpush
 
 @push('scripts')
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
     let rrUserLabs = @json($userLabs->map(fn($l) => ['id' => $l->id, 'name' => $l->lab_name]));
     let rrLabAssets = [];
     let rrLabPcs = [];
     let rrPcComponents = [];
     let rrItemIndex = 1;
+    let cardIndex = 0;
+    let itemRowIndex = 0;
     let currentReturnRequestId = null;
+
+    // QR scanner state
+    let activeQrSelect = null;
+    let scanHtml5QrCode = null;
+    let isScanCameraRunning = false;
 
     window.openPanelModal = function(id) {
         const modal = document.getElementById(id);
@@ -386,36 +409,134 @@
         if (event.target.id === id) closePanelModal(id);
     };
 
+    // QR scanner helpers
+    window.openQrScannerFor = function(selectEl) {
+        activeQrSelect = selectEl;
+        document.getElementById('qrScanModal').style.display = 'flex';
+        switchScanTab('camera');
+    };
+
+    window.closeQrScanModal = function() {
+        stopScanCamera();
+        document.getElementById('qrScanModal').style.display = 'none';
+        activeQrSelect = null;
+    };
+
+    window.switchScanTab = function(tab) {
+        document.getElementById('scanTabCam').style.borderBottomColor = tab === 'camera' ? '#111B4C' : 'transparent';
+        document.getElementById('scanTabCam').style.color = tab === 'camera' ? '#111B4C' : 'var(--text-muted)';
+        document.getElementById('scanTabFile').style.borderBottomColor = tab === 'file' ? '#111B4C' : 'transparent';
+        document.getElementById('scanTabFile').style.color = tab === 'file' ? '#111B4C' : 'var(--text-muted)';
+        
+        document.getElementById('scanCamPanel').style.display = tab === 'camera' ? 'block' : 'none';
+        document.getElementById('scanFilePanel').style.display = tab === 'file' ? 'block' : 'none';
+        
+        if (tab !== 'camera') {
+            stopScanCamera();
+        }
+    };
+
+    window.startScanCamera = async function() {
+        if (isScanCameraRunning) return;
+        if (!scanHtml5QrCode) {
+            scanHtml5QrCode = new Html5Qrcode('qr_scanner_reader');
+        }
+        
+        const config = {
+            fps: 12,
+            qrbox: { width: 220, height: 220 },
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.QR_CODE,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39
+            ]
+        };
+        
+        try {
+            await scanHtml5QrCode.start(
+                { facingMode: 'environment' },
+                config,
+                onQrScanSuccess,
+                () => {}
+            );
+            isScanCameraRunning = true;
+            document.getElementById('btnStartScanCam').style.display = 'none';
+            document.getElementById('btnStopScanCam').style.display = 'inline-flex';
+        } catch (err) {
+            alert('Gagal mengakses kamera: ' + err);
+        }
+    };
+
+    window.stopScanCamera = async function() {
+        if (!isScanCameraRunning || !scanHtml5QrCode) return;
+        try {
+            await scanHtml5QrCode.stop();
+        } catch (_) {}
+        isScanCameraRunning = false;
+        document.getElementById('btnStartScanCam').style.display = 'inline-flex';
+        document.getElementById('btnStopScanCam').style.display = 'none';
+    };
+
+    function onQrScanSuccess(decodedText) {
+        if (!activeQrSelect) return;
+        
+        const options = Array.from(activeQrSelect.options);
+        const matched = options.find(o => o.text.trim().toLowerCase().startsWith(decodedText.trim().toLowerCase()));
+        
+        if (matched) {
+            activeQrSelect.value = matched.value;
+            activeQrSelect.dispatchEvent(new Event('change'));
+            closeQrScanModal();
+        } else {
+            alert(`Kode "${decodedText}" tidak sesuai atau tidak tersedia untuk item ini di lab.`);
+        }
+    }
+
+    window.handleQrFileSelected = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if (code) {
+                    onQrScanSuccess(code.data);
+                } else {
+                    alert('QR Code tidak terdeteksi pada gambar. Silakan coba gambar lain yang lebih jelas.');
+                }
+            };
+            img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
     async function handleRRModalLabChange() {
         const labId = document.getElementById('rr_modal_lab_id').value;
 
         document.getElementById('rr_modal_no_lab').style.display = labId ? 'none' : 'block';
         document.getElementById('rr_modal_loading').style.display = labId ? 'block' : 'none';
         document.getElementById('rr_modal_no_assets').style.display = 'none';
-        document.getElementById('rr_modal_items').style.display = 'none';
-        document.getElementById('rr_modal_add_btn').style.display = 'none';
+        document.getElementById('rr_cards_container').style.display = 'none';
+        document.getElementById('rr_add_btn').style.display = 'none';
         
         if (!labId) return;
 
         try {
-            // Fetch all assets for this lab (without category query, to cache them)
             const assetsRes = await fetch(`/api/labs/${labId}/assets`);
             rrLabAssets = await assetsRes.json();
             
-            // Fetch PCs in this lab
             const pcsRes = await fetch(`/api/labs/${labId}/pcs`);
             rrLabPcs = await pcsRes.json();
-            
-            // Populate PC dropdown
-            const pcSelect = document.getElementById('rr_modal_pc_id');
-            pcSelect.innerHTML = '<option value="">-- All PCs / No PC --</option>' +
-                rrLabPcs.map(pc => `<option value="${pc.id}">${pc.sku} (${ucFirst(pc.type_pc)})</option>`).join('');
-            
-            // Reset PC components
-            rrPcComponents = [];
-            
-            // Reset active categories (remove active class from all buttons)
-            document.querySelectorAll('.rr-cat-btn').forEach(btn => btn.classList.remove('is-active'));
             
             document.getElementById('rr_modal_loading').style.display = 'none';
             
@@ -424,11 +545,13 @@
                 return;
             }
             
-            document.getElementById('rr_modal_items').innerHTML = '';
-            rrItemIndex = 1;
-            addRRModalItem();
-            document.getElementById('rr_modal_items').style.display = 'block';
-            document.getElementById('rr_modal_add_btn').style.display = 'block';
+            document.getElementById('rr_cards_container').innerHTML = '';
+            cardIndex = 0;
+            itemRowIndex = 0;
+            addRRCategoryCard();
+            
+            document.getElementById('rr_cards_container').style.display = 'flex';
+            document.getElementById('rr_add_btn').style.display = 'inline-flex';
         } catch (e) {
             alert('Failed to load laboratory data.');
             document.getElementById('rr_modal_loading').style.display = 'none';
@@ -440,136 +563,546 @@
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
-    async function handleRRPcChange() {
-        const pcId = document.getElementById('rr_modal_pc_id').value;
-        if (!pcId) {
-            rrPcComponents = [];
-            updateRrAssetDropdowns();
+    window.addRRCategoryCard = function() {
+        const container = document.getElementById('rr_cards_container');
+        const idx = cardIndex++;
+        
+        const card = document.createElement('div');
+        card.className = 'tr-category-card rounded-xl p-4'; // keep same class for submit traversal
+        card.style.cssText = 'background:var(--bg-input); border:1px solid var(--border-color); display:flex; flex-direction:column; gap:12px;';
+        card.dataset.cardIndex = idx;
+        
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                <div style="display:flex; gap:12px; align-items:center; flex:1;">
+                    <div style="width:200px;">
+                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Category <span class="text-red-500">*</span></label>
+                        <select class="js-card-category" required onchange="handleCardCategoryChange(${idx})"
+                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-card);">
+                            <option value="">-- Select Category --</option>
+                            <option value="electronic">Electronic</option>
+                            <option value="component-pc">PC Component</option>
+                            <option value="pc">PC</option>
+                            <option value="non-electronic">Non-Electronic</option>
+                        </select>
+                    </div>
+                    <div class="js-card-pc-container" style="display:none; width:200px;">
+                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">PC <span class="text-red-500">*</span></label>
+                        <select class="js-card-pc" onchange="handleCardPcChange(${idx})"
+                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-card);">
+                            <option value="">-- All PCs / No PC --</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="button" onclick="removeCategoryCard(this)"
+                    style="background:none; border:none; cursor:pointer; color:#dc2626; font-size:13px; font-weight:600; margin-top:16px;">Remove Card</button>
+            </div>
+            
+            <div class="js-card-items-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+        `;
+        container.appendChild(card);
+    };
+
+    window.removeCategoryCard = function(btn) {
+        const container = document.getElementById('rr_cards_container');
+        if (container.querySelectorAll('.tr-category-card').length === 1) {
+            alert('At least one category card is required.');
+            return;
+        }
+        btn.closest('.tr-category-card').remove();
+    };
+
+    window.handleCardCategoryChange = function(cardIdx) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        if (!card) return;
+        
+        const catSelect = card.querySelector('.js-card-category');
+        const category = catSelect.value;
+        
+        if (category) {
+            const otherSelects = Array.from(document.querySelectorAll('.js-card-category')).filter(sel => sel !== catSelect);
+            const hasDuplicate = otherSelects.some(sel => sel.value === category);
+            if (hasDuplicate) {
+                alert('Kategori ini sudah dipilih pada card lain.');
+                catSelect.value = '';
+                handleCardCategoryChange(cardIdx);
+                return;
+            }
+        }
+        
+        const pcContainer = card.querySelector('.js-card-pc-container');
+        const pcSelect = card.querySelector('.js-card-pc');
+        const itemsContainer = card.querySelector('.js-card-items-container');
+        
+        itemsContainer.innerHTML = '';
+        
+        if (!category) {
+            pcContainer.style.display = 'none';
+            pcSelect.value = '';
             return;
         }
         
-        try {
-            const res = await fetch(`/api/pcs/${pcId}/components`);
-            rrPcComponents = await res.json();
-            updateRrAssetDropdowns();
-        } catch (e) {
-            alert('Failed to load PC components.');
+        if (category === 'component-pc') {
+            pcContainer.style.display = 'block';
+            pcSelect.innerHTML = '<option value="">-- All PCs / No PC --</option>' +
+                rrLabPcs.map(pc => `<option value="${pc.id}">${pc.pc_name || pc.sku || 'PC'} (${ucFirst(pc.type_pc)})</option>`).join('');
+        } else {
+            pcContainer.style.display = 'none';
+            pcSelect.value = '';
         }
-    }
+        
+        addCardItem(cardIdx);
+    };
 
-    function updateRrAssetDropdowns() {
-        const activeCategories = Array.from(document.querySelectorAll('.rr-cat-btn.is-active')).map(btn => btn.dataset.value);
+    window.handleCardPcChange = async function(cardIdx) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        if (!card) return;
         
-        // Filter by active categories
-        let filtered = rrLabAssets.filter(a => activeCategories.length === 0 || activeCategories.includes(a.category));
+        const pcSelect = card.querySelector('.js-card-pc');
+        const pcId = pcSelect.value;
         
-        // Filter by PC components if PC is chosen
-        const pcId = document.getElementById('rr_modal_pc_id').value;
         if (pcId) {
-            const componentAssetIds = rrPcComponents.map(c => c.asset_id);
+            try {
+                const res = await fetch(`/api/pcs/${pcId}/components`);
+                card.dataset.pcComponents = JSON.stringify(await res.json());
+            } catch (e) {
+                alert('Failed to load PC components.');
+                card.dataset.pcComponents = '[]';
+            }
+        } else {
+            card.removeAttribute('data-pc-components');
+        }
+        
+        // Update PC component rows
+        const rows = card.querySelectorAll('.item-row');
+        rows.forEach(row => {
+            const itemIdx = row.dataset.itemIdx;
+            populateComponentTypes(cardIdx, itemIdx);
+            handleComponentTypeChange(cardIdx, itemIdx);
+        });
+    };
+
+    function updateCardAssetDropdowns(cardIdx) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        if (!card) return;
+        
+        const category = card.querySelector('.js-card-category').value;
+        const pcComponentsStr = card.dataset.pcComponents;
+        const pcComponents = pcComponentsStr ? JSON.parse(pcComponentsStr) : null;
+        
+        let filtered = rrLabAssets.filter(a => a.category === category);
+        
+        if (pcComponents) {
+            const componentAssetIds = pcComponents.map(c => c.asset_id);
             filtered = filtered.filter(a => componentAssetIds.includes(a.asset_id));
         }
         
-        // Populate all asset selects in item rows
-        const selects = document.querySelectorAll('[id^="rr_asset_"]');
+        const selects = card.querySelectorAll('.js-asset-select');
         selects.forEach(select => {
             const currentValue = select.value;
-            select.innerHTML = '<option value="">-- Select Asset --</option>' +
-                filtered.map(a => `<option value="${a.asset_id}" data-category="${a.category}">${a.name}</option>`).join('');
+            select.innerHTML = '<option value="">-- Choose Asset --</option>' +
+                filtered.map(a => `<option value="${a.asset_id}">${a.name}</option>`).join('');
             
-            // Restore selected value if it's still in the filtered list
             if (currentValue && filtered.some(a => String(a.asset_id) === String(currentValue))) {
                 select.value = currentValue;
             } else {
                 select.value = '';
-                // Trigger change event to reset serial numbers or quantities
                 select.dispatchEvent(new Event('change'));
             }
         });
     }
 
-    function getRRItemRowHtml(idx) {
-        return `
-            <div class="item-row" data-index="${idx}"
-                style="border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative;">
-                <button type="button" onclick="removeRRModalItem(this)"
-                    style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:16px;">&times;</button>
-                
+    window.addCardItem = function(cardIdx) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        if (!card) return;
+        
+        const container = card.querySelector('.js-card-items-container');
+        const idx = itemRowIndex++;
+        
+        const category = card.querySelector('.js-card-category').value;
+        const isPcComp = category === 'component-pc';
+        
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.dataset.itemIdx = idx;
+        row.style.cssText = 'border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:8px; position:relative; background:var(--bg-card);';
+        
+        let componentTypeHtml = '';
+        if (isPcComp) {
+            componentTypeHtml = `
                 <div style="margin-bottom:8px;">
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name <span class="text-red-500">*</span></label>
-                    <select name="items[${idx}][asset_id]" id="rr_asset_${idx}" required
-                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
-                        onchange="handleRRModalAssetChange(${idx})">
-                        <option value="">-- Select Asset --</option>
+                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Component Type <span class="text-red-500">*</span></label>
+                    <select class="js-component-type-select" required onchange="handleComponentTypeChange(${cardIdx}, ${idx})"
+                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                        <option value="">-- Choose Component Type --</option>
                     </select>
                 </div>
+            `;
+        }
+        
+        row.innerHTML = `
+            <button type="button" onclick="removeCardItem(this)"
+                style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:16px;">&times;</button>
+            
+            ${componentTypeHtml}
 
-                <div id="rr_serial_container_${idx}" style="display:none; margin-bottom:8px;">
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Serial Numbers</label>
-                    <div id="rr_serial_list_${idx}" style="display:flex; flex-direction:column; gap:6px; margin-bottom:6px;">
-                    </div>
-                    <button type="button" onclick="addRRSerialSelect(${idx})"
-                        class="rounded-lg bg-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-300 transition" style="border:none; cursor:pointer;">
-                        + Add Serial Number
-                    </button>
-                </div>
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Asset Name <span class="text-red-500">*</span></label>
+                <select class="js-asset-select" required onchange="handleCardAssetChange(${cardIdx}, ${idx})"
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                    <option value="">-- Choose Asset --</option>
+                </select>
+            </div>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
-                    <div>
-                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity <span class="text-red-500">*</span></label>
-                        <input type="number" name="items[${idx}][quantity]" id="rr_qty_${idx}" min="1" value="1" required
-                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Condition <span class="text-red-500">*</span></label>
-                        <select name="items[${idx}][condition]" id="rr_condition_${idx}"
-                            style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
-                            <option value="good">Good</option>
-                            <option value="damaged">Damaged</option>
-                        </select>
-                    </div>
+            <div class="js-serial-container" style="display:none; margin-bottom:8px;">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Kode Inventaris</label>
+                <div class="js-serial-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:6px;"></div>
+                <button type="button" onclick="addCardSerialSelect(${cardIdx}, ${idx})"
+                    class="rounded-lg bg-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-300 transition" style="border:none; cursor:pointer;">
+                    + Add Kode Inventaris
+                </button>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+                <div>
+                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Available Stock</label>
+                    <input type="text" class="js-stock-input" readonly
+                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-muted); background:var(--bg-input);">
                 </div>
                 <div>
-                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Reason (optional):</label>
-                    <input type="text" name="items[${idx}][reason]"
+                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Quantity</label>
+                    <input type="number" class="js-qty-input"
                         style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
-                        placeholder="Reason for return...">
+                        min="1" value="1" onchange="handleCardQtyChange(${cardIdx}, ${idx})" oninput="handleCardQtyChange(${cardIdx}, ${idx})" required>
+                </div>
+                <div>
+                    <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Condition <span class="text-red-500">*</span></label>
+                    <select class="js-condition-select" required onchange="handleCardConditionChange(${cardIdx}, ${idx})"
+                        style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);">
+                        <option value="good">Good</option>
+                        <option value="damaged">Damaged</option>
+                    </select>
                 </div>
             </div>
-        `;
-    }
 
-    window.addRRSerialSelect = function(index, preselectedValue = null) {
-        const list = document.getElementById(`rr_serial_list_${index}`);
-        const assetSelect = document.getElementById(`rr_asset_${index}`);
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px;">Reason (optional)</label>
+                <input type="text" class="js-reason-input"
+                    style="width:100%; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);"
+                    placeholder="Enter reason...">
+            </div>
+
+            <div style="display:flex; justify-content:flex-end;">
+                <button type="button" onclick="addCardItem(${cardIdx})"
+                    class="rounded-lg bg-[#111B4C] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition" style="border:none; cursor:pointer;">
+                    + Add Asset
+                </button>
+            </div>
+        `;
+        
+        // Hide add asset buttons on previous rows in this card
+        container.querySelectorAll('.item-row button[onclick^="addCardItem"]').forEach(btn => {
+            btn.parentElement.style.display = 'none';
+        });
+        
+        container.appendChild(row);
+        
+        if (isPcComp) {
+            populateComponentTypes(cardIdx, idx);
+            handleComponentTypeChange(cardIdx, idx);
+        } else {
+            updateCardAssetDropdowns(cardIdx);
+        }
+    };
+
+    window.removeCardItem = function(btn) {
+        const container = btn.closest('.js-card-items-container');
+        const card = btn.closest('.tr-category-card');
+        const cardIdx = card.dataset.cardIndex;
+        
+        if (container.querySelectorAll('.item-row').length === 1) {
+            alert('At least one asset row is required per card.');
+            return;
+        }
+        
+        btn.closest('.item-row').remove();
+        
+        const rows = container.querySelectorAll('.item-row');
+        const lastRow = rows[rows.length - 1];
+        if (lastRow) {
+            const lastBtn = lastRow.querySelector('button[onclick^="addCardItem"]');
+            if (lastBtn) lastBtn.parentElement.style.display = 'flex';
+        }
+        
+        validateCardUniqueAssets(cardIdx);
+        validateCardUniqueComponentTypes(cardIdx);
+    };
+
+    window.populateComponentTypes = function(cardIdx, itemIdx) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        const row = card.querySelector(`.item-row[data-item-idx="${itemIdx}"]`);
+        if (!row) return;
+        const compTypeSelect = row.querySelector('.js-component-type-select');
+        if (!compTypeSelect) return;
+        
+        const pcComponentsStr = card.dataset.pcComponents;
+        const pcComponents = pcComponentsStr ? JSON.parse(pcComponentsStr) : null;
+        
+        let types = [];
+        const slotLabels = {
+            processor: 'Processor',
+            ram: 'RAM',
+            ram2: 'RAM (Slot 2)',
+            ssd: 'SSD',
+            hdd: 'HDD',
+            motherboard: 'Motherboard',
+            vga: 'VGA',
+            cpu_fan: 'CPU Fan',
+            powersupply: 'Power Supply'
+        };
+        
+        if (pcComponents && pcComponents.length > 0) {
+            types = pcComponents.map(c => ({ value: c.slot, label: slotLabels[c.slot] || ucFirst(c.slot) }));
+        } else {
+            types = [
+                { value: 'processor', label: 'Processor' },
+                { value: 'ram', label: 'RAM' },
+                { value: 'ssd', label: 'SSD' },
+                { value: 'hdd', label: 'HDD' },
+                { value: 'motherboard', label: 'Motherboard' },
+                { value: 'vga', label: 'VGA' },
+                { value: 'cpu_fan', label: 'CPU Fan' },
+                { value: 'powersupply', label: 'Power Supply' }
+            ];
+        }
+        
+        compTypeSelect.innerHTML = '<option value="">-- Choose Component Type --</option>' +
+            types.map(t => `<option value="${t.value}">${t.label}</option>`).join('');
+    };
+
+    window.handleComponentTypeChange = function(cardIdx, itemIdx) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        const row = card.querySelector(`.item-row[data-item-idx="${itemIdx}"]`);
+        if (!row) return;
+        
+        const compTypeSelect = row.querySelector('.js-component-type-select');
+        const componentType = compTypeSelect.value;
+        
+        const assetSelect = row.querySelector('.js-asset-select');
+        assetSelect.innerHTML = '<option value="">-- Choose Asset --</option>';
+        
+        const qtyInput = row.querySelector('.js-qty-input');
+        qtyInput.value = 1;
+        qtyInput.readOnly = false;
+        row.querySelector('.js-serial-container').style.display = 'none';
+        row.querySelector('.js-serial-list').innerHTML = '';
+        
+        if (!componentType) return;
+        
+        const pcComponentsStr = card.dataset.pcComponents;
+        const pcComponents = pcComponentsStr ? JSON.parse(pcComponentsStr) : null;
+        
+        let filteredAssets = [];
+        
+        if (pcComponents && pcComponents.length > 0) {
+            const mappedType = (componentType === 'ram2') ? 'ram' : componentType;
+            const comp = pcComponents.find(c => c.slot === componentType);
+            if (comp) {
+                const asset = rrLabAssets.find(a => a.asset_id == comp.asset_id);
+                if (asset) {
+                    filteredAssets.push(asset);
+                } else {
+                    filteredAssets.push({
+                        asset_id: comp.asset_id,
+                        name: comp.name,
+                        category: comp.category,
+                        component_type: mappedType,
+                        stock: 1
+                    });
+                }
+            }
+        } else {
+            filteredAssets = rrLabAssets.filter(a => a.category === 'component-pc' && a.component_type === componentType);
+        }
+        
+        assetSelect.innerHTML = '<option value="">-- Choose Asset --</option>' +
+            filteredAssets.map(a => `<option value="${a.asset_id}">${a.name}</option>`).join('');
+            
+        if (filteredAssets.length === 1) {
+            assetSelect.value = filteredAssets[0].asset_id;
+            handleCardAssetChange(cardIdx, itemIdx);
+        }
+        
+        validateCardUniqueAssets(cardIdx);
+        validateCardUniqueComponentTypes(cardIdx);
+    };
+
+    window.validateCardUniqueAssets = function(cardIdx) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        if (!card) return;
+        const selects = card.querySelectorAll('.js-asset-select');
+        const selectedValues = Array.from(selects).map(s => s.value).filter(Boolean);
+        
+        selects.forEach(sel => {
+            const currentVal = sel.value;
+            Array.from(sel.options).forEach(opt => {
+                if (opt.value && opt.value !== currentVal) {
+                    opt.disabled = selectedValues.includes(opt.value);
+                } else {
+                    opt.disabled = false;
+                }
+            });
+        });
+    };
+
+    window.validateCardUniqueComponentTypes = function(cardIdx) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        if (!card) return;
+        const selects = card.querySelectorAll('.js-component-type-select');
+        if (selects.length === 0) return;
+        
+        const selectedValues = Array.from(selects).map(s => s.value).filter(Boolean);
+        
+        selects.forEach(sel => {
+            const currentVal = sel.value;
+            Array.from(sel.options).forEach(opt => {
+                if (opt.value && opt.value !== currentVal) {
+                    opt.disabled = selectedValues.includes(opt.value);
+                } else {
+                    opt.disabled = false;
+                }
+            });
+        });
+    };
+
+    window.handleCardAssetChange = function(cardIdx, itemIdx) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        const row = card.querySelector(`.item-row[data-item-idx="${itemIdx}"]`);
+        if (!row) return;
+        
+        const assetSelect = row.querySelector('.js-asset-select');
+        const assetId = assetSelect.value;
+        const stockInput = row.querySelector('.js-stock-input');
+        const qtyInput = row.querySelector('.js-qty-input');
+        const serialContainer = row.querySelector('.js-serial-container');
+        const serialList = row.querySelector('.js-serial-list');
+        
+        serialContainer.style.display = 'none';
+        serialList.innerHTML = '';
+        stockInput.value = '';
+        qtyInput.value = 1;
+        qtyInput.readOnly = false;
+        
+        if (!assetId) {
+            validateCardUniqueAssets(cardIdx);
+            return;
+        }
+        
+        const asset = rrLabAssets.find(a => a.asset_id == assetId);
+        if (!asset) return;
+        
+        const category = asset.category;
+        const usesSerial = ['electronic', 'pc', 'non-electronic'].includes(category);
+        
+        const condSelect = row.querySelector('.js-condition-select');
+        const condition = condSelect.value;
+        
+        if (usesSerial) {
+            serialContainer.style.display = 'block';
+            qtyInput.readOnly = true;
+            
+            const labId = document.getElementById('rr_modal_lab_id').value;
+            fetch(`/api/laboratory/${labId}/assets/${assetId}/serials-with-pc`)
+                .then(res => res.json())
+                .then(data => {
+                    window.rrSerialData = window.rrSerialData || {};
+                    window.rrSerialData[assetId] = data.serials || [];
+                    
+                    let filteredSerials = (data.serials || []).filter(s => s.condition === condition);
+                    
+                    const pcSelect = card.querySelector('.js-card-pc');
+                    const pcId = pcSelect ? pcSelect.value : '';
+                    if (pcId) {
+                        filteredSerials = filteredSerials.filter(s => String(s.pc_id) === String(pcId));
+                    }
+                    
+                    stockInput.value = filteredSerials.length;
+                    
+                    if (filteredSerials.length === 0) {
+                        serialList.innerHTML = `<div style="color:#f87171; font-size:12px; padding:4px 0;">No ${condition} serial numbers available in this lab</div>`;
+                        qtyInput.value = 0;
+                        return;
+                    }
+                    
+                    // If category is PC Component and PC is selected, we automatically find and preselect the serial_id
+                    if (category === 'component-pc' && pcId) {
+                        const compTypeSelect = row.querySelector('.js-component-type-select');
+                        const componentType = compTypeSelect ? compTypeSelect.value : '';
+                        const pcComponentsStr = card.dataset.pcComponents;
+                        const pcComponents = pcComponentsStr ? JSON.parse(pcComponentsStr) : null;
+                        if (pcComponents && componentType) {
+                            const comp = pcComponents.find(c => c.slot === componentType);
+                            if (comp && comp.serial_id) {
+                                const matchingSerial = filteredSerials.find(s => s.id == comp.serial_id);
+                                if (matchingSerial) {
+                                    addCardSerialSelect(cardIdx, itemIdx, comp.serial_id);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    addCardSerialSelect(cardIdx, itemIdx);
+                })
+                .catch(() => alert('Failed to load serial numbers.'));
+        } else {
+            const stock = getAvailableStockForAssetAndCondition(asset, condition);
+            stockInput.value = stock;
+            updateCardQtyStyle(row, stock, parseInt(qtyInput.value));
+        }
+        
+        validateCardUniqueAssets(cardIdx);
+    };
+
+    window.addCardSerialSelect = function(cardIdx, itemIdx, preselectedValue = null) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        const row = card.querySelector(`.item-row[data-item-idx="${itemIdx}"]`);
+        if (!row) return;
+        
+        const list = row.querySelector('.js-serial-list');
+        const assetSelect = row.querySelector('.js-asset-select');
         const assetId = assetSelect.value;
         const serials = (window.rrSerialData && window.rrSerialData[assetId]) ? window.rrSerialData[assetId] : [];
         
         if (serials.length === 0) return;
         
-        const pcId = document.getElementById('rr_modal_pc_id').value;
-        let filteredSerials = serials;
+        const condSelect = row.querySelector('.js-condition-select');
+        const condition = condSelect.value;
+        
+        const pcSelect = card.querySelector('.js-card-pc');
+        const pcId = pcSelect ? pcSelect.value : '';
+        let filteredSerials = serials.filter(s => s.condition === condition);
         if (pcId) {
-            filteredSerials = serials.filter(s => String(s.pc_id) === String(pcId));
+            filteredSerials = filteredSerials.filter(s => String(s.pc_id) === String(pcId));
         }
 
         if (filteredSerials.length === 0) {
-            alert('No serial numbers for this asset are installed on the selected PC.');
+            alert('No serial numbers for this asset match the condition and PC constraints.');
             return;
         }
-
-        const rowId = Date.now() + Math.random().toString(36).substr(2, 5);
         
-        const row = document.createElement('div');
-        row.id = `rr_serial_row_${rowId}`;
-        row.style.cssText = 'display:flex; gap:6px; align-items:center; margin-bottom:4px;';
+        const rowId = Date.now() + Math.random().toString(36).substr(2, 5);
+        const subRow = document.createElement('div');
+        subRow.id = `rr_serial_row_${rowId}`;
+        subRow.style.cssText = 'display:flex; gap:6px; align-items:center; margin-bottom:4px;';
+        
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'flex:1; display:flex; gap:6px; align-items:center;';
         
         const select = document.createElement('select');
-        select.name = `items[${index}][serial_number_ids][]`;
-        select.className = `rr-serial-select-${index}`;
+        select.className = 'js-serial-picker-select';
         select.style.cssText = 'flex:1; padding:8px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; color:var(--text-primary); background:var(--bg-input);';
         select.required = true;
-        select.innerHTML = '<option value="">-- Choose Serial Number --</option>' +
+        select.innerHTML = '<option value="">-- Choose Kode Inventaris --</option>' +
             filteredSerials.map(s => {
                 const pcLabel = s.pc_sku ? ` - (PC: ${s.pc_sku})` : '';
                 return `<option value="${s.id}">${s.serial_number}${pcLabel}</option>`;
@@ -580,8 +1113,22 @@
         }
         
         select.addEventListener('change', () => {
-            validateRRUniqueSerials(index);
+            validateCardUniqueSerials(row);
         });
+        
+        wrapper.appendChild(select);
+        
+        const scanBtn = document.createElement('button');
+        scanBtn.type = 'button';
+        scanBtn.style.cssText = 'background:none; border:none; cursor:pointer; color:#111B4C; padding:4px; display:inline-flex; align-items:center; justify-content:center;';
+        scanBtn.title = 'Scan QR Code';
+        scanBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+                <rect x="7" y="7" width="10" height="10" rx="1" />
+            </svg>`;
+        scanBtn.onclick = () => openQrScannerFor(select);
+        wrapper.appendChild(scanBtn);
         
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
@@ -594,28 +1141,28 @@
         removeBtn.style.cursor = 'pointer';
         removeBtn.style.height = '38px';
         removeBtn.onclick = () => {
-            row.remove();
-            updateRRQtyFromSerials(index);
-            validateRRUniqueSerials(index);
+            subRow.remove();
+            updateCardQtyFromSerials(row);
+            validateCardUniqueSerials(row);
         };
         
-        row.appendChild(select);
-        row.appendChild(removeBtn);
-        list.appendChild(row);
+        subRow.appendChild(wrapper);
+        subRow.appendChild(removeBtn);
+        list.appendChild(subRow);
         
-        updateRRQtyFromSerials(index);
-        validateRRUniqueSerials(index);
+        updateCardQtyFromSerials(row);
+        validateCardUniqueSerials(row);
     };
 
-    window.updateRRQtyFromSerials = function(index) {
-        const list = document.getElementById(`rr_serial_list_${index}`);
+    window.updateCardQtyFromSerials = function(row) {
+        const list = row.querySelector('.js-serial-list');
         const count = list.querySelectorAll('select').length;
-        const qtyInput = document.getElementById(`rr_qty_${index}`);
+        const qtyInput = row.querySelector('.js-qty-input');
         qtyInput.value = count;
     };
 
-    window.validateRRUniqueSerials = function(index) {
-        const list = document.getElementById(`rr_serial_list_${index}`);
+    window.validateCardUniqueSerials = function(row) {
+        const list = row.querySelector('.js-serial-list');
         const selects = list.querySelectorAll('select');
         const selectedValues = Array.from(selects).map(s => s.value).filter(Boolean);
         
@@ -631,79 +1178,135 @@
         });
     };
 
-    function handleRRModalAssetChange(idx) {
-        const labId = document.getElementById('rr_modal_lab_id').value;
-        const assetSelect = document.getElementById(`rr_asset_${idx}`);
+    window.getAvailableStockForAssetAndCondition = function(asset, condition) {
+        if (!asset) return 0;
+        if (condition === 'damaged') {
+            return asset.stock_damaged ?? 0;
+        } else if (condition === 'lost') {
+            return asset.stock_loss ?? 0;
+        } else {
+            return asset.stock_good ?? 0;
+        }
+    };
+
+    window.handleCardConditionChange = function(cardIdx, itemIdx) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        const row = card.querySelector(`.item-row[data-item-idx="${itemIdx}"]`);
+        if (!row) return;
+        
+        const assetSelect = row.querySelector('.js-asset-select');
         const assetId = assetSelect.value;
-        const qtyEl = document.getElementById(`rr_qty_${idx}`);
-        const serialContainer = document.getElementById(`rr_serial_container_${idx}`);
-        const serialList = document.getElementById(`rr_serial_list_${idx}`);
-
-        serialContainer.style.display = 'none';
-        if (serialList) serialList.innerHTML = '';
-        qtyEl.value = 1;
-        qtyEl.readOnly = false;
-
-        if (!labId || !assetId) return;
-
+        if (!assetId) return;
+        
         const asset = rrLabAssets.find(a => a.asset_id == assetId);
         if (!asset) return;
-
+        
         const category = asset.category;
         const usesSerial = ['electronic', 'pc', 'non-electronic'].includes(category);
-
+        
+        const condSelect = row.querySelector('.js-condition-select');
+        const condition = condSelect.value;
+        
+        const qtyInput = row.querySelector('.js-qty-input');
+        const stockInput = row.querySelector('.js-stock-input');
+        
         if (usesSerial) {
-            serialContainer.style.display = 'block';
-            qtyEl.readOnly = true;
+            const serialList = row.querySelector('.js-serial-list');
+            serialList.innerHTML = '';
+            qtyInput.value = 0;
+            
+            const serials = (window.rrSerialData && window.rrSerialData[assetId]) ? window.rrSerialData[assetId] : [];
+            const pcSelect = card.querySelector('.js-card-pc');
+            const pcId = pcSelect ? pcSelect.value : '';
+            
+            let filteredSerials = serials.filter(s => s.condition === condition);
+            if (pcId) {
+                filteredSerials = filteredSerials.filter(s => String(s.pc_id) === String(pcId));
+            }
+            
+            stockInput.value = filteredSerials.length;
+            
+            if (filteredSerials.length === 0) {
+                serialList.innerHTML = `<div style="color:#f87171; font-size:12px; padding:4px 0;">No ${condition} serial numbers available in this lab</div>`;
+                return;
+            }
+            addCardSerialSelect(cardIdx, itemIdx);
+        } else {
+            const stock = getAvailableStockForAssetAndCondition(asset, condition);
+            stockInput.value = stock;
+            updateCardQtyStyle(row, stock, parseInt(qtyInput.value));
+        }
+    };
 
-            fetch(`/api/laboratory/${labId}/assets/${assetId}/serials-with-pc`)
-                .then(res => res.json())
-                .then(data => {
-                    window.rrSerialData = window.rrSerialData || {};
-                    window.rrSerialData[assetId] = data.serials || [];
+    window.handleCardQtyChange = function(cardIdx, itemIdx) {
+        const card = document.querySelector(`.tr-category-card[data-card-index="${cardIdx}"]`);
+        const row = card.querySelector(`.item-row[data-item-idx="${itemIdx}"]`);
+        if (!row) return;
+        const assetSelect = row.querySelector('.js-asset-select');
+        const assetId = assetSelect.value;
+        if (!assetId) return;
+        const asset = rrLabAssets.find(a => a.asset_id == assetId);
+        if (!asset) return;
+        
+        const condition = row.querySelector('.js-condition-select').value;
+        const stock = getAvailableStockForAssetAndCondition(asset, condition);
+        const qty = parseInt(row.querySelector('.js-qty-input').value);
+        updateCardQtyStyle(row, stock, qty);
+    };
 
-                    if (!data.serials || data.serials.length === 0) {
-                        if (serialList) serialList.innerHTML = '<div style="color:#f87171; font-size:12px; padding:4px 0;">No serial numbers available in this lab</div>';
-                        qtyEl.value = 0;
-                        return;
-                    }
-                    
-                    addRRSerialSelect(idx);
-                })
-                .catch(() => alert('Failed to load serial numbers.'));
+    function updateCardQtyStyle(row, stock, qty) {
+        const stockInput = row.querySelector('.js-stock-input');
+        const qtyInput = row.querySelector('.js-qty-input');
+        if (stock !== null && qty > stock) {
+            stockInput.style.color = '#dc2626';
+            qtyInput.style.background = '#fee2e2';
+            qtyInput.style.borderColor = '#dc2626';
+        } else {
+            stockInput.style.color = 'var(--text-muted)';
+            qtyInput.style.background = 'var(--bg-input)';
+            qtyInput.style.borderColor = 'var(--border-color)';
         }
     }
 
-    function addRRModalItem() {
-        const container = document.getElementById('rr_modal_items');
-        const idx = rrItemIndex++;
-        
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = getRRItemRowHtml(idx);
-        container.appendChild(tempDiv.firstElementChild);
-        
-        updateRrAssetDropdowns();
-    }
-
-    function removeRRModalItem(btn) {
-        const list = document.getElementById('rr_modal_items');
-        if (list.querySelectorAll('.item-row').length === 1) return;
-        btn.closest('.item-row').remove();
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
-        // Setup category button toggle listeners
-        document.querySelectorAll('.rr-cat-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                btn.classList.toggle('is-active');
-                updateRrAssetDropdowns();
-            });
-        });
-        
-        // If lab is pre-selected (hidden input for staff)
         const labIdInput = document.getElementById('rr_modal_lab_id');
         if (labIdInput && labIdInput.value) {
             handleRRModalLabChange();
+        }
+        
+        const createForm = document.querySelector('#addReturnModal form');
+        if (createForm) {
+            createForm.addEventListener('submit', function(e) {
+                let index = 0;
+                const cards = document.querySelectorAll('.tr-category-card');
+                cards.forEach(card => {
+                    const rows = card.querySelectorAll('.item-row');
+                    rows.forEach(row => {
+                        const assetSel = row.querySelector('.js-asset-select');
+                        const qtyInput = row.querySelector('.js-qty-input');
+                        const conditionSelect = row.querySelector('.js-condition-select');
+                        const reasonInput = row.querySelector('.js-reason-input');
+                        
+                        if (assetSel && assetSel.value) {
+                            assetSel.name = `items[${index}][asset_id]`;
+                            qtyInput.name = `items[${index}][quantity]`;
+                            conditionSelect.name = `items[${index}][condition]`;
+                            reasonInput.name = `items[${index}][reason]`;
+                            
+                            const serialSelects = row.querySelectorAll('.js-serial-picker-select');
+                            serialSelects.forEach(sel => {
+                                sel.name = `items[${index}][serial_number_ids][]`;
+                            });
+                            index++;
+                        }
+                    });
+                });
+                
+                if (index === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one asset to return.');
+                }
+            });
         }
     });
 

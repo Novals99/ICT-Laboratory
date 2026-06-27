@@ -114,7 +114,7 @@ class ReturnRequestController extends Controller
 
         $category = $request->query('category');
 
-        $query = AssetLab::with('asset:id,asset_name,asset_category,specification')
+        $query = AssetLab::with('asset:id,asset_name,asset_category,specification,component_type')
             ->where('lab_id', $labId)
             ->where('total_asset_lab', '>', 0);
 
@@ -127,6 +127,7 @@ class ReturnRequestController extends Controller
                 'asset_id'      => $item->asset_id,
                 'name'          => $item->asset->asset_name . ($item->asset->specification ? ' - ' . $item->asset->specification : ''),
                 'category'      => $item->asset->asset_category,
+                'component_type'=> $item->asset->component_type,
                 'stock'         => $item->total_good_lab,    // default = good (dipakai form Transfer)
                 'stock_good'    => $item->total_good_lab,
                 'stock_damaged' => $item->total_damaged_lab,
@@ -147,9 +148,15 @@ class ReturnRequestController extends Controller
         }
 
         $pcs = \App\Models\Pc::where('lab_id', $labId)
+            ->orderBy('id')
             ->get(['id', 'sku', 'type_pc']);
 
-        return response()->json($pcs);
+        $pcsFormatted = $pcs->map(function ($pc, $index) {
+            $pc->pc_name = 'PC-' . str_pad($index, 2, '0', STR_PAD_LEFT);
+            return $pc;
+        });
+
+        return response()->json($pcsFormatted);
     }
 
     public function getPcComponents(int $pcId)
@@ -174,6 +181,8 @@ class ReturnRequestController extends Controller
                 'name' => $pcAsset ? $pcAsset->asset_name . ($pcAsset->specification ? ' - ' . $pcAsset->specification : '') : 'PC Box',
                 'category' => 'pc',
                 'slot' => 'pc',
+                'serial_id' => $pc->pc_serial_id,
+                'serial_number' => $pc->pcSerial ? $pc->pcSerial->serial_number : null,
             ];
         }
 
@@ -187,6 +196,7 @@ class ReturnRequestController extends Controller
             $assetId = null;
             $assetName = $val;
             $category = 'component-pc';
+            $serial = null;
 
             if ($serialId) {
                 $serial = \App\Models\AssetSerialNumber::with('asset')->find($serialId);
@@ -216,6 +226,8 @@ class ReturnRequestController extends Controller
                     'name' => $assetName,
                     'category' => $category,
                     'slot' => $slot,
+                    'serial_id' => $serialId,
+                    'serial_number' => $serial ? $serial->serial_number : null,
                 ];
             }
         }

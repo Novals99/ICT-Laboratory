@@ -42,7 +42,8 @@ class Laboratory extends Model
             'asset_labs',
             'lab_id',
             'asset_id'
-        )->withPivot(['total_asset_lab', 'total_good_lab', 'total_damaged_lab', 'total_loss_lab']);
+        )->withPivot(['total_asset_lab', 'total_good_lab', 'total_damaged_lab', 'total_loss_lab'])
+         ->withTimestamps();
     }
 
     public function pcs()
