@@ -1015,7 +1015,7 @@ window.handleCardAssetChange = function(cardIdx, itemIdx) {
     if (!asset) return;
     
     const category = asset.category;
-    const usesSerial = ['electronic', 'pc', 'non-electronic'].includes(category);
+    const usesSerial = ['electronic', 'pc', 'non-electronic', 'component-pc'].includes(category);
     
     if (usesSerial) {
         serialContainer.style.display = 'block';
@@ -1338,6 +1338,18 @@ function openTransferDetailModal(requestId) {
         });
 }
 
+window.onTransferQtyInput = function(itemId, value, maxQty, minQty) {
+    let val = parseInt(value) || 0;
+    if (val < minQty) val = minQty;
+    if (val > maxQty) val = maxQty;
+    
+    const input = document.getElementById(`qty_approved_${itemId}`);
+    if (input) input.value = val;
+    
+    trItemStates[itemId + '_qty'] = val;
+    trItemStates[itemId] = val > 0 ? 'approved' : 'rejected';
+};
+
 function renderTransferRows() {
     const isSpv = @json($isSpv);
     const container = document.getElementById('transfer_modal_categories_container');
@@ -1377,16 +1389,14 @@ function renderTransferRows() {
             <table style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0; margin-bottom:12px;">
                 <thead>
                     <tr style="background:var(--bg-table-header);">
-                        <th style="padding:8px 14px; text-align:left; width: 35%;">Asset Name</th>
-                        <th style="padding:8px 14px; text-align:left; width: 25%;">Kode Inventaris</th>
-                        <th style="padding:8px 14px; text-align:center; width: 12%;">Qty Diajukan</th>
-                        <th style="padding:8px 14px; text-align:center; width: 13%;">Qty Disetujui</th>
-                        <th style="padding:8px 14px; text-align:center; width: 15%;">Status / Action</th>
+                        <th style="padding:8px 14px; text-align:left; width: 40%;">Asset Name</th>
+                        <th style="padding:8px 14px; text-align:left; width: 30%;">Kode Inventaris</th>
+                        <th style="padding:8px 14px; text-align:center; width: 15%;">Qty Diajukan</th>
+                        <th style="padding:8px 14px; text-align:center; width: 15%;">Qty Disetujui</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${items.map(item => {
-                        let actionHtml = '';
                         let qtyApprovedHtml = '';
                         
                         const isPending = item.status === 'pending';
@@ -1394,57 +1404,22 @@ function renderTransferRows() {
                         const isLocked = !isPending && !isPartial;
                         
                         if (isLocked) {
-                            const isApproved = item.status === 'approved';
-                            const badgeBg = isApproved ? 'rgba(22, 163, 74, 0.2)' : 'rgba(220, 38, 38, 0.2)';
-                            const badgeText = isApproved ? '#4ade80' : '#f87171';
-                            const badgeLabel = isApproved ? 'Approved' : 'Rejected';
-                            actionHtml = `<span style="background:${badgeBg}; color:${badgeText}; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600;">${badgeLabel}</span>`;
                             qtyApprovedHtml = `<span style="font-weight:600; color:var(--text-primary);">${item.quantity_approved ?? 0}</span>`;
                         } else {
                             if (isSpv) {
-                                const curState = trItemStates[item.id] || (isPartial ? 'approved' : 'pending');
-                                const appOpacity = curState === 'approved' ? '1.0' : (curState === 'pending' ? '0.4' : '0.15');
-                                const rejOpacity = curState === 'rejected' ? '1.0' : (curState === 'pending' ? '0.4' : '0.15');
-                                const canReject = !isPartial; 
-                                
-                                actionHtml = `
-                                    <div style="display:flex; align-items:center; justify-content:center; gap:12px;">
-                                        <button type="button" onclick="setTrRowState(${item.id}, 'approved')"
-                                            style="background:none; border:none; cursor:pointer; color:#4ade80; padding:4px; opacity:${appOpacity}; transition:opacity 0.2s;" title="Approve">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                                <polyline points="20 6 9 17 4 12"></polyline>
-                                            </svg>
-                                        </button>
-                                        ${canReject ? `
-                                        <button type="button" onclick="setTrRowState(${item.id}, 'rejected')"
-                                            style="background:none; border:none; cursor:pointer; color:#f87171; padding:4px; opacity:${rejOpacity}; transition:opacity 0.2s;" title="Reject">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                                <line x1="18" y1="6" x2="6" y2="18"></line>
-                                                <line x1="6" y1="6" x2="18" y2="18"></line>
-                                            </svg>
-                                        </button>` : ''}
-                                    </div>
-                                `;
-                                
-                                const isRejected = curState === 'rejected';
                                 const minQty = isPartial ? item.quantity_approved : 0;
                                 const initialVal = trItemStates[item.id + '_qty'] !== undefined 
                                     ? trItemStates[item.id + '_qty'] 
-                                    : (isRejected ? 0 : (isPartial ? item.quantity_approved : item.quantity));
+                                    : (isPartial ? item.quantity_approved : item.quantity);
                                     
                                 qtyApprovedHtml = `
                                     <input type="number" id="qty_approved_${item.id}" 
                                            value="${initialVal}" 
                                            min="${minQty}" max="${item.quantity}" 
-                                           ${isRejected ? 'disabled' : ''}
-                                           oninput="trItemStates[${item.id} + '_qty'] = this.value"
+                                           oninput="onTransferQtyInput(${item.id}, this.value, ${item.quantity}, ${minQty})"
                                            style="width:70px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:6px; padding:4px 8px; text-align:center;">
                                 `;
                             } else {
-                                const statusLabel = isPartial ? 'Partially Approved' : 'Pending';
-                                const statusColor = isPartial ? '#3b82f6' : '#fbbf24';
-                                const statusBg = isPartial ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)';
-                                actionHtml = `<span style="background:${statusBg}; color:${statusColor}; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600;">${statusLabel}</span>`;
                                 qtyApprovedHtml = `<span style="font-weight:600; color:var(--text-primary);">${item.quantity_approved ?? 0}</span>`;
                             }
                         }
@@ -1455,7 +1430,6 @@ function renderTransferRows() {
                                 <td style="padding:10px 14px;color:var(--text-secondary);font-family:monospace;">${item.serial_number ?? '-'}</td>
                                 <td style="padding:10px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.quantity}</td>
                                 <td style="padding:10px 14px;text-align:center;">${qtyApprovedHtml}</td>
-                                <td style="padding:10px 14px;text-align:center;">${actionHtml}</td>
                             </tr>
                         `;
                     }).join('')}
@@ -1464,22 +1438,6 @@ function renderTransferRows() {
         `;
         container.appendChild(catDiv);
     });
-}
-
-function setTrRowState(itemId, state) {
-    if (trItemStates[itemId] !== undefined) {
-        trItemStates[itemId] = state;
-        if (state === 'rejected') {
-            trItemStates[itemId + '_qty'] = 0;
-        } else if (state === 'approved') {
-            const item = trItemsList.find(i => i.id === itemId);
-            if (item) {
-                const isPartial = item.status === 'approved' && item.quantity_approved < item.quantity;
-                trItemStates[itemId + '_qty'] = isPartial ? item.quantity_approved : item.quantity;
-            }
-        }
-        renderTransferRows();
-    }
 }
 
 function closeTransferDetailModal() {

@@ -518,10 +518,15 @@ class ReturnRequestController extends Controller
             'lab_name' => $returnRequest->laboratory?->lab_name ?? '-',
             'requested_by' => $returnRequest->requestedBy?->name ?? '-',
             'items' => $returnRequest->items->map(function ($item) {
+                $category = $item->asset?->asset_category;
+                $name = $item->asset?->asset_name ?? '-';
+                if ($category === 'component-pc' && $item->asset?->specification) {
+                    $name .= ' - ' . $item->asset->specification;
+                }
                 return [
                     'id' => $item->id,
                     'asset_id' => $item->asset_id,
-                    'asset_name' => $item->asset?->asset_name ?? '-',
+                    'asset_name' => $name,
                     'serial_number' => $item->serialNumber?->serial_number ?? '-',
                     'quantity' => $item->quantity_requested,
                     'condition' => ucfirst($item->condition),

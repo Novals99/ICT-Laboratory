@@ -96,6 +96,6 @@ class Asset extends Model
      */
     public function usesSerial(): bool
     {
-        return in_array($this->asset_category, ['electronic', 'pc', 'non-electronic'], true);
+        return in_array($this->asset_category, ['electronic', 'pc', 'non-electronic', 'component-pc'], true);
     }
 }

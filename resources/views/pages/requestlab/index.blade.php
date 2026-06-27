@@ -296,11 +296,10 @@
                     <table style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
                         <thead>
                             <tr style="background:var(--bg-table-header);">
-                                <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty Requested</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty Approved</th>
-                                <th style="padding:8px 14px; text-align:left;">Kode Inventaris</th>
-                                <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
+                                <th style="padding:8px 14px; text-align:left; width: 35%;">Asset Name</th>
+                                <th style="padding:8px 14px; text-align:center; width: 15%;">Qty Requested</th>
+                                <th style="padding:8px 14px; text-align:center; width: 15%;">Qty Approved</th>
+                                <th style="padding:8px 14px; text-align:left; width: 35%;">Kode Inventaris</th>
                             </tr>
                         </thead>
                         <tbody id="modal_electronic"></tbody>
@@ -312,10 +311,10 @@
                     <table style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
                         <thead>
                             <tr style="background:var(--bg-table-header);">
-                                <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty Requested</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty Approved</th>
-                                <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
+                                <th style="padding:8px 14px; text-align:left; width: 35%;">Asset Name</th>
+                                <th style="padding:8px 14px; text-align:center; width: 15%;">Qty Requested</th>
+                                <th style="padding:8px 14px; text-align:center; width: 15%;">Qty Approved</th>
+                                <th style="padding:8px 14px; text-align:left; width: 35%;">Kode Inventaris</th>
                             </tr>
                         </thead>
                         <tbody id="modal_nonelectronic"></tbody>
@@ -327,11 +326,10 @@
                     <table style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
                         <thead>
                             <tr style="background:var(--bg-table-header);">
-                                <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty Requested</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty Approved</th>
-                                <th style="padding:8px 14px; text-align:left;">Spesifikasi</th>
-                                <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
+                                <th style="padding:8px 14px; text-align:left; width: 35%;">Asset Name</th>
+                                <th style="padding:8px 14px; text-align:center; width: 15%;">Qty Requested</th>
+                                <th style="padding:8px 14px; text-align:center; width: 15%;">Qty Approved</th>
+                                <th style="padding:8px 14px; text-align:left; width: 35%;">Kode Inventaris</th>
                             </tr>
                         </thead>
                         <tbody id="modal_componentpc"></tbody>
@@ -343,11 +341,10 @@
                     <table style="width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0;">
                         <thead>
                             <tr style="background:var(--bg-table-header);">
-                                <th style="padding:8px 14px; text-align:left;">Asset Name</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty Requested</th>
-                                <th style="padding:8px 14px; text-align:center;">Qty Approved</th>
-                                <th style="padding:8px 14px; text-align:left;">Kode Inventaris</th>
-                                <th style="padding:8px 14px; text-align:center;">{{ $canReviewRequest ? 'Action' : 'Status' }}</th>
+                                <th style="padding:8px 14px; text-align:left; width: 35%;">Asset Name</th>
+                                <th style="padding:8px 14px; text-align:center; width: 15%;">Qty Requested</th>
+                                <th style="padding:8px 14px; text-align:center; width: 15%;">Qty Approved</th>
+                                <th style="padding:8px 14px; text-align:left; width: 35%;">Kode Inventaris</th>
                             </tr>
                         </thead>
                         <tbody id="modal_pc"></tbody>
@@ -648,17 +645,18 @@
                     ...(data.pc || [])
                 ];
 
-                document.getElementById('modal_electronic').innerHTML = rowHtml(data.electronic, true, false);
-                document.getElementById('modal_nonelectronic').innerHTML = rowHtml(data.non_electronic, false, false);
-                document.getElementById('modal_componentpc').innerHTML = rowHtml(data.component_pc, true, true);
-                document.getElementById('modal_pc').innerHTML = rowHtml(data.pc, true, false);
+                document.getElementById('modal_electronic').innerHTML = rowHtml(data.electronic, true);
+                document.getElementById('modal_nonelectronic').innerHTML = rowHtml(data.non_electronic, true);
+                document.getElementById('modal_componentpc').innerHTML = rowHtml(data.component_pc, true);
+                document.getElementById('modal_pc').innerHTML = rowHtml(data.pc, true);
             })
             .catch(() => {
                 const error = '<tr><td colspan="4" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Failed to load data</td></tr>';
                 document.getElementById('modalProgress').style.width = '100%';
                 document.getElementById('modal_electronic').innerHTML = error;
-                document.getElementById('modal_nonelectronic').innerHTML = '<tr><td colspan="3" style="padding:12px;text-align:center;color:#f87171;font-size:12px;">Failed to load data</td></tr>';
+                document.getElementById('modal_nonelectronic').innerHTML = error;
                 document.getElementById('modal_componentpc').innerHTML = error;
+                document.getElementById('modal_pc').innerHTML = error;
             });
     }
 
@@ -681,103 +679,54 @@
         return '<span style="background:#facc15;color:#713f12;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Pending</span>';
     }
 
-    function rowHtml(items, hasSerial = false, isComponentPc = false) {
+    function rowHtml(items, hasSerial = false) {
         if (!(items ?? []).length) {
-            return `<tr><td colspan="${hasSerial ? 5 : 4}" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">No data</td></tr>`;
+            return `<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;">No data</td></tr>`;
         }
 
         return items.map(item => {
             let serialCol = '';
             let qtyApprovedCol = '';
-            let actionCol = '';
 
             const isCompleted = item.status === 'approved' || item.status === 'rejected';
             const isSpvPending = canReviewRequest && !isCompleted;
 
             // Qty Approved column
             if (isSpvPending) {
-                if (hasSerial && !isComponentPc) {
-                    // Serial-based
-                    qtyApprovedCol = `<td style="padding:8px 14px;text-align:center;color:var(--text-primary);font-weight:600;"><span id="qty_approved_label_${item.item_id}">${item.qty_approved}</span></td>`;
-                } else {
-                    // Non-serial
-                    qtyApprovedCol = `
-                        <td style="padding:8px 14px;text-align:center;">
-                            <input type="number" data-item-qty-approved-input data-item-id="${item.item_id}" min="0" max="${item.quantity}" value="${item.qty_approved}"
-                                oninput="handleQtyApprovedInput(this, ${item.item_id})"
-                                style="width:60px; text-align:center; padding:4px 8px; border:1px solid var(--border-color); border-radius:6px; background:var(--bg-input); color:var(--text-primary); font-size:13px; font-weight:600;">
-                        </td>
-                    `;
-                }
+                qtyApprovedCol = `<td style="padding:8px 14px;text-align:center;color:var(--text-primary);font-weight:600;"><span id="qty_approved_label_${item.item_id}">${item.qty_approved}</span></td>`;
             } else {
                 qtyApprovedCol = `<td style="padding:8px 14px;text-align:center;color:var(--text-primary);font-weight:600;">${item.qty_approved}</td>`;
             }
 
-            // Serial / Spec column
+            // Serial column
             if (hasSerial) {
-                if (isComponentPc) {
+                if (!requestItemSerials[item.item_id]) {
+                    requestItemSerials[item.item_id] = (item.serials ?? []).map(s => s.id);
+                }
+                const currentLabels = (item.serials ?? []).map(s => s.serial_number).join(', ') || 'None';
+                
+                if (isSpvPending) {
                     serialCol = `
-                        <td style="padding:8px 14px; color:var(--text-secondary); font-size:12px;">
-                            ${item.specification || 'None'}
+                        <td style="padding:8px 14px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="hidden" data-item-status-select data-item-id="${item.item_id}" value="${item.status}" id="status_input_${item.item_id}">
+                                <span id="serial_labels_${item.item_id}" style="color:var(--text-secondary); font-family:monospace; font-size:12px;">${currentLabels}</span>
+                                <button type="button" onclick="selectItemSerials(${item.item_id}, ${item.asset_id}, ${item.quantity})"
+                                    style="background:#111B4C; border:none; cursor:pointer; color:#fff; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600;">
+                                    Select S/N
+                                </button>
+                            </div>
                         </td>
                     `;
                 } else {
-                    if (!requestItemSerials[item.item_id]) {
-                        requestItemSerials[item.item_id] = (item.serials ?? []).map(s => s.id);
-                    }
-                    const currentLabels = (item.serials ?? []).map(s => s.serial_number).join(', ') || 'None';
-                    
-                    if (isSpvPending) {
-                        serialCol = `
-                            <td style="padding:8px 14px;">
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <span id="serial_labels_${item.item_id}" style="color:var(--text-secondary); font-family:monospace; font-size:12px;">${currentLabels}</span>
-                                    <button type="button" onclick="selectItemSerials(${item.item_id}, ${item.asset_id}, ${item.quantity})"
-                                        style="background:#111B4C; border:none; cursor:pointer; color:#fff; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600;">
-                                        Select S/N
-                                    </button>
-                                </div>
-                            </td>
-                        `;
-                    } else {
-                        serialCol = `
-                            <td style="padding:8px 14px; color:var(--text-secondary); font-family:monospace; font-size:12px;">
-                                ${currentLabels}
-                            </td>
-                        `;
-                    }
+                    serialCol = `
+                        <td style="padding:8px 14px; color:var(--text-secondary); font-family:monospace; font-size:12px;">
+                            ${currentLabels}
+                        </td>
+                    `;
                 }
-            }
-
-            // Action / Status column
-            if (isSpvPending) {
-                actionCol = `
-                    <td style="padding:8px 14px;text-align:center;">
-                        <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-                            <input type="hidden" data-item-status-select data-item-id="${item.item_id}" value="${item.status}" id="status_input_${item.item_id}">
-                            <div class="flex items-center gap-1">
-                                <button type="button" onclick="setItemStatus(${item.item_id}, 'approved', ${item.quantity})" id="btn_approve_${item.item_id}"
-                                    class="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-green-900/30 dark:hover:text-green-400" title="Approve Full">
-                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                    </svg>
-                                </button>
-                                <button type="button" onclick="setItemStatus(${item.item_id}, 'rejected', ${item.quantity})" id="btn_reject_${item.item_id}"
-                                    class="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400" title="Reject">
-                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </td>
-                `;
             } else {
-                actionCol = `
-                    <td style="padding:8px 14px;text-align:center;">
-                        ${itemStatusBadge(item.status)}
-                    </td>
-                `;
+                serialCol = `<td style="padding:8px 14px; color:var(--text-secondary); font-size:12px;">-</td>`;
             }
 
             return `
@@ -786,7 +735,6 @@
                     <td style="padding:8px 14px;text-align:center;color:var(--text-primary); font-weight:600;">${item.quantity}</td>
                     ${qtyApprovedCol}
                     ${serialCol}
-                    ${actionCol}
                 </tr>
             `;
         }).join('');
@@ -983,16 +931,14 @@
                 qtyApproved = serialIds.length;
             }
 
-            if (status !== 'rejected') {
-                const itemData = window.currentRequestItemsList.find(i => i.item_id == itemId);
-                const quantity = itemData ? itemData.quantity : 9999;
-                if (qtyApproved >= quantity) {
-                    status = 'approved';
-                } else if (qtyApproved > 0) {
-                    status = 'partial';
-                } else {
-                    status = 'pending';
-                }
+            const itemData = window.currentRequestItemsList.find(i => i.item_id == itemId);
+            const quantity = itemData ? itemData.quantity : 9999;
+            if (qtyApproved >= quantity) {
+                status = 'approved';
+            } else if (qtyApproved > 0) {
+                status = 'partial';
+            } else {
+                status = 'rejected';
             }
 
             try {

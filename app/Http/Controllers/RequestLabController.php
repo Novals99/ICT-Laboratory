@@ -180,7 +180,7 @@ class RequestLabController extends Controller
         $labRequest = RequestLab::findOrFail($item->request_lab_id);
 
         $asset = $item->asset;
-        $usesSerial = in_array($asset->asset_category, ['electronic', 'pc', 'non-electronic']);
+        $usesSerial = in_array($asset->asset_category, ['electronic', 'pc', 'non-electronic', 'component-pc']);
 
         $qtyApproved = (int) ($validated['qty_approved'] ?? 0);
         if ($usesSerial) {
@@ -260,7 +260,7 @@ class RequestLabController extends Controller
                 foreach ($labRequest->request_items as $item) {
                     $serialIds = [];
                     $asset = $item->asset;
-                    $usesSerial = in_array($asset->asset_category, ['electronic', 'pc', 'non-electronic']);
+                    $usesSerial = in_array($asset->asset_category, ['electronic', 'pc', 'non-electronic', 'component-pc']);
                     
                     if ($validated['status'] === 'approved') {
                         $qtyNeeded = $item->total_request - $item->qty_approved;
@@ -404,7 +404,9 @@ class RequestLabController extends Controller
             ->map(fn ($item) => [
                 'item_id' => $item->id,
                 'asset_id' => $item->asset_id,
-                'asset_name' => $item->asset->asset_name ?? '-',
+                'asset_name' => ($category === 'component-pc' && $item->asset->specification)
+                    ? $item->asset->asset_name . ' - ' . $item->asset->specification
+                    : ($item->asset->asset_name ?? '-'),
                 'specification' => $item->asset->specification ?? '-',
                 'quantity' => $item->total_request,
                 'qty_approved' => $item->qty_approved,
@@ -421,7 +423,7 @@ class RequestLabController extends Controller
     private function applyItemStatus(RequestItem $item, RequestLab $labRequest, string $newStatus, array $serialIds = [], int $newQtyApproved = 0): void
     {
         $oldQtyApproved = (int) $item->qty_approved;
-        $usesSerial = in_array($item->asset->asset_category, ['electronic', 'pc', 'non-electronic']);
+        $usesSerial = in_array($item->asset->asset_category, ['electronic', 'pc', 'non-electronic', 'component-pc']);
 
         if ($newStatus === 'rejected') {
             if ($oldQtyApproved > 0) {

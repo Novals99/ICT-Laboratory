@@ -482,10 +482,8 @@
                     data-progress-field
                     data-validate="asset-number"
                     min="0"
-                    @if(!$isComponentPc)
                     readonly
                     style="background:var(--bg-input-readonly, #f3f4f6); cursor:not-allowed;"
-                    @endif
                     required
                 >
 
@@ -540,6 +538,10 @@
                     data-progress-field
                     data-validate="asset-number"
                     min="0"
+                    @if(!$isComponentPc)
+                    readonly
+                    style="background:var(--bg-input-readonly, #f3f4f6); cursor:not-allowed;"
+                    @endif
                     required
                 >
 
@@ -565,6 +567,10 @@
                     data-progress-field
                     data-validate="asset-number"
                     min="0"
+                    @if(!$isComponentPc)
+                    readonly
+                    style="background:var(--bg-input-readonly, #f3f4f6); cursor:not-allowed;"
+                    @endif
                     required
                 >
 
@@ -814,6 +820,7 @@
                 }
 
                 function addSerialInput(list, name, value, locked, serialId = null, condition = 'good', prefix = null, qr_code = null) {
+                    const isStructured = !!list.dataset.assetId;
                     const row = document.createElement('div');
                     row.style.cssText = 'display:flex; gap:6px; align-items:center; margin-bottom:6px;';
 
@@ -928,7 +935,7 @@
                                     b.style.color = b.style.borderColor;
                                 });
                                 setBtnState(true);
-                                const condInputEl = row.querySelector(`input[name="serials[${idx}][condition]"]`);
+                                const condInputEl = row.querySelector('input[name$="[condition]"]');
                                 if (condInputEl) {
                                     condInputEl.value = cOpt.key;
                                     recalculateEditModalCounts(row.closest('form'));
@@ -1049,53 +1056,37 @@
 
                 document.addEventListener('input', function (e) {
                     if (!e.target.matches) return;
-                    const isTotal = e.target.matches('[name="total_asset"], [name$="[total_asset]"]');
+                    
+                    const isGood = e.target.matches('[name="total_good"], [name$="[total_good]"]');
                     const isDamaged = e.target.matches('[name="total_damaged"], [name$="[total_damaged]"]');
                     const isLoss = e.target.matches('[name="total_loss"], [name$="[total_loss]"]');
                     
-                    if (isTotal || isDamaged || isLoss) {
+                    if (isGood || isDamaged || isLoss) {
                         const card = e.target.closest('.asset-item-card');
                         const form = e.target.closest('form');
                         
                         let totalInput, goodInput, damagedInput, lossInput;
+                        let isComp = false;
                         if (card) {
+                            const catEl = card.querySelector('.js-asset-category');
+                            isComp = catEl && catEl.value === 'component-pc';
                             totalInput = card.querySelector('[name$="[total_asset]"], [data-stock-total]');
                             goodInput = card.querySelector('[name$="[total_good]"], [data-stock-good]');
                             damagedInput = card.querySelector('[name$="[total_damaged]"], [data-stock-damaged]');
                             lossInput = card.querySelector('[name$="[total_loss]"]');
                         } else if (form) {
+                            isComp = !!form.querySelector('[name="component_type"]');
                             totalInput = form.querySelector('[name="total_asset"]');
                             goodInput = form.querySelector('[name="total_good"]');
                             damagedInput = form.querySelector('[name="total_damaged"]');
                             lossInput = form.querySelector('[name="total_loss"]');
                         }
                         
-                        if (totalInput && goodInput && damagedInput && lossInput) {
-                            const total = parseInt(totalInput.value) || 0;
-                            let damaged = parseInt(damagedInput.value) || 0;
-                            let loss = parseInt(lossInput.value) || 0;
-                            
-                            let good = total - damaged - loss;
-                            if (good < 0) {
-                                if (isDamaged) {
-                                    damaged = total - loss;
-                                    if (damaged < 0) damaged = 0;
-                                    damagedInput.value = damaged;
-                                } else if (isLoss) {
-                                    loss = total - damaged;
-                                    if (loss < 0) loss = 0;
-                                    lossInput.value = loss;
-                                } else if (isTotal) {
-                                    damaged = total;
-                                    loss = 0;
-                                    damagedInput.value = damaged;
-                                    lossInput.value = loss;
-                                }
-                                good = 0;
-                            }
-                            
-                            goodInput.value = good;
-                            goodInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        if (isComp && totalInput && goodInput && damagedInput && lossInput) {
+                            const good = parseInt(goodInput.value) || 0;
+                            const damaged = parseInt(damagedInput.value) || 0;
+                            const loss = parseInt(lossInput.value) || 0;
+                            totalInput.value = good + damaged + loss;
                         }
                     }
                 });
@@ -1117,6 +1108,7 @@
                     }
                     addSerialInput(list, name, '', false);
                     updateStockCount(e.target, 1);
+                    recalculateEditModalCounts(field.closest('form'));
                 });
 
                 document.addEventListener('DOMContentLoaded', function () {
@@ -1136,15 +1128,10 @@
                         const totalInput = editForm.querySelector('[name="total_asset"]');
                         const goodInput = editForm.querySelector('[name="total_good"]');
                         if (totalInput && goodInput) {
-                            if (isComp) {
-                                totalInput.removeAttribute('readonly');
-                                totalInput.style.background = '';
-                                totalInput.style.cursor = '';
-                            } else {
-                                totalInput.setAttribute('readonly', 'true');
-                                totalInput.style.background = 'var(--bg-input-readonly, #f3f4f6)';
-                                totalInput.style.cursor = 'not-allowed';
-                            }
+                            totalInput.setAttribute('readonly', 'true');
+                            totalInput.style.background = 'var(--bg-input-readonly, #f3f4f6)';
+                            totalInput.style.cursor = 'not-allowed';
+                            
                             if (isComp) {
                                 goodInput.removeAttribute('readonly');
                                 goodInput.style.background = '';
@@ -1167,6 +1154,7 @@
                             .then(d => {
                                 list.innerHTML = '';
                                 (d.serials || []).forEach(s => addSerialInput(list, 'serials[]', s.serial_number, s.locked, s.id, s.condition, s.prefix, s.qr_code));
+                                recalculateEditModalCounts(field.closest('form'));
                             })
                             .catch(() => {});
                     });

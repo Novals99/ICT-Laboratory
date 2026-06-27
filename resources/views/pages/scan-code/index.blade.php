@@ -760,6 +760,7 @@
                         <div class="sc-info-label">Tipe Komponen</div>
                         <div class="sc-info-value">${escHtml(asset.component_type)}</div>
                     </div>` : ''}
+                    ${!serial ? `
                     <div class="sc-info-item">
                         <div class="sc-info-label">Total Aset</div>
                         <div class="sc-info-value">${asset.total_asset ?? 0}</div>
@@ -775,7 +776,7 @@
                     <div class="sc-info-item">
                         <div class="sc-info-label">Hilang</div>
                         <div class="sc-info-value" style="color:#b45309;">${asset.total_loss ?? 0}</div>
-                    </div>
+                    </div>` : ''}
                 </div>
                 ${serialSection}
             </div>`;
