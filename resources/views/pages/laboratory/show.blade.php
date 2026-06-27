@@ -923,10 +923,10 @@ function openAssetSerialModal(assetId, name, category) {
                 tdNo.style.cssText = 'padding:10px; text-align:center; color:var(--text-muted); font-size:13px;';
                 tr.appendChild(tdNo);
 
-                // Parse Prefix and QR Code from serial_number
-                let prefixVal = '';
-                let qrVal = s.serial_number || '';
-                if (s.serial_number) {
+                // Parse Prefix and QR Code from separate columns or fallback
+                let prefixVal = s.prefix || '';
+                let qrVal = s.qr_code || s.serial_number || '';
+                if (s.serial_number && !s.prefix && !s.qr_code) {
                     const lastDash = s.serial_number.lastIndexOf('-');
                     if (lastDash !== -1) {
                         prefixVal = s.serial_number.substring(0, lastDash);
@@ -1068,12 +1068,12 @@ function saveAssetSerials() {
         
         const p = prefixInput ? prefixInput.value.trim() : '';
         const q = qrInput ? qrInput.value.trim() : '';
-        const serial_number = p && q ? `${p}-${q}` : (p || q);
+        const serial_number = q ? q : (p || '');
         
         const activeCondBtn = tr.querySelector('.cond-btn.active');
         const condition = activeCondBtn ? activeCondBtn.dataset.cond : 'good';
         
-        return { id, serial_number, condition };
+        return { id, prefix: p, qr_code: q, serial_number, condition };
     });
 
     fetch(`/api/laboratory/${labId}/assets/${currentAssetSerialId}/serials/sync`, {

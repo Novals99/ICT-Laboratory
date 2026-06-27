@@ -20,6 +20,8 @@ class AssetSerialNumber extends Model
         'slot',
         'notes',
         'request_item_id',
+        'prefix',
+        'qr_code',
     ];
 
     public function asset(): BelongsTo

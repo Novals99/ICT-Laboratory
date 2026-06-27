@@ -67,9 +67,8 @@ class AssetController extends Controller
             'items.*.total_loss'     => ['nullable', 'integer', 'min:0'],
             'items.*.source'         => ['nullable', 'string', 'max:255'],
             'items.*.notes'          => ['nullable', 'string'],
-            // (#17) serial number opsional (array string) untuk kategori ber-S/N.
+            // (#17) serial number opsional (array) untuk kategori ber-S/N.
             'items.*.serials'        => ['nullable', 'array'],
-            'items.*.serials.*'      => ['nullable', 'string', 'max:100'],
             // Serial Number dari SPV Inventory (referensi asset_serial_numbers.id).
             'items.*.spv_serial_id'  => ['nullable', 'integer', 'exists:asset_serial_numbers,id'],
         ]);
@@ -156,7 +155,6 @@ class AssetController extends Controller
             'source'         => ['nullable', 'string', 'max:255'],
             'notes'          => ['nullable', 'string'],
             'serials'        => ['nullable', 'array'],
-            'serials.*'      => ['nullable', 'string', 'max:100'],
         ]);
 
         if ($validated['total_good'] + $validated['total_damaged'] > $validated['total_asset']) {
@@ -242,13 +240,49 @@ class AssetController extends Controller
             return;
         }
 
-        $manual = array_values(array_filter(array_map('trim', $manual)));
+        // Normalize $manual to always be array of: ['serial_number', 'prefix', 'qr_code', 'condition']
+        $normalized = [];
+        foreach ($manual as $m) {
+            if (is_array($m)) {
+                $sn = isset($m['serial_number']) ? trim($m['serial_number']) : '';
+                if ($sn === '') continue;
+                $normalized[] = [
+                    'serial_number' => $sn,
+                    'prefix' => isset($m['prefix']) ? trim($m['prefix']) : null,
+                    'qr_code' => isset($m['qr_code']) ? trim($m['qr_code']) : null,
+                    'condition' => isset($m['condition']) ? trim($m['condition']) : 'good',
+                ];
+            } elseif (is_string($m)) {
+                $sn = trim($m);
+                if ($sn === '') continue;
+                
+                // Parse prefix/qr from string if needed (fallback)
+                $prefix = null;
+                $qrCode = $sn;
+                $lastDash = strrpos($sn, '-');
+                if ($lastDash !== false) {
+                    $prefix = substr($sn, 0, $lastDash);
+                    $qrCode = substr($sn, $lastDash + 1);
+                }
+                $normalized[] = [
+                    'serial_number' => $sn,
+                    'prefix' => $prefix,
+                    'qr_code' => $qrCode,
+                    'condition' => 'good',
+                ];
+            }
+        }
 
         // Create the manual ones first
-        foreach ($manual as $sn) {
+        foreach ($normalized as $row) {
             AssetSerialNumber::firstOrCreate(
-                ['asset_id' => $asset->id, 'serial_number' => $sn],
-                ['condition' => 'good', 'status' => 'available'],
+                ['asset_id' => $asset->id, 'serial_number' => $row['serial_number']],
+                [
+                    'prefix' => $row['prefix'],
+                    'qr_code' => $row['qr_code'],
+                    'condition' => $row['condition'],
+                    'status' => 'available'
+                ]
             );
         }
 
@@ -272,6 +306,8 @@ class AssetController extends Controller
                     AssetSerialNumber::create([
                         'asset_id' => $asset->id,
                         'serial_number' => $serial,
+                        'prefix' => null,
+                        'qr_code' => null,
                         'condition' => 'good',
                         'status' => 'available',
                     ]);
@@ -309,66 +345,94 @@ class AssetController extends Controller
             return;
         }
 
-        // Mode daftar: rekonsiliasi berdasarkan nilai.
-        $submitted = array_values(array_unique(array_filter(array_map('trim', $submitted))));
-
-        // Serial yang terpasang di PC tidak boleh hilang dari daftar.
-        $locked = $asset->serialNumbers()->where('status', 'in_use')->pluck('serial_number')->all();
-        $final  = array_values(array_unique(array_merge($locked, $submitted)));
-
-        // Hapus serial available yang tidak ada lagi di daftar final.
-        $asset->serialNumbers()
-            ->where('status', 'available')
-            ->whereNotIn('serial_number', $final)
-            ->delete();
-
-        // Tambah serial baru.
-        foreach ($final as $sn) {
-            AssetSerialNumber::firstOrCreate(
-                ['asset_id' => $asset->id, 'serial_number' => $sn],
-                ['condition' => 'good', 'status' => 'available'],
-            );
+        // Normalize submitted list
+        $normalized = [];
+        foreach ($submitted as $row) {
+            if (is_array($row)) {
+                $sn = isset($row['serial_number']) ? trim($row['serial_number']) : '';
+                if ($sn === '') continue;
+                $normalized[] = [
+                    'id' => $row['id'] ?? null,
+                    'serial_number' => $sn,
+                    'prefix' => isset($row['prefix']) ? trim($row['prefix']) : null,
+                    'qr_code' => isset($row['qr_code']) ? trim($row['qr_code']) : null,
+                    'condition' => isset($row['condition']) ? trim($row['condition']) : 'good',
+                ];
+            } elseif (is_string($row)) {
+                $sn = trim($row);
+                if ($sn === '') continue;
+                
+                $prefix = null;
+                $qrCode = $sn;
+                $lastDash = strrpos($sn, '-');
+                if ($lastDash !== false) {
+                    $prefix = substr($sn, 0, $lastDash);
+                    $qrCode = substr($sn, $lastDash + 1);
+                }
+                $normalized[] = [
+                    'id' => null,
+                    'serial_number' => $sn,
+                    'prefix' => $prefix,
+                    'qr_code' => $qrCode,
+                    'condition' => 'good',
+                ];
+            }
         }
 
-        // Jika jumlah serial masih kurang dari targetGood, auto-generate sisanya.
+        // Keep track of IDs we keep or create
+        $keepIds = [];
+        foreach ($normalized as $row) {
+            if (!empty($row['id'])) {
+                // Update existing serial
+                $serial = $asset->serialNumbers()->find($row['id']);
+                if ($serial) {
+                    $serial->update([
+                        'serial_number' => $row['serial_number'],
+                        'prefix' => $row['prefix'],
+                        'qr_code' => $row['qr_code'],
+                        'condition' => $row['condition'],
+                    ]);
+                    $keepIds[] = $serial->id;
+                }
+            } else {
+                // Check if a serial number with the same serial_number already exists for this asset
+                $serial = $asset->serialNumbers()->where('serial_number', $row['serial_number'])->first();
+                if ($serial) {
+                    $serial->update([
+                        'prefix' => $row['prefix'],
+                        'qr_code' => $row['qr_code'],
+                        'condition' => $row['condition'],
+                    ]);
+                } else {
+                    // Create new serial
+                    $serial = AssetSerialNumber::create([
+                        'asset_id' => $asset->id,
+                        'serial_number' => $row['serial_number'],
+                        'prefix' => $row['prefix'],
+                        'qr_code' => $row['qr_code'],
+                        'condition' => $row['condition'],
+                        'status' => 'available',
+                    ]);
+                }
+                $keepIds[] = $serial->id;
+            }
+        }
+
+        // Serial yang terpasang di PC (status === in_use) tidak boleh didelete.
+        $inUseIds = $asset->serialNumbers()->where('status', 'in_use')->pluck('id')->all();
+        $finalKeepIds = array_values(array_unique(array_merge($inUseIds, $keepIds)));
+
+        // Hapus serial available yang tidak ada di list finalKeepIds
+        $asset->serialNumbers()
+            ->where('status', 'available')
+            ->whereNotIn('id', $finalKeepIds)
+            ->delete();
+
+        // Jika jumlah serial masih kurang dari targetGood, auto-generate sisanya
         $currentCount = $asset->serialNumbers()->count();
         if ($currentCount < $targetGood) {
             $diff = $targetGood - $currentCount;
-            $autoCount = 0;
-            $index = 1;
-            while ($autoCount < $diff) {
-                if ($asset->asset_category === 'component-pc' && !empty($asset->specification)) {
-                    $cleanSpec = substr(trim($asset->specification), 0, 80);
-                    $serial = $cleanSpec . '-' . str_pad($index, 3, '0', STR_PAD_LEFT);
-                } else {
-                    $serial = $asset->sku . '-' . str_pad($index, 3, '0', STR_PAD_LEFT);
-                }
-                $exists = AssetSerialNumber::where('asset_id', $asset->id)
-                    ->where('serial_number', $serial)
-                    ->exists();
-                if (!$exists) {
-                    AssetSerialNumber::create([
-                        'asset_id' => $asset->id,
-                        'serial_number' => $serial,
-                        'condition' => 'good',
-                        'status' => 'available',
-                    ]);
-                    $autoCount++;
-                }
-                $index++;
-                if ($index > 9999) {
-                    break;
-                }
-            }
-        } elseif ($currentCount > $targetGood) {
-            // Jika jumlah serial melebihi targetGood (misal karena stok dikurangi),
-            // hapus kelebihan serial yang available.
-            $excess = $currentCount - $targetGood;
-            $asset->serialNumbers()
-                ->where('status', 'available')
-                ->latest('id')
-                ->limit($excess)
-                ->delete();
+            $this->generateSerials($asset, $currentCount + $diff, []);
         }
     }
 }
