@@ -329,6 +329,13 @@
                     </svg>
                     Stop Kamera
                 </button>
+                <button class="sc-btn sc-btn-secondary" id="btnTorch" onclick="toggleTorch()" style="display:none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                    <span id="lblTorch">Senter</span>
+                </button>
             </div>
 
             <div class="sc-or">atau ketik manual</div>
@@ -419,6 +426,7 @@
     /* ── state ── */
     let html5QrCode = null;
     let isCameraRunning = false;
+    let isTorchOn = false;
     let currentTab = 'camera';
     let uploadedFile = null;
 
@@ -479,6 +487,30 @@
             document.getElementById('btnStart').style.display = 'none';
             document.getElementById('btnStop').style.display  = 'inline-flex';
             document.getElementById('scanningBadge').classList.add('show');
+
+            // Check torch/flashlight capability and show button if supported
+            setTimeout(() => {
+                let hasTorch = false;
+                try {
+                    const capabilities = html5QrCode.getRunningTrackCapabilities();
+                    if (capabilities && capabilities.torch) {
+                        hasTorch = true;
+                    }
+                } catch (e) {}
+
+                if (!hasTorch) {
+                    try {
+                        const camCapabilities = html5QrCode.getRunningTrackCameraCapabilities();
+                        if (camCapabilities && camCapabilities.torchFeature && camCapabilities.torchFeature().isSupported()) {
+                            hasTorch = true;
+                        }
+                    } catch (e) {}
+                }
+
+                if (hasTorch) {
+                    document.getElementById('btnTorch').style.display = 'inline-flex';
+                }
+            }, 500);
         } catch (err) {
             showAlert('Tidak dapat mengakses kamera: ' + err, 'error');
         }
@@ -490,9 +522,37 @@
             await html5QrCode.stop();
         } catch(_) {}
         isCameraRunning = false;
+        isTorchOn = false;
         document.getElementById('btnStart').style.display = 'inline-flex';
         document.getElementById('btnStop').style.display  = 'none';
+        document.getElementById('btnTorch').style.display = 'none';
+        document.getElementById('btnTorch').classList.remove('sc-btn-primary');
+        document.getElementById('btnTorch').classList.add('sc-btn-secondary');
+        document.getElementById('lblTorch').textContent = 'Senter';
         document.getElementById('scanningBadge').classList.remove('show');
+    }
+
+    async function toggleTorch() {
+        if (!isCameraRunning || !html5QrCode) return;
+        try {
+            isTorchOn = !isTorchOn;
+            await html5QrCode.applyVideoConstraints({
+                advanced: [{ torch: isTorchOn }]
+            });
+            document.getElementById('lblTorch').textContent = isTorchOn ? 'Matikan Senter' : 'Senter';
+            const btnTorch = document.getElementById('btnTorch');
+            if (isTorchOn) {
+                btnTorch.classList.add('sc-btn-primary');
+                btnTorch.classList.remove('sc-btn-secondary');
+            } else {
+                btnTorch.classList.remove('sc-btn-primary');
+                btnTorch.classList.add('sc-btn-secondary');
+            }
+        } catch (err) {
+            console.error("Failed to toggle torch:", err);
+            isTorchOn = !isTorchOn; // revert state
+            alert("Senter tidak dapat diaktifkan pada perangkat/browser ini.");
+        }
     }
 
     let lastScanned = '';
