@@ -233,4 +233,16 @@ class PcController extends Controller
             $al->update(['total_asset_lab' => $al->total_good_lab + $al->total_damaged_lab + $al->total_loss_lab]);
         }
     }
+
+    public function toggleStatus(Laboratory $lab, Pc $pc)
+{
+    $pc->update([
+        'status_pc' => $pc->status_pc === 'active' ? 'inactive' : 'active',
+    ]);
+
+    return redirect()
+        ->route('laboratory.show', $lab->id)
+        ->with('success', 'Status PC berhasil diubah.')
+        ->with('section', 'pc');
+}
 }

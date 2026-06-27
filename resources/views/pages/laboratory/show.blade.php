@@ -34,117 +34,88 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
     </div>
     @endif
 
-    {{-- ══ SECTION 1: PC INFORMATION ══ --}}
-    <div id="section-pc" class="db-card" style="padding:0; overflow:hidden;">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px 14px; border-bottom:1px solid #f3f4f6;">
-            <h3 style="font-size:15px; font-weight:700; color:#111827; margin:0;">PC Information</h3>
-            @if($canEdit)
-            <button onclick="openAddPcModal()"
-                    style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:600;">
-                + Add PC
-            </button>
-            @endif
-        </div>
-
-        <div style="overflow-x:auto;">
-            <table class="db-table" style="min-width:{{ $canEdit ? '1450px' : '1350px' }};">
-                <thead>
-                    <tr>
-                        <th>No PC</th>
-                        <th>PC Unit / Serial</th>
-                        <th>Type</th>
-                        <th>Processor</th>
-                        <th>RAM</th>
-                        <th>SSD</th>
-                        <th>HDD</th>
-                        <th>Motherboard</th>
-                        <th>VGA</th>
-                        <th>CPU Fan</th>
-                        <th>Power Supply</th>
-                        <th>Status</th>
-                        @if($canEdit)<th>Action</th>@endif
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($laboratory->pcs as $i => $pc)
-                    <tr>
-                        <td style="font-weight:600;">PC-{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</td>
-                        <td>
-                            @if($pc->pcSerial)
-                                <div style="font-weight:600; color:var(--text-bold);">{{ $pc->pcSerial->asset->asset_name }}</div>
-                                <div style="font-size:11px; color:var(--text-muted); font-family:monospace;">S/N: {{ $pc->pcSerial->serial_number }}</div>
-                            @else
-                                <span style="color:var(--text-muted);">-</span>
-                            @endif
-                        </td>
-                        <td>{{ ucfirst($pc->type_pc) }}</td>
-                        <td>{{ $pc->processor ?? '-' }}</td>
-                        <td>{{ $pc->ram ?? '-' }}</td>
-                        <td>{{ $pc->ssd ?? '-' }}</td>
-                        <td>{{ $pc->hdd ?? '-' }}</td>
-                        <td>{{ $pc->motherboard ?? '-' }}</td>
-                        <td>{{ $pc->vga ?? '-' }}</td>
-                        <td>{{ $pc->cpu_fan ?? '-' }}</td>
-                        <td>{{ $pc->powersupply ?? '-' }}</td>
-                        <td>
-                            <span style="background:{{ $pc->status_pc === 'active' ? '#16a34a' : '#dc2626' }}; color:#fff; border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600;">
-                                {{ ucfirst($pc->status_pc) }}
-                            </span>
-                        </td>
-                        @if($canEdit)
-                        <td>
-                            <div class="action-btns">
-                                <button type="button"
-                                        onclick="openEditPcModal({{ $pc->id }})"
-                                        class="action-btn action-edit" title="Edit">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                    </svg>
-                                </button>
-                                @if($isStaffLab)
-                                <button type="button"
-                                        onclick='openReturnModal("pc", {{ $pc->id }}, null, "PC-{{ str_pad($loop->index, 2, '0', STR_PAD_LEFT) }}")'
-                                        class="action-btn action-delete" title="Retur PC">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
-                                        <polyline points="3 6 5 6 21 6"/>
-                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                                        <path d="M10 11v6M14 11v6"/>
-                                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                                    </svg>
-                                </button>
-                                @endif
-                            </div>
-                        </td>
-                        @endif
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="{{ $canEdit ? 11 : 10 }}" style="text-align:center; padding:32px; color:#9ca3af; font-size:13px;">Belum ada PC</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        <div style="padding:16px 24px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f3f4f6;">
-            <a href="{{ route('laboratory.index') }}"
-               style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:9px 20px; font-size:13px; text-decoration:none; color:#374151; font-weight:500; display:inline-flex; align-items:center; gap:6px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-                    <polyline points="15 18 9 12 15 6"/>
-                </svg>
-                Back
-            </a>
-            <button type="button" onclick="showSection('asset')"
-                    style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:6px;">
-                Next
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-                    <polyline points="9 18 15 12 9 6"/>
-                </svg>
-            </button>
-        </div>
+{{-- ══ SECTION 1: PC INFORMATION ══ --}}
+<div id="section-pc" class="db-card" style="padding:0; overflow:hidden;">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px 14px; border-bottom:1px solid #f3f4f6;">
+        <h3 style="font-size:15px; font-weight:700; color:#111827; margin:0;">PC Information</h3>
+        @if($canEdit)
+        <button onclick="openAddPcModal()"
+                style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:600;">
+            + Add PC
+        </button>
+        @endif
     </div>
 
+    <div style="overflow-x:auto;">
+        <table class="db-table" style="min-width:400px; width:100%;">
+            <thead>
+                <tr>
+                    <th>No PC</th>
+                    <th>PC Unit / Serial</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th style="text-align:center;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($laboratory->pcs as $i => $pc)
+                <tr>
+                    <td style="font-weight:600;">PC-{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</td>
+                    <td>
+                        @if($pc->pcSerial)
+                            <div style="font-weight:600; color:var(--text-bold);">{{ $pc->pcSerial->asset->asset_name }}</div>
+                            <div style="font-size:11px; color:var(--text-muted); font-family:monospace;">S/N: {{ $pc->pcSerial->serial_number }}</div>
+                        @else
+                            <span style="color:var(--text-muted);">-</span>
+                        @endif
+                    </td>
+                    <td>{{ ucfirst($pc->type_pc) }}</td>
+                    <td>
+                        <span style="background:{{ $pc->status_pc === 'active' ? '#16a34a' : '#dc2626' }}; color:#fff; border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600;">
+                            {{ ucfirst($pc->status_pc) }}
+                        </span>
+                    </td>
+                    <td style="text-align:center;">
+                        <div class="action-btns" style="justify-content:center;">
+                            <x-table.action
+                                variant="view"
+                                title="Lihat Detail PC"
+                                onclick="openViewPcModal({{ $pc->id }})"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </x-table.action>
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="5" style="text-align:center; padding:32px; color:#9ca3af; font-size:13px;">Belum ada PC</td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    <div style="padding:16px 24px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f3f4f6;">
+        <a href="{{ route('laboratory.index') }}"
+           style="border:1px solid #d1d5db; background:#fff; border-radius:8px; padding:9px 20px; font-size:13px; text-decoration:none; color:#374151; font-weight:500; display:inline-flex; align-items:center; gap:6px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Back
+        </a>
+        <button type="button" onclick="showSection('asset')"
+                style="background:#111B4C; color:#fff; border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:6px;">
+            Next
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                <polyline points="9 18 15 12 9 6"/>
+            </svg>
+        </button>
+    </div>
+</div>
 <style>
 /* Definisikan warna default (Light Mode) */
 :root {
@@ -409,6 +380,134 @@ $existingNonElectric = $laboratory->assets->filter(fn($a) => $a->asset_category 
         </form>
     </div>
 </div>
+
+
+{{-- ══ MODAL VIEW PC ══ --}}
+@foreach($laboratory->pcs as $i => $pc)
+<div id="modal-view-pc-{{ $pc->id }}" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-main); border-radius:16px; width:100%; max-width:480px; margin:0 16px; box-shadow:0 20px 60px rgba(0,0,0,0.15); display:flex; flex-direction:column;">
+
+        {{-- Header --}}
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border-light); flex-shrink:0;">
+            <div>
+                <h3 style="font-size:16px; font-weight:700; color:var(--text-bold); margin:0;">
+                    PC-{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}
+                </h3>
+                <span style="font-size:12px; color:var(--text-muted);">{{ ucfirst($pc->type_pc) }}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="background:{{ $pc->status_pc === 'active' ? '#16a34a' : '#dc2626' }}; color:#fff; border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600;">
+                    {{ ucfirst($pc->status_pc) }}
+                </span>
+                <button type="button" onclick="closeViewPcModal({{ $pc->id }})" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:22px; line-height:1;">&times;</button>
+            </div>
+        </div>
+
+        {{-- Spec List --}}
+        <div style="padding:20px 24px; display:flex; flex-direction:column; gap:0;">
+
+            @php
+            $specs = [
+                ['label' => 'PC Unit',       'value' => $pc->pcSerial?->asset?->asset_name ?? '-'],
+                ['label' => 'Serial Number',  'value' => $pc->pcSerial?->serial_number ?? '-'],
+                ['label' => 'Processor',      'value' => $pc->processor ?? '-'],
+                ['label' => 'RAM',            'value' => $pc->ram ?? '-'],
+                ['label' => 'SSD',            'value' => $pc->ssd ?? '-'],
+                ['label' => 'HDD',            'value' => $pc->hdd ?? '-'],
+                ['label' => 'Motherboard',    'value' => $pc->motherboard ?? '-'],
+                ['label' => 'VGA',            'value' => $pc->vga ?? '-'],
+                ['label' => 'CPU Fan',        'value' => $pc->cpu_fan ?? '-'],
+                ['label' => 'Power Supply',   'value' => $pc->powersupply ?? '-'],
+            ];
+            @endphp
+
+            @foreach($specs as $idx => $spec)
+            <div style="display:flex; align-items:center; padding:10px 0; {{ !$loop->last ? 'border-bottom:1px solid var(--border-light);' : '' }}">
+                <span style="width:140px; flex-shrink:0; font-size:13px; font-weight:500; color:var(--text-muted);">{{ $spec['label'] }}</span>
+                <span style="font-size:13px; font-weight:600; color:{{ $spec['value'] === '-' ? 'var(--text-muted)' : 'var(--text-bold)' }};">
+                    {{ $spec['value'] }}
+                </span>
+            </div>
+            @endforeach
+
+        </div>
+
+{{-- Footer Actions --}}
+{{-- Footer Actions --}}
+<div style="display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-top:1px solid var(--border-light); flex-shrink:0;">
+
+    {{-- Kiri: Retur --}}
+    <div>
+        @if($isStaffLab)
+        <button
+            type="button"
+            class="btn-retur-pc panel-table-action panel-action-delete"
+            data-pc-id="{{ $pc->id }}"
+            data-pc-label="PC-{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}"
+            title="Retur PC"
+            style="display:inline-flex; align-items:center; gap:6px;"
+        >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+            Retur PC
+        </button>
+        @endif
+    </div>
+
+    {{-- Kanan: Toggle Status + Tutup + Edit --}}
+    <div style="display:flex; gap:8px; align-items:center;">
+
+        {{-- Toggle Status (hanya canEdit) --}}
+        @if($canEdit)
+        <form method="POST" action="{{ route('pc.toggle-status', [$laboratory->id, $pc->id]) }}">
+            @csrf
+            @method('PATCH')
+            <button type="submit"
+                    style="border:1px solid {{ $pc->status_pc === 'active' ? '#dc2626' : '#16a34a' }}; background:{{ $pc->status_pc === 'active' ? '#fef2f2' : '#dcfce7' }}; color:{{ $pc->status_pc === 'active' ? '#dc2626' : '#16a34a' }}; border-radius:8px; padding:9px 16px; font-size:13px; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                @if($pc->status_pc === 'active')
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="8" y1="12" x2="16" y2="12"/>
+                    </svg>
+                    Set Inactive
+                @else
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="16"/>
+                        <line x1="8" y1="12" x2="16" y2="12"/>
+                    </svg>
+                    Set Active
+                @endif
+            </button>
+        </form>
+        @endif
+
+        <button type="button"
+                data-close-view="{{ $pc->id }}"
+                style="border:1px solid var(--border-main); background:var(--bg-main); color:var(--text-normal); border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer;">
+            Tutup
+        </button>
+
+        @if($canEdit)
+        <button type="button"
+                data-open-edit="{{ $pc->id }}"
+                style="background:var(--bg-primary); color:var(--text-primary); border:none; border-radius:8px; padding:9px 20px; font-size:13px; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Edit
+        </button>
+        @endif
+    </div>
+</div>
+@endforeach
+
+
 
 {{-- ══ MODAL EDIT PC (#10: per-PC + serial picker) ══ --}}
 @foreach($laboratory->pcs as $i => $pc)
@@ -1174,6 +1273,27 @@ window.stopModalQrScanner = function() {
         activeQrInput = null;
     }
 };
+
+// ── View PC Modal ──
+function openViewPcModal(pcId) {
+    const m = document.getElementById('modal-view-pc-' + pcId);
+    if (!m) return;
+    m.style.display = 'flex';
+}
+function closeViewPcModal(pcId) {
+    const m = document.getElementById('modal-view-pc-' + pcId);
+    if (m) m.style.display = 'none';
+}
+
+// Close modal view PC on backdrop click
+document.querySelectorAll('[id^="modal-view-pc-"]').forEach(m => {
+    m.addEventListener('click', e => {
+        if (e.target === e.currentTarget) {
+            const pcId = m.id.replace('modal-view-pc-', '');
+            closeViewPcModal(pcId);
+        }
+    });
+});
 @endif
 </script>
 

@@ -181,12 +181,15 @@ Route::middleware('auth')->group(function () {
         ->where(['laboratory' => '[0-9]+']);
 });
 
-    Route::post('/laboratory/{laboratory}/staff', [LaboratoryController::class, 'assignStaff'])
-        ->name('laboratory.staff.assign')
-        ->middleware(\App\Http\Middleware\EnsureSpv::class);
+Route::post('/laboratory/{laboratory}/staff', [LaboratoryController::class, 'assignStaff'])
+    ->name('laboratory.staff.assign')
+    ->middleware(\App\Http\Middleware\EnsureSpv::class);
 
-    Route::delete('/laboratory/{laboratory}/staff/{user}', [LaboratoryController::class, 'removeStaff'])
-        ->name('laboratory.staff.remove')
-        ->middleware(\App\Http\Middleware\EnsureSpv::class);
+Route::delete('/laboratory/{laboratory}/staff/{user}', [LaboratoryController::class, 'removeStaff'])
+    ->name('laboratory.staff.remove')
+    ->middleware(\App\Http\Middleware\EnsureSpv::class);
+
+Route::patch('/laboratory/{lab}/pc/{pc}/toggle-status', [PcController::class, 'toggleStatus'])
+    ->name('pc.toggle-status');
 
 require __DIR__ . '/auth.php';
